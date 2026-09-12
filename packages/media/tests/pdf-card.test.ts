@@ -28,7 +28,7 @@ describe("pdf-card service", () => {
 				weddingDate: "12.09.2026",
 				targetUrl: "https://example.com/g/kasia-i-tomek",
 				headline: "Podziel się wspomnieniami!",
-				instructions: "1. Krok pierwszy\n2. Krok drugi",
+				instructions: "1. Krok pierwszy\n\n2. Krok drugi", // Pusta linia w instrukcji
 				primaryColorHex: "#1E293B",
 				accentColorHex: "#D4AF37",
 			});
@@ -36,23 +36,40 @@ describe("pdf-card service", () => {
 			expect(pdfBytes).toBeInstanceOf(Uint8Array);
 			expect(pdfBytes.length).toBeGreaterThan(1000);
 
-			// Nagłówek każdego pliku PDF to %PDF- (bajty: 0x25, 0x50, 0x44, 0x46, 0x2D)
 			const header = Buffer.from(pdfBytes.slice(0, 5)).toString("utf-8");
 			expect(header).toBe("%PDF-");
 		});
 
-		it("powinien poprawnie obsłużyć domyślne i brakujące wartości", async () => {
+		it("powinien poprawnie obsłużyć domyślne i brakujące wartości oraz 3-znakowe kolory hex", async () => {
 			const pdfBytes = await generateWeddingCardPdf({
 				coupleNames:
 					"Bardzo Długa Nazwa Pary Młodej Z Wieloma Znakami Diakrytycznymi Łukasz i Małgorzata",
 				weddingDate: "01.01.2027",
 				targetUrl: "https://example.com/g/lukasz-i-malgorzata",
+				primaryColorHex: "#123",
+				accentColorHex: "#abc",
 			});
 
 			expect(pdfBytes).toBeInstanceOf(Uint8Array);
 			expect(pdfBytes.length).toBeGreaterThan(1000);
 			const header = Buffer.from(pdfBytes.slice(0, 5)).toString("utf-8");
 			expect(header).toBe("%PDF-");
+		});
+
+		it("powinien poprawnie obsłużyć adres URL z localhost lub nieprawidłowy URL w stopce", async () => {
+			const pdfBytesLocalhost = await generateWeddingCardPdf({
+				coupleNames: "Magda i Piotr",
+				weddingDate: "15.08.2026",
+				targetUrl: "http://localhost:3000/g/magda-i-piotr",
+			});
+			expect(pdfBytesLocalhost).toBeInstanceOf(Uint8Array);
+
+			const pdfBytesInvalidUrl = await generateWeddingCardPdf({
+				coupleNames: "Magda i Piotr",
+				weddingDate: "15.08.2026",
+				targetUrl: "niepoprawny-adres-url",
+			});
+			expect(pdfBytesInvalidUrl).toBeInstanceOf(Uint8Array);
 		});
 	});
 });

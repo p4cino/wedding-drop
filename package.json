@@ -9,6 +9,8 @@
 		"lint": "biome check .",
 		"format": "biome format --write .",
 		"test": "turbo run test",
+		"test:coverage": "turbo run test:coverage",
+		"test:e2e": "pnpm --filter @wedding-drop/web test:e2e",
 		"db:push": "turbo run db:push",
 		"db:generate": "turbo run db:generate"
 	},

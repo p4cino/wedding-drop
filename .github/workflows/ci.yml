@@ -1,0 +1,62 @@
+name: CI - Test PR to Main
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Lint, Build & Unit/Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint and formatting check (Biome)
+        run: pnpm biome check apps/ packages/
+
+      - name: TypeScript type checking
+        run: pnpm --filter @wedding-drop/web check-types
+
+      - name: Build monorepo packages and Next.js app
+        run: pnpm build
+
+      - name: Run Unit & Integration tests with coverage (Vitest)
+        run: pnpm test:coverage
+
+      - name: Verify 80% coverage threshold across all packages
+        run: node scripts/check-coverage.js
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-coverage-reports
+          path: |
+            packages/db/coverage/
+            packages/media/coverage/
+            apps/web/coverage/
+          retention-days: 14

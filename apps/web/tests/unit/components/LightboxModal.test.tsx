@@ -130,6 +130,64 @@ describe("LightboxModal Component", () => {
 		expect(onNavigate).toHaveBeenCalledWith(0);
 	});
 
+	it("powinien zamykać po kliknięciu ikony zamknięcia X", () => {
+		const onClose = vi.fn();
+		const { container } = render(
+			<LightboxModal
+				items={mockItems}
+				currentIndex={0}
+				onClose={onClose}
+				onNavigate={vi.fn()}
+			/>,
+		);
+
+		const closeBtn = container.querySelector("button:has(svg.lucide-x)");
+		if (closeBtn) {
+			fireEvent.click(closeBtn);
+			expect(onClose).toHaveBeenCalled();
+		}
+	});
+
+	it("powinien nawigować po kliknięciu przycisków Chevron", () => {
+		const onNavigate = vi.fn();
+		const { container, rerender } = render(
+			<LightboxModal
+				items={mockItems}
+				currentIndex={0}
+				onClose={vi.fn()}
+				onNavigate={onNavigate}
+			/>,
+		);
+
+		// Dla index = 0, jest przycisk ChevronRight
+		const rightBtn = container.querySelector(
+			"button:has(svg.lucide-chevron-right)",
+		);
+		expect(rightBtn).toBeInTheDocument();
+		if (rightBtn) {
+			fireEvent.click(rightBtn);
+			expect(onNavigate).toHaveBeenCalledWith(1);
+		}
+
+		// Dla index = 1, jest przycisk ChevronLeft
+		rerender(
+			<LightboxModal
+				items={mockItems}
+				currentIndex={1}
+				onClose={vi.fn()}
+				onNavigate={onNavigate}
+			/>,
+		);
+		const leftBtn = container.querySelector(
+			"button:has(svg.lucide-chevron-left)",
+		);
+		expect(leftBtn).toBeInTheDocument();
+		if (leftBtn) {
+			fireEvent.click(leftBtn);
+			expect(onNavigate).toHaveBeenCalledWith(0);
+		}
+	});
+
 	it("powinien nawigować przy geście swipe left na ekranie dotykowym", () => {
 		const onNavigate = vi.fn();
 		const { container } = render(
@@ -147,5 +205,47 @@ describe("LightboxModal Component", () => {
 		fireEvent.touchEnd(modal);
 
 		expect(onNavigate).toHaveBeenCalledWith(1);
+	});
+
+	it("powinien nawigować przy geście swipe right na ekranie dotykowym", () => {
+		const onNavigate = vi.fn();
+		const { container } = render(
+			<LightboxModal
+				items={mockItems}
+				currentIndex={1}
+				onClose={vi.fn()}
+				onNavigate={onNavigate}
+			/>,
+		);
+
+		const modal = container.firstChild as HTMLElement;
+		fireEvent.touchStart(modal, { targetTouches: [{ clientX: 100 }] });
+		fireEvent.touchMove(modal, { targetTouches: [{ clientX: 200 }] });
+		fireEvent.touchEnd(modal);
+
+		expect(onNavigate).toHaveBeenCalledWith(0);
+	});
+
+	it("nie powinien nawigować gdy ruch touch jest zbyt mały lub brak współrzędnych", () => {
+		const onNavigate = vi.fn();
+		const { container } = render(
+			<LightboxModal
+				items={mockItems}
+				currentIndex={0}
+				onClose={vi.fn()}
+				onNavigate={onNavigate}
+			/>,
+		);
+
+		const modal = container.firstChild as HTMLElement;
+		// Mały ruch (mniej niż minSwipeDistance 45)
+		fireEvent.touchStart(modal, { targetTouches: [{ clientX: 100 }] });
+		fireEvent.touchMove(modal, { targetTouches: [{ clientX: 110 }] });
+		fireEvent.touchEnd(modal);
+		expect(onNavigate).not.toHaveBeenCalled();
+
+		// Brak startu
+		fireEvent.touchEnd(modal);
+		expect(onNavigate).not.toHaveBeenCalled();
 	});
 });

@@ -6,6 +6,7 @@ import { GET as getLive } from "@/app/api/gallery/[slug]/live/route";
 import { GET as getMedia } from "@/app/api/gallery/[slug]/media/route";
 import { GET as getGallery } from "@/app/api/gallery/[slug]/route";
 import { GET as getZip } from "@/app/api/gallery/[slug]/zip/route";
+import { generateAdminToken } from "@/lib/auth";
 
 let mockExists = true;
 vi.mock("node:fs", () => ({
@@ -23,7 +24,7 @@ vi.mock("bcryptjs", () => ({
 }));
 
 vi.mock("archiver", () => {
-	const zipArchiveMock = vi.fn().mockImplementation(function (this: any) {
+	const zipArchiveMock = vi.fn().mockImplementation(function (this: unknown) {
 		return {
 			pipe: vi.fn(),
 			file: vi.fn(),
@@ -37,56 +38,25 @@ vi.mock("archiver", () => {
 	};
 });
 
-let mockGalleries: any[] = [
-	{
-		id: "gal-1",
-		slug: "kasia-i-tomek",
-		coupleNames: "Kasia & Tomek",
-		weddingDate: "2026-09-12",
-		ownerPasswordHash: "hashed",
-		isActive: true,
-		allowGuestDownloads: true,
-		allowVideos: true,
-		accessPin: null,
-	},
-];
-
-const _mockCards: any[] = [
-	{
-		id: "card-1",
-		galleryId: "gal-1",
-		headline: "Wspomnienia z wesela",
-		primaryColor: "#1E293B",
-		accentColor: "#D4AF37",
-	},
-];
-
-let mockMedia: any[] = [
-	{
-		id: "m-1",
-		galleryId: "gal-1",
-		uploaderName: "Gość",
-		fileType: "image",
-		mimeType: "image/jpeg",
-		originalFileName: "zabawa.jpg",
-		fileSize: 1024,
-		storagePath: "galleries/kasia-i-tomek/raw/1.jpg",
-		thumbPath: "galleries/kasia-i-tomek/thumbs/1.webp",
-		status: "ready",
-		createdAt: new Date().toISOString(),
-	},
-];
-
+let mockGalleries: Record<string, unknown>[] = [];
+let mockCards: Record<string, unknown>[] = [];
+let mockMedia: Record<string, unknown>[] = [];
 let dbShouldThrow = false;
 
+import { cardSettings, galleries } from "@wedding-drop/db";
+
 vi.mock("@wedding-drop/db", async (importOriginal) => {
-	const actual = await importOriginal<Record<string, any>>();
+	const actual = await importOriginal<Record<string, unknown>>();
 	return {
 		...actual,
 		db: {
 			select: vi.fn(() => ({
-				from: vi.fn(() => {
+				from: vi.fn((table) => {
 					if (dbShouldThrow) throw new Error("DB Error");
+					let targetData = mockMedia;
+					if (table === galleries) targetData = mockGalleries;
+					else if (table === cardSettings) targetData = mockCards;
+
 					return {
 						where: vi.fn(() => {
 							if (dbShouldThrow) throw new Error("DB Error");
@@ -94,10 +64,12 @@ vi.mock("@wedding-drop/db", async (importOriginal) => {
 								limit: vi.fn().mockImplementation(() => {
 									if (dbShouldThrow)
 										return Promise.reject(new Error("DB Error"));
-									return Promise.resolve(mockGalleries);
+									return Promise.resolve(targetData);
 								}),
-								orderBy: vi.fn().mockResolvedValue(mockMedia),
-								then: (resolve: any) => resolve(mockMedia),
+								orderBy: vi.fn().mockResolvedValue(targetData),
+								// biome-ignore lint/suspicious/noThenProperty: Drizzle ORM thenable query mock
+								then: (resolve: (val: unknown) => unknown) =>
+									resolve(targetData),
 							};
 						}),
 					};
@@ -118,10 +90,20 @@ describe("Gallery API Routes", () => {
 				slug: "kasia-i-tomek",
 				coupleNames: "Kasia & Tomek",
 				weddingDate: "2026-09-12",
+				ownerPasswordHash: "hashed",
 				isActive: true,
 				allowGuestDownloads: true,
 				allowVideos: true,
 				accessPin: null,
+			},
+		];
+		mockCards = [
+			{
+				id: "card-1",
+				galleryId: "gal-1",
+				headline: "Wspomnienia z wesela",
+				primaryColor: "#1E293B",
+				accentColor: "#D4AF37",
 			},
 		];
 		mockMedia = [
@@ -152,6 +134,19 @@ describe("Gallery API Routes", () => {
 			const data = await res.json();
 			expect(data.slug).toBe("kasia-i-tomek");
 			expect(data.coupleNames).toBe("Kasia & Tomek");
+			expect(data.cardSettings).toBeDefined();
+		});
+
+		it("powinien zwrócić null w cardSettings gdy brak konfiguracji winietki", async () => {
+			mockCards = [];
+			const req = new NextRequest("http://localhost/api/gallery/kasia-i-tomek");
+			const res = await getGallery(req, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+
+			expect(res.status).toBe(200);
+			const data = await res.json();
+			expect(data.cardSettings).toBeNull();
 		});
 
 		it("powinien zwrócić 404, gdy galeria nie istnieje", async () => {
@@ -211,6 +206,20 @@ describe("Gallery API Routes", () => {
 		it("powinien obsłużyć parametr includeHidden=true z poprawnym hasłem", async () => {
 			const req = new NextRequest(
 				"http://localhost/api/gallery/kasia-i-tomek/media?includeHidden=true&password=sekret123",
+			);
+			const res = await getMedia(req, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+
+			expect(res.status).toBe(200);
+			const data = await res.json();
+			expect(data.media).toBeDefined();
+		});
+
+		it("powinien obsłużyć parametr includeHidden=true z poprawnym adminToken", async () => {
+			const token = generateAdminToken("admin");
+			const req = new NextRequest(
+				`http://localhost/api/gallery/kasia-i-tomek/media?includeHidden=true&adminToken=${token}`,
 			);
 			const res = await getMedia(req, {
 				params: Promise.resolve({ slug: "kasia-i-tomek" }),
@@ -312,6 +321,31 @@ describe("Gallery API Routes", () => {
 			expect(res.headers.get("Content-Type")).toBe("application/zip");
 		});
 
+		it("powinien zablokować pobieranie ZIP gdy galeria ma accessPin i podano błędny lub brak PIN", async () => {
+			mockGalleries[0].accessPin = "4321";
+			const req = new NextRequest(
+				"http://localhost/api/gallery/kasia-i-tomek/zip",
+			);
+			const res = await getZip(req, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+			expect(res.status).toBe(401);
+		});
+
+		it("powinien zezwolić na pobranie ZIP gdy galeria ma accessPin i podano poprawny PIN", async () => {
+			mockGalleries[0].accessPin = "4321";
+			const req = new NextRequest(
+				"http://localhost/api/gallery/kasia-i-tomek/zip",
+				{
+					headers: { "x-access-pin": "4321" },
+				},
+			);
+			const res = await getZip(req, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+			expect(res.status).toBe(200);
+		});
+
 		it("powinien zwrócić 404, gdy galeria nie istnieje", async () => {
 			mockGalleries = [];
 			const req = new NextRequest("http://localhost/api/gallery/brak/zip");
@@ -347,6 +381,18 @@ describe("Gallery API Routes", () => {
 			expect(await res.json()).toEqual({
 				error: "Pliki fizyczne nie zostały znalezione na dysku",
 			});
+		});
+
+		it("powinien zwrócić 500 w razie błędu serwera", async () => {
+			dbShouldThrow = true;
+			const req = new NextRequest(
+				"http://localhost/api/gallery/kasia-i-tomek/zip",
+			);
+			const res = await getZip(req, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+
+			expect(res.status).toBe(500);
 		});
 	});
 
