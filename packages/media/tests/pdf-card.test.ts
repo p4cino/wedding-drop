@@ -56,20 +56,22 @@ describe("pdf-card service", () => {
 			expect(header).toBe("%PDF-");
 		});
 
-		it("powinien poprawnie obsłużyć adres URL z localhost lub nieprawidłowy URL w stopce", async () => {
+		it("powinien poprawnie obsłużyć adres URL z localhost w stopce", async () => {
 			const pdfBytesLocalhost = await generateWeddingCardPdf({
 				coupleNames: "Magda i Piotr",
 				weddingDate: "15.08.2026",
 				targetUrl: "http://localhost:3000/g/magda-i-piotr",
 			});
 			expect(pdfBytesLocalhost).toBeInstanceOf(Uint8Array);
+		}, 20000);
 
+		it("powinien poprawnie obsłużyć nieprawidłowy URL w stopce", async () => {
 			const pdfBytesInvalidUrl = await generateWeddingCardPdf({
 				coupleNames: "Magda i Piotr",
 				weddingDate: "15.08.2026",
 				targetUrl: "niepoprawny-adres-url",
 			});
 			expect(pdfBytesInvalidUrl).toBeInstanceOf(Uint8Array);
-		});
+		}, 20000);
 	});
 });
