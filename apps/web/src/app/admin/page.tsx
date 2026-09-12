@@ -54,10 +54,10 @@ export default function AdminDashboardPage() {
 		setLoading(true);
 
 		try {
-			const res = await fetch("/api/admin", {
+			const res = await fetch("/api/admin/auth", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ action: "login", username, password }),
+				body: JSON.stringify({ username, password }),
 			});
 
 			const data = await res.json();
@@ -77,10 +77,11 @@ export default function AdminDashboardPage() {
 
 	const loadGalleries = async (adminToken: string) => {
 		try {
-			const res = await fetch("/api/admin", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ action: "list-galleries", token: adminToken }),
+			const res = await fetch("/api/admin/galleries", {
+				method: "GET",
+				headers: {
+					"x-admin-token": adminToken,
+				},
 			});
 			if (res.ok) {
 				const data = await res.json();
@@ -96,12 +97,13 @@ export default function AdminDashboardPage() {
 		if (!token) return;
 
 		try {
-			const res = await fetch("/api/admin", {
+			const res = await fetch("/api/admin/galleries", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: {
+					"Content-Type": "application/json",
+					"x-admin-token": token,
+				},
 				body: JSON.stringify({
-					action: "create-gallery",
-					token,
 					coupleNames,
 					weddingDate,
 					ownerEmail,
@@ -137,10 +139,11 @@ export default function AdminDashboardPage() {
 		if (!token) return;
 
 		try {
-			const res = await fetch("/api/admin", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ action: "delete-gallery", token, galleryId }),
+			const res = await fetch(`/api/admin/galleries/${galleryId}`, {
+				method: "DELETE",
+				headers: {
+					"x-admin-token": token,
+				},
 			});
 			if (res.ok) {
 				setGalleries((prev) => prev.filter((g) => g.id !== galleryId));

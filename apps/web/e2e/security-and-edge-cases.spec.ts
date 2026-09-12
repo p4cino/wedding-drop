@@ -142,4 +142,56 @@ test.describe("Bezpieczeństwo i Przypadki Brzegowe (Security & Edge Cases)", ()
 			},
 		});
 	});
+
+	test("UC8: dedykowane endpointy RESTful (GET, POST, DELETE) powinny poprawnie obsługiwać cykl życia zasobów", async ({
+		request,
+	}) => {
+		// Logowanie REST POST /api/admin/auth
+		const loginRes = await request.post("/api/admin/auth", {
+			data: { username: "admin", password: "admin123" },
+		});
+		expect(loginRes.status()).toBe(200);
+		const { adminToken } = await loginRes.json();
+
+		// Tworzenie galerii REST POST /api/admin/galleries (status 201)
+		const restSlug = `rest-${Date.now().toString().slice(-6)}`;
+		const createRes = await request.post("/api/admin/galleries", {
+			headers: { "x-admin-token": adminToken },
+			data: {
+				coupleNames: "REST Para",
+				weddingDate: "2026-10-15",
+				ownerEmail: "rest@example.com",
+				ownerPassword: "haslo",
+				customSlug: restSlug,
+			},
+		});
+		expect(createRes.status()).toBe(201);
+		const createData = await createRes.json();
+
+		// Pobranie listy galerii REST GET /api/admin/galleries
+		const listRes = await request.get("/api/admin/galleries", {
+			headers: { "x-admin-token": adminToken },
+		});
+		expect(listRes.status()).toBe(200);
+		const listData = await listRes.json();
+		expect(listData.galleries.some((g: any) => g.slug === restSlug)).toBe(true);
+
+		// Logowanie pary młodej REST POST /api/owner/[slug]/auth
+		const ownerAuthRes = await request.post(`/api/owner/${restSlug}/auth`, {
+			data: { password: "haslo" },
+		});
+		expect(ownerAuthRes.status()).toBe(200);
+		const ownerAuthData = await ownerAuthRes.json();
+		expect(ownerAuthData.ownerToken).toBeDefined();
+		expect(ownerAuthData.ownerToken.startsWith("owner_")).toBe(true);
+
+		// Usunięcie galerii REST DELETE /api/admin/galleries/[id]
+		const deleteRes = await request.delete(
+			`/api/admin/galleries/${createData.gallery.id}`,
+			{
+				headers: { "x-admin-token": adminToken },
+			},
+		);
+		expect(deleteRes.status()).toBe(200);
+	});
 });

@@ -99,9 +99,14 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 		await expect(toggleBtn).toBeVisible();
 
 		// Przechwycenie żądania toggle-status
-		await page.route("**/api/owner", async (route) => {
-			const body = route.request().postDataJSON();
-			if (body.action === "toggle-status") {
+		await page.route("**/api/owner/**", async (route) => {
+			const method = route.request().method();
+			let action = "";
+			try {
+				action = route.request().postDataJSON()?.action;
+			} catch (_e) {}
+
+			if (method === "PATCH" || action === "toggle-status") {
 				await route.fulfill({
 					status: 200,
 					contentType: "application/json",
@@ -208,9 +213,14 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 		await expect(page.getByText("Do Skasowania")).toBeVisible();
 
 		// Przechwycenie akcji usunięcia
-		await page.route("**/api/owner", async (route) => {
-			const body = route.request().postDataJSON();
-			if (body.action === "delete-media") {
+		await page.route("**/api/owner/**", async (route) => {
+			const method = route.request().method();
+			let action = "";
+			try {
+				action = route.request().postDataJSON()?.action;
+			} catch (_e) {}
+
+			if (method === "DELETE" || action === "delete-media") {
 				await route.fulfill({
 					status: 200,
 					contentType: "application/json",
