@@ -54,31 +54,31 @@ function main() {
     case "vitest":
     case "unit": {
       const extra = args.slice(1).join(" ");
-      run(`npm test ${extra}`.trim());
+      run(`pnpm turbo run test ${extra}`.trim());
       break;
     }
     case "coverage":
-      run("npm run test:coverage");
+      run("pnpm --filter @wedding-drop/web test:coverage");
       break;
     case "e2e": {
       const extra = args.slice(1).join(" ");
-      run(`npx playwright test ${extra}`.trim());
+      run(`pnpm --filter @wedding-drop/web test:e2e ${extra}`.trim());
       break;
     }
     case "e2e:mobile":
-      run('npx playwright test --project="Mobile Safari" --project="Mobile Chrome"');
+      run('pnpm --filter @wedding-drop/web exec playwright test --project="Mobile Safari" --project="Mobile Chrome"');
       break;
     case "e2e:docker":
       run(
         'docker run --rm --network wedding-drop_wedding_net ' +
         '-v wedding_playwright_browsers:/ms-playwright ' +
-        '-v "${PWD}:/app" -w /app ' +
+        '-v "${PWD}:/app" -w /app/apps/web ' +
         '-e BASE_URL=http://wedding_web:3000 ' +
         'mcr.microsoft.com/playwright:v1.50.0-noble npx playwright test'
       );
       break;
     case "e2e:ui":
-      run("npx playwright test --ui");
+      run("pnpm --filter @wedding-drop/web exec playwright test --ui");
       break;
     default:
       console.error(`\x1b[31mUnknown command: ${command}\x1b[0m`);

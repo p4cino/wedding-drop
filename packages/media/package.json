@@ -1,0 +1,31 @@
+{
+	"name": "@wedding-drop/media",
+	"version": "1.0.0",
+	"private": true,
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
+	"scripts": {
+		"test": "vitest run",
+		"lint": "biome check src/ tests/",
+		"check-types": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@tus/file-store": "^2.1.1",
+		"@tus/server": "^2.4.5",
+		"@wedding-drop/db": "workspace:*",
+		"archiver": "^8.0.0",
+		"drizzle-orm": "^0.45.2",
+		"googleapis": "^180.0.0",
+		"p-queue": "^9.3.3",
+		"pdf-lib": "^1.17.1",
+		"qrcode": "^1.5.4",
+		"sharp": "^0.35.4"
+	},
+	"devDependencies": {
+		"@types/archiver": "^8.0.0",
+		"@types/node": "^22.20.2",
+		"@types/qrcode": "^1.5.6",
+		"typescript": "^7.0.2",
+		"vitest": "^5.0.0"
+	}
+}
