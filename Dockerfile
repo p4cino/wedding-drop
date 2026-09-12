@@ -36,8 +36,6 @@ FROM node:24-alpine AS runner
 RUN apk add --no-cache ffmpeg libc6-compat
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
@@ -49,4 +47,7 @@ RUN mkdir -p /app/data/galleries /app/data/tus_temp
 
 EXPOSE 3000
 
-CMD ["pnpm", "--filter", "@wedding-drop/web", "start"]
+# Bezpośrednie uruchomienie serwera bez ciężkiego managera procesów pnpm
+# (natychmiastowa obsługa sygnałów SIGTERM i minimalne zużycie RAM na Intel N100)
+WORKDIR /app/apps/web
+CMD ["npx", "tsx", "server.ts"]

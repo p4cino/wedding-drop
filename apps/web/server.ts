@@ -80,6 +80,19 @@ async function bootstrap() {
 					const chunksize = end - start + 1;
 					const file = fs.createReadStream(fullPath, { start, end });
 
+					file.on("error", () => {
+						if (!res.headersSent) {
+							res.statusCode = 500;
+							res.end("Błąd odczytu pliku");
+						} else {
+							res.destroy();
+						}
+					});
+
+					req.on("close", () => {
+						file.destroy();
+					});
+
 					res.writeHead(206, {
 						"Content-Range": `bytes ${start}-${end}/${stat.size}`,
 						"Accept-Ranges": "bytes",
@@ -90,7 +103,21 @@ async function bootstrap() {
 				}
 
 				res.setHeader("Content-Length", stat.size);
-				return fs.createReadStream(fullPath).pipe(res);
+				const stream = fs.createReadStream(fullPath);
+				stream.on("error", () => {
+					if (!res.headersSent) {
+						res.statusCode = 500;
+						res.end("Błąd odczytu pliku");
+					} else {
+						res.destroy();
+					}
+				});
+
+				req.on("close", () => {
+					stream.destroy();
+				});
+
+				return stream.pipe(res);
 			}
 
 			res.statusCode = 404;

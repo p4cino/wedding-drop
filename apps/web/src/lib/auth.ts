@@ -1,6 +1,5 @@
 import crypto from "node:crypto";
 import { db, galleries } from "@wedding-drop/db";
-import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 
@@ -108,10 +107,10 @@ export function verifyOwnerToken(
 export async function authenticateOwner(
 	req: NextRequest,
 	slug: string,
-	body?: any,
+	body?: { token?: string } | null,
 ): Promise<{
 	authorized: boolean;
-	gallery?: any;
+	gallery?: typeof galleries.$inferSelect;
 	errorStatus?: number;
 	errorMessage?: string;
 }> {
@@ -139,16 +138,6 @@ export async function authenticateOwner(
 		body?.token;
 
 	if (token && verifyOwnerToken(token, slug)) {
-		return { authorized: true, gallery };
-	}
-
-	// Kompatybilność wsteczna: fallback do hasła bcrypt
-	const password =
-		req.headers.get("x-owner-password") ||
-		new URL(req.url).searchParams.get("password") ||
-		body?.password;
-
-	if (password && (await bcrypt.compare(password, gallery.ownerPasswordHash))) {
 		return { authorized: true, gallery };
 	}
 

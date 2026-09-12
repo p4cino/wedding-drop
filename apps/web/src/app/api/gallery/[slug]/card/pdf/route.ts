@@ -65,7 +65,7 @@ export async function GET(
 			accentColorHex,
 		});
 
-		return new Response(Buffer.from(pdfBytes) as any, {
+		return new Response(Buffer.from(pdfBytes) as unknown as BodyInit, {
 			headers: {
 				"Content-Type": "application/pdf",
 				"Content-Disposition": `inline; filename="karteczka-stol-${slug}.pdf"`,

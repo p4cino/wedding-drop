@@ -46,7 +46,7 @@ export default function AdminDashboardPage() {
 	const [ownerEmail, setOwnerEmail] = useState("");
 	const [ownerPassword, setOwnerPassword] = useState("");
 	const [customSlug, setCustomSlug] = useState("");
-	const [createdGallery, setCreatedGallery] = useState<any | null>(null);
+	const [createdGallery, setCreatedGallery] = useState<GalleryRow | null>(null);
 
 	const handleLogin = async (e: React.FormEvent) => {
 		e.preventDefault();

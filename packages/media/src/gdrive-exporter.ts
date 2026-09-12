@@ -98,14 +98,14 @@ async function runExportTask(
 			.update(galleries)
 			.set({
 				gdriveExportStatus: "running",
-				gdriveExportProgress: JSON.stringify({
+				gdriveExportProgress: {
 					totalFiles: 0,
 					processedFiles: 0,
 					totalBytes: 0,
 					processedBytes: 0,
 					currentFile: "Inicjalizacja połączenia z Google Drive...",
 					error: null,
-				}),
+				},
 			})
 			.where(eq(galleries.id, gallery.id));
 
@@ -143,14 +143,14 @@ async function runExportTask(
 				.set({
 					gdriveExportStatus: "completed",
 					gdriveExportedAt: new Date(),
-					gdriveExportProgress: JSON.stringify({
+					gdriveExportProgress: {
 						totalFiles: 0,
 						processedFiles: 0,
 						totalBytes: 0,
 						processedBytes: 0,
 						currentFile: "",
 						error: null,
-					}),
+					},
 				})
 				.where(eq(galleries.id, gallery.id));
 
@@ -179,14 +179,14 @@ async function runExportTask(
 				.update(galleries)
 				.set({
 					gdriveExportStatus: "failed",
-					gdriveExportProgress: JSON.stringify({
+					gdriveExportProgress: {
 						totalFiles: itemsToExport.length,
 						processedFiles: 0,
 						totalBytes: bytesNeeded,
 						processedBytes: 0,
 						currentFile: "",
 						error: errorMsg,
-					}),
+					},
 				})
 				.where(eq(galleries.id, gallery.id));
 
@@ -252,7 +252,7 @@ async function runExportTask(
 			await db
 				.update(galleries)
 				.set({
-					gdriveExportProgress: JSON.stringify(progressObj),
+					gdriveExportProgress: progressObj,
 				})
 				.where(eq(galleries.id, gallery.id));
 
@@ -270,7 +270,7 @@ async function runExportTask(
 				continue;
 			}
 
-			await queue.add(async () => {
+			queue.add(async () => {
 				const localPath = path.join(dataDir, item.storagePath);
 				if (!fs.existsSync(localPath)) {
 					console.warn(`Plik lokalny nie istnieje: ${localPath}`);
@@ -333,7 +333,7 @@ async function runExportTask(
 			.set({
 				gdriveExportStatus: "completed",
 				gdriveExportedAt: new Date(),
-				gdriveExportProgress: JSON.stringify(finalProgress),
+				gdriveExportProgress: finalProgress,
 			})
 			.where(eq(galleries.id, gallery.id));
 
@@ -354,14 +354,14 @@ async function runExportTask(
 			.update(galleries)
 			.set({
 				gdriveExportStatus: "failed",
-				gdriveExportProgress: JSON.stringify({
+				gdriveExportProgress: {
 					totalFiles: 0,
 					processedFiles: 0,
 					totalBytes: 0,
 					processedBytes: 0,
 					currentFile: "",
 					error: errorMsg,
-				}),
+				},
 			})
 			.where(eq(galleries.id, gallery.id));
 

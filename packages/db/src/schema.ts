@@ -3,6 +3,7 @@ import {
 	boolean,
 	index,
 	integer,
+	jsonb,
 	pgTable,
 	text,
 	timestamp,
@@ -32,7 +33,14 @@ export const galleries = pgTable("galleries", {
 	gdriveVideosFolderId: text("gdrive_videos_folder_id"),
 	gdriveHiddenFolderId: text("gdrive_hidden_folder_id"),
 	gdriveExportStatus: text("gdrive_export_status").notNull().default("idle"), // 'idle' | 'running' | 'completed' | 'failed' | 'interrupted'
-	gdriveExportProgress: text("gdrive_export_progress"), // JSON ze stanem { processedFiles, totalFiles, processedBytes, totalBytes, currentFile, error }
+	gdriveExportProgress: jsonb("gdrive_export_progress").$type<{
+		processedFiles: number;
+		totalFiles: number;
+		processedBytes: number;
+		totalBytes: number;
+		currentFile?: string | null;
+		error?: string | null;
+	}>(),
 	gdriveExportedAt: timestamp("gdrive_exported_at", { withTimezone: true }),
 	createdAt: timestamp("created_at", { withTimezone: true })
 		.defaultNow()

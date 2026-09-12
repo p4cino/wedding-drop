@@ -7,7 +7,10 @@ import { verifyAdminToken } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-function getAdminTokenFromRequest(req: NextRequest, body?: any): string | null {
+function getAdminTokenFromRequest(
+	req: NextRequest,
+	body?: { token?: string } | null,
+): string | null {
 	return (
 		req.headers.get("x-admin-token") ||
 		req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ||
@@ -22,7 +25,7 @@ export async function DELETE(
 	{ params }: { params: Promise<{ id: string }> },
 ) {
 	try {
-		let body: any = null;
+		let body: { token?: string } | null = null;
 		try {
 			body = await req.json();
 		} catch (_e) {

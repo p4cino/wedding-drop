@@ -2,41 +2,27 @@
 
 import {
 	AlertCircle,
-	AlertTriangle,
-	ArrowUpRight,
 	CheckCircle2,
-	Cloud,
 	Download,
 	ExternalLink,
-	Eye,
-	EyeOff,
-	Film,
-	HardDrive,
-	Images,
 	Loader2,
 	Lock,
-	Play,
 	QrCode,
-	RefreshCw,
-	Trash2,
-	Unlink,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import type React from "react";
-import { useEffect, useState } from "react";
-
-interface MediaItem {
-	id: string;
-	uploaderName: string;
-	fileType: "image" | "video";
-	originalFileName: string;
-	fileSize: number;
-	thumbUrl: string;
-	rawUrl: string;
-	status: "ready" | "hidden";
-	createdAt: string;
-}
+import { useCallback, useEffect, useState } from "react";
+import {
+	GDriveBackupCard,
+	type GDriveProgressData,
+} from "@/components/owner/GDriveBackupCard";
+import { GDriveExportModal } from "@/components/owner/GDriveExportModal";
+import {
+	MediaGridWithModeration,
+	type OwnerMediaItem,
+} from "@/components/owner/MediaGridWithModeration";
+import { OwnerStatsGrid } from "@/components/owner/OwnerStatsGrid";
 
 export default function OwnerDashboardPage() {
 	const params = useParams();
@@ -48,12 +34,15 @@ export default function OwnerDashboardPage() {
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
 
-	const [galleryInfo, setGalleryInfo] = useState<any>(null);
+	const [galleryInfo, setGalleryInfo] = useState<{
+		coupleNames?: string;
+		[key: string]: unknown;
+	} | null>(null);
 	const [stats, setStats] = useState<{
 		totalFiles: number;
 		totalBytes: number;
 	}>({ totalFiles: 0, totalBytes: 0 });
-	const [mediaList, setMediaList] = useState<MediaItem[]>([]);
+	const [mediaList, setMediaList] = useState<OwnerMediaItem[]>([]);
 	const [filter, setFilter] = useState<"all" | "ready" | "hidden">("all");
 
 	// Google Drive state
@@ -61,7 +50,8 @@ export default function OwnerDashboardPage() {
 	const [hasGDrive, setHasGDrive] = useState(false);
 	const [gdriveEmail, setGDriveEmail] = useState<string | null>(null);
 	const [gdriveStatus, setGDriveStatus] = useState<string>("idle");
-	const [gdriveProgress, setGDriveProgress] = useState<any>(null);
+	const [gdriveProgress, setGDriveProgress] =
+		useState<GDriveProgressData | null>(null);
 	const [gdriveFolderId, setGDriveFolderId] = useState<string | null>(null);
 	const [gdriveExportedAt, setGDriveExportedAt] = useState<string | null>(null);
 	const [showExportModal, setShowExportModal] = useState(false);
@@ -72,66 +62,74 @@ export default function OwnerDashboardPage() {
 		text: string;
 	} | null>(null);
 
-	const loadMedia = async (token = ownerToken, pwd = password) => {
-		try {
-			const headers: Record<string, string> = {};
-			if (token) headers["x-owner-token"] = token;
-			else if (pwd) headers["x-owner-password"] = pwd;
+	const loadMedia = useCallback(
+		async (token = ownerToken) => {
+			try {
+				const headers: Record<string, string> = {};
+				if (token) headers["x-owner-token"] = token;
 
-			const res = await fetch(`/api/gallery/${slug}/media?includeHidden=true`, {
-				headers,
-			});
-			if (res.ok) {
+				const res = await fetch(
+					`/api/gallery/${slug}/media?includeHidden=true`,
+					{
+						headers,
+					},
+				);
+				if (res.ok) {
+					const data = await res.json();
+					setMediaList(data.media || []);
+				}
+			} catch (e) {
+				console.error(e);
+			}
+		},
+		[ownerToken, slug],
+	);
+
+	const doLogin = useCallback(
+		async (pwd: string) => {
+			setError("");
+			setLoading(true);
+
+			try {
+				const res = await fetch(`/api/owner/${slug}/auth`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ password: pwd }),
+				});
+
 				const data = await res.json();
-				setMediaList(data.media || []);
+				if (!res.ok) {
+					setError(data.error || "Błędne hasło");
+					sessionStorage.removeItem(`owner_pwd_${slug}`);
+					sessionStorage.removeItem(`owner_token_${slug}`);
+					return;
+				}
+
+				if (data.ownerToken) {
+					setOwnerToken(data.ownerToken);
+					sessionStorage.setItem(`owner_token_${slug}`, data.ownerToken);
+				}
+				sessionStorage.setItem(`owner_pwd_${slug}`, pwd);
+				setIsAuthenticated(true);
+				setGalleryInfo(data.gallery);
+				setStats(data.stats);
+				setIsGDriveConfigured(data.isGDriveConfigured ?? true);
+				setHasGDrive(Boolean(data.gallery?.hasGDrive));
+				setGDriveEmail(data.gallery?.gdriveAccountEmail || null);
+				setGDriveStatus(data.gallery?.gdriveExportStatus || "idle");
+				setGDriveProgress(data.gallery?.gdriveExportProgress || null);
+				setGDriveFolderId(data.gallery?.gdriveRootFolderId || null);
+				setGDriveExportedAt(data.gallery?.gdriveExportedAt || null);
+
+				loadMedia(data.ownerToken);
+			} catch (_err) {
+				setError("Błąd połączenia");
+			} finally {
+				setLoading(false);
 			}
-		} catch (e) {
-			console.error(e);
-		}
-	};
-
-	const doLogin = async (pwd: string) => {
-		setError("");
-		setLoading(true);
-
-		try {
-			const res = await fetch(`/api/owner/${slug}/auth`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ password: pwd }),
-			});
-
-			const data = await res.json();
-			if (!res.ok) {
-				setError(data.error || "Błędne hasło");
-				sessionStorage.removeItem(`owner_pwd_${slug}`);
-				sessionStorage.removeItem(`owner_token_${slug}`);
-				return;
-			}
-
-			if (data.ownerToken) {
-				setOwnerToken(data.ownerToken);
-				sessionStorage.setItem(`owner_token_${slug}`, data.ownerToken);
-			}
-			sessionStorage.setItem(`owner_pwd_${slug}`, pwd);
-			setIsAuthenticated(true);
-			setGalleryInfo(data.gallery);
-			setStats(data.stats);
-			setIsGDriveConfigured(data.isGDriveConfigured ?? true);
-			setHasGDrive(Boolean(data.gallery?.hasGDrive));
-			setGDriveEmail(data.gallery?.gdriveAccountEmail || null);
-			setGDriveStatus(data.gallery?.gdriveExportStatus || "idle");
-			setGDriveProgress(data.gallery?.gdriveExportProgress || null);
-			setGDriveFolderId(data.gallery?.gdriveRootFolderId || null);
-			setGDriveExportedAt(data.gallery?.gdriveExportedAt || null);
-
-			loadMedia(data.ownerToken, pwd);
-		} catch (_err) {
-			setError("Błąd połączenia");
-		} finally {
-			setLoading(false);
-		}
-	};
+		},
+		[slug, loadMedia],
+	);
 
 	const handleLogin = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -213,7 +211,6 @@ export default function OwnerDashboardPage() {
 			try {
 				const headers: Record<string, string> = {};
 				if (ownerToken) headers["x-owner-token"] = ownerToken;
-				else if (password) headers["x-owner-password"] = password;
 
 				const res = await fetch(`/api/owner/${slug}/gdrive`, {
 					method: "GET",
@@ -236,7 +233,7 @@ export default function OwnerDashboardPage() {
 		}, 3000);
 
 		return () => clearInterval(interval);
-	}, [isAuthenticated, gdriveStatus, slug, ownerToken, password]);
+	}, [isAuthenticated, gdriveStatus, slug, ownerToken]);
 
 	const toggleStatus = async (mediaId: string, currentStatus: string) => {
 		const newStatus = currentStatus === "ready" ? "hidden" : "ready";
@@ -245,7 +242,6 @@ export default function OwnerDashboardPage() {
 				"Content-Type": "application/json",
 			};
 			if (ownerToken) headers["x-owner-token"] = ownerToken;
-			else if (password) headers["x-owner-password"] = password;
 
 			const res = await fetch(`/api/owner/${slug}/media/${mediaId}/status`, {
 				method: "PATCH",
@@ -253,13 +249,14 @@ export default function OwnerDashboardPage() {
 				body: JSON.stringify({
 					newStatus,
 					token: ownerToken,
-					password,
 				}),
 			});
 			if (res.ok) {
 				setMediaList((prev) =>
 					prev.map((m) =>
-						m.id === mediaId ? { ...m, status: newStatus as any } : m,
+						m.id === mediaId
+							? { ...m, status: newStatus as "ready" | "hidden" }
+							: m,
 					),
 				);
 			}
@@ -275,14 +272,12 @@ export default function OwnerDashboardPage() {
 				"Content-Type": "application/json",
 			};
 			if (ownerToken) headers["x-owner-token"] = ownerToken;
-			else if (password) headers["x-owner-password"] = password;
 
 			const res = await fetch(`/api/owner/${slug}/media/${mediaId}`, {
 				method: "DELETE",
 				headers,
 				body: JSON.stringify({
 					token: ownerToken,
-					password,
 				}),
 			});
 			if (res.ok) {
@@ -298,7 +293,7 @@ export default function OwnerDashboardPage() {
 		const tokenParam = ownerToken
 			? `&token=${encodeURIComponent(ownerToken)}`
 			: "";
-		window.location.href = `/api/auth/google?slug=${slug}${tokenParam}&password=${encodeURIComponent(password)}`;
+		window.location.href = `/api/auth/google?slug=${slug}${tokenParam}`;
 	};
 
 	// Obsługa odłączania Dysku Google
@@ -314,12 +309,11 @@ export default function OwnerDashboardPage() {
 				"Content-Type": "application/json",
 			};
 			if (ownerToken) headers["x-owner-token"] = ownerToken;
-			else if (password) headers["x-owner-password"] = password;
 
 			const res = await fetch(`/api/owner/${slug}/gdrive`, {
 				method: "DELETE",
 				headers,
-				body: JSON.stringify({ token: ownerToken, password }),
+				body: JSON.stringify({ token: ownerToken }),
 			});
 			if (res.ok) {
 				setHasGDrive(false);
@@ -344,14 +338,12 @@ export default function OwnerDashboardPage() {
 				"Content-Type": "application/json",
 			};
 			if (ownerToken) headers["x-owner-token"] = ownerToken;
-			else if (password) headers["x-owner-password"] = password;
 
 			const res = await fetch(`/api/owner/${slug}/gdrive/export`, {
 				method: "POST",
 				headers,
 				body: JSON.stringify({
 					token: ownerToken,
-					password,
 					includeHidden: includeHiddenInExport,
 				}),
 			});
@@ -394,9 +386,10 @@ export default function OwnerDashboardPage() {
 								{error}
 							</div>
 						)}
+
 						<div>
-							<label className="block text-xs font-semibold text-slate-700 mb-1">
-								Hasło
+							<label className="block text-xs font-semibold text-slate-700 mb-1.5">
+								Hasło właściciela
 							</label>
 							<input
 								type="password"
@@ -422,33 +415,9 @@ export default function OwnerDashboardPage() {
 		);
 	}
 
-	const filteredMedia = mediaList.filter((m) => {
-		if (filter === "ready") return m.status === "ready";
-		if (filter === "hidden") return m.status === "hidden";
-		return true;
-	});
-
 	const totalMegabytes = (stats.totalBytes / (1024 * 1024)).toFixed(1);
 	const imagesCount = mediaList.filter((m) => m.fileType === "image").length;
 	const videosCount = mediaList.filter((m) => m.fileType === "video").length;
-
-	// Obliczenia postępu Google Drive
-	const progressPercent =
-		gdriveProgress?.totalFiles && gdriveProgress?.totalFiles > 0
-			? Math.min(
-					100,
-					Math.round(
-						(gdriveProgress.processedFiles / gdriveProgress.totalFiles) * 100,
-					),
-				)
-			: 0;
-
-	const processedMB = gdriveProgress?.processedBytes
-		? (gdriveProgress.processedBytes / (1024 * 1024)).toFixed(1)
-		: "0";
-	const totalProgMB = gdriveProgress?.totalBytes
-		? (gdriveProgress.totalBytes / (1024 * 1024)).toFixed(1)
-		: "0";
 
 	return (
 		<div className="min-h-screen bg-[#FAF8F5] pb-20">
@@ -468,6 +437,7 @@ export default function OwnerDashboardPage() {
 					)}
 					<div className="text-xs font-medium flex-1">{gdriveToast.text}</div>
 					<button
+						type="button"
 						onClick={() => setGDriveToast(null)}
 						className="text-xs font-bold opacity-60 hover:opacity-100"
 					>
@@ -506,7 +476,7 @@ export default function OwnerDashboardPage() {
 					</Link>
 
 					<a
-						href={`/api/gallery/${slug}/zip?password=${encodeURIComponent(password)}`}
+						href={`/api/gallery/${slug}/zip?token=${encodeURIComponent(ownerToken)}`}
 						className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-900 text-white shadow-sm transition"
 					>
 						<Download className="w-4 h-4" />
@@ -517,496 +487,47 @@ export default function OwnerDashboardPage() {
 
 			<main className="max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-8">
 				{/* Kafelki statystyk */}
-				<div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-					<div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-						<div className="flex items-center gap-2 text-slate-400 text-xs font-medium mb-1">
-							<Images className="w-4 h-4 text-amber-600" />
-							<span>Zdjęcia</span>
-						</div>
-						<p className="text-2xl font-bold text-slate-900">{imagesCount}</p>
-					</div>
-
-					<div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-						<div className="flex items-center gap-2 text-slate-400 text-xs font-medium mb-1">
-							<Film className="w-4 h-4 text-amber-600" />
-							<span>Filmy</span>
-						</div>
-						<p className="text-2xl font-bold text-slate-900">{videosCount}</p>
-					</div>
-
-					<div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-						<div className="flex items-center gap-2 text-slate-400 text-xs font-medium mb-1">
-							<HardDrive className="w-4 h-4 text-amber-600" />
-							<span>Zajęte miejsce</span>
-						</div>
-						<p className="text-2xl font-bold text-slate-900">
-							{totalMegabytes} MB
-						</p>
-					</div>
-
-					<div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-						<div>
-							<div className="text-slate-400 text-xs font-medium mb-1">
-								Status galerii
-							</div>
-							<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-								Aktywna
-							</span>
-						</div>
-						<button
-							onClick={() => loadMedia()}
-							title="Odśwież"
-							className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 transition"
-						>
-							<RefreshCw className="w-4 h-4" />
-						</button>
-					</div>
-				</div>
+				<OwnerStatsGrid
+					imagesCount={imagesCount}
+					videosCount={videosCount}
+					totalMegabytes={totalMegabytes}
+					onRefresh={() => loadMedia()}
+				/>
 
 				{/* Sekcja: Kopia w chmurze (Google Drive) */}
-				<div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-					<div className="p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-r from-amber-500/5 via-amber-50/20 to-transparent border-b border-slate-100">
-						<div className="flex items-start gap-4">
-							<div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 shadow-xs">
-								<Cloud className="w-6 h-6" />
-							</div>
-							<div>
-								<div className="flex items-center gap-2 mb-1 flex-wrap">
-									<h2 className="text-lg font-bold text-slate-900 font-serif-luxury">
-										Kopia w chmurze Google Drive
-									</h2>
-									{hasGDrive ? (
-										<span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">
-											<CheckCircle2 className="w-3 h-3" />
-											Połączono ({gdriveEmail || "Konto Google"})
-										</span>
-									) : (
-										<span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600">
-											Niepodłączono
-										</span>
-									)}
-								</div>
-								<p className="text-xs text-slate-500 max-w-xl">
-									Prześlij wszystkie zdjęcia i filmy z wesela w 100% oryginalnej
-									rozdzielczości bezpośrednio na swój prywatny Dysk Google w
-									uporządkowanych folderach.
-								</p>
-							</div>
-						</div>
-
-						{/* Przyciski główne akcji */}
-						<div className="flex items-center gap-3 shrink-0 flex-wrap">
-							{!hasGDrive ? (
-								<button
-									onClick={handleConnectGDrive}
-									disabled={!isGDriveConfigured}
-									className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-bold shadow-sm transition ${
-										isGDriveConfigured
-											? "bg-slate-900 hover:bg-slate-800 text-white"
-											: "bg-slate-200 text-slate-400 cursor-not-allowed"
-									}`}
-								>
-									<Cloud className="w-4 h-4" />
-									<span>Połącz z Google Drive</span>
-								</button>
-							) : (
-								<div className="flex items-center gap-2 flex-wrap">
-									{gdriveFolderId && (
-										<a
-											href={`https://drive.google.com/drive/folders/${gdriveFolderId}`}
-											target="_blank"
-											rel="noopener noreferrer"
-											className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition"
-										>
-											<ArrowUpRight className="w-4 h-4" />
-											<span>Otwórz folder na Dysku</span>
-										</a>
-									)}
-
-									<button
-										onClick={() => setShowExportModal(true)}
-										disabled={gdriveStatus === "running"}
-										className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition ${
-											gdriveStatus === "running"
-												? "bg-slate-200 text-slate-400 cursor-not-allowed"
-												: "bg-emerald-600 hover:bg-emerald-700 text-white"
-										}`}
-									>
-										{gdriveStatus === "running" ? (
-											<>
-												<Loader2 className="w-4 h-4 animate-spin" />
-												<span>Trwa eksport...</span>
-											</>
-										) : (
-											<>
-												<Play className="w-3.5 h-3.5" />
-												<span>
-													{gdriveStatus === "interrupted"
-														? "Wznów eksport"
-														: "Eksportuj na Dysk Google"}
-												</span>
-											</>
-										)}
-									</button>
-
-									<button
-										onClick={handleDisconnectGDrive}
-										title="Odłącz konto Google"
-										className="p-2.5 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
-									>
-										<Unlink className="w-4 h-4" />
-									</button>
-								</div>
-							)}
-						</div>
-					</div>
-
-					{!isGDriveConfigured && !hasGDrive && (
-						<div className="p-4 bg-amber-50/60 border-t border-amber-200/60 text-xs text-amber-800 flex items-center gap-2">
-							<AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-							<span>
-								Integracja wymaga ustawienia zmiennych{" "}
-								<code>GOOGLE_CLIENT_ID</code> i{" "}
-								<code>GOOGLE_CLIENT_SECRET</code> w pliku <code>.env</code>{" "}
-								serwera.
-							</span>
-						</div>
-					)}
-
-					{/* Podgląd stanu i paska postępu eksportu */}
-					{hasGDrive && (
-						<div className="p-6 sm:p-8 space-y-4">
-							{gdriveStatus === "running" && (
-								<div className="p-5 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-3">
-									<div className="flex items-center justify-between text-xs font-semibold text-amber-900">
-										<span className="flex items-center gap-2">
-											<Loader2 className="w-4 h-4 animate-spin text-amber-700" />
-											Trwa przesyłanie plików na Twój Dysk Google...
-										</span>
-										<span>
-											{gdriveProgress?.processedFiles || 0} /{" "}
-											{gdriveProgress?.totalFiles || 0} plików (
-											{progressPercent}%)
-										</span>
-									</div>
-
-									{/* Pasek postępu */}
-									<div className="w-full h-3 bg-amber-200/70 rounded-full overflow-hidden">
-										<div
-											className="h-full bg-amber-600 transition-all duration-500 rounded-full"
-											style={{ width: `${progressPercent}%` }}
-										/>
-									</div>
-
-									<div className="flex items-center justify-between text-[11px] text-amber-800/80">
-										<span className="truncate max-w-md">
-											{gdriveProgress?.currentFile
-												? `Wysyłanie: ${gdriveProgress.currentFile}`
-												: "Przetwarzanie..."}
-										</span>
-										<span>
-											{processedMB} MB / {totalProgMB} MB
-										</span>
-									</div>
-
-									<p className="text-[11px] text-amber-700/70 italic">
-										Transfer odbywa się bezpiecznie w tle na serwerze – możesz
-										swobodnie zamknąć kartę lub wyłączyć telefon.
-									</p>
-								</div>
-							)}
-
-							{gdriveStatus === "interrupted" && (
-								<div className="p-4 rounded-2xl bg-orange-50 border border-orange-200 flex items-start justify-between gap-4">
-									<div className="flex items-start gap-3">
-										<AlertTriangle className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
-										<div>
-											<h3 className="text-xs font-bold text-orange-900">
-												Transfer został wstrzymany
-											</h3>
-											<p className="text-xs text-orange-700 mt-0.5">
-												Proces eksportu został przerwany (np. przez restart
-												serwera). Kliknij przycisk „Wznów eksport” powyżej, aby
-												kontynuować od ostatniego pliku.
-											</p>
-										</div>
-									</div>
-								</div>
-							)}
-
-							{gdriveStatus === "failed" && (
-								<div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3">
-									<AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-									<div>
-										<h3 className="text-xs font-bold text-red-900">
-											Wystąpił problem podczas eksportu
-										</h3>
-										<p className="text-xs text-red-700 mt-0.5">
-											{gdriveProgress?.error ||
-												"Nie udało się ukończyć transferu. Spróbuj ponownie za chwilę."}
-										</p>
-									</div>
-								</div>
-							)}
-
-							{gdriveStatus === "completed" && (
-								<div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-4 flex-wrap">
-									<div className="flex items-center gap-3">
-										<CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-										<div>
-											<h3 className="text-xs font-bold text-emerald-900">
-												Wszystkie pliki zostały pomyślnie przesłane na Dysk
-												Google!
-											</h3>
-											<p className="text-xs text-emerald-700">
-												{gdriveExportedAt
-													? `Ostatni eksport: ${new Date(gdriveExportedAt).toLocaleString("pl-PL")}`
-													: "Pliki są posegregowane w folderach Zdjęcia i Filmy."}
-											</p>
-										</div>
-									</div>
-
-									{gdriveFolderId && (
-										<a
-											href={`https://drive.google.com/drive/folders/${gdriveFolderId}`}
-											target="_blank"
-											rel="noopener noreferrer"
-											className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition"
-										>
-											<ArrowUpRight className="w-4 h-4" />
-											<span>Zobacz na Dysku Google</span>
-										</a>
-									)}
-								</div>
-							)}
-
-							{gdriveStatus === "idle" && (
-								<div className="text-xs text-slate-500 flex items-center justify-between flex-wrap gap-2">
-									<span>
-										Dysk podłączony do: <strong>{gdriveEmail}</strong>. Gotowy
-										do uruchomienia eksportu.
-									</span>
-									{gdriveExportedAt && (
-										<span className="text-[11px] text-slate-400">
-											Ostatni eksport:{" "}
-											{new Date(gdriveExportedAt).toLocaleString("pl-PL")}
-										</span>
-									)}
-								</div>
-							)}
-						</div>
-					)}
-				</div>
-
-				{/* Pasek filtrowania i moderacji */}
-				<div className="bg-white p-4 rounded-2xl border border-slate-200/80 flex flex-wrap items-center justify-between gap-4">
-					<div className="flex items-center gap-2 text-xs font-medium">
-						<span className="text-slate-400 mr-1">Filtruj:</span>
-						<button
-							onClick={() => setFilter("all")}
-							className={`px-3 py-1.5 rounded-xl transition ${
-								filter === "all"
-									? "bg-slate-900 text-white"
-									: "bg-slate-100 text-slate-600 hover:bg-slate-200"
-							}`}
-						>
-							Wszystkie ({mediaList.length})
-						</button>
-						<button
-							onClick={() => setFilter("ready")}
-							className={`px-3 py-1.5 rounded-xl transition ${
-								filter === "ready"
-									? "bg-slate-900 text-white"
-									: "bg-slate-100 text-slate-600 hover:bg-slate-200"
-							}`}
-						>
-							Widoczne ({mediaList.filter((m) => m.status === "ready").length})
-						</button>
-						<button
-							onClick={() => setFilter("hidden")}
-							className={`px-3 py-1.5 rounded-xl transition ${
-								filter === "hidden"
-									? "bg-slate-900 text-white"
-									: "bg-slate-100 text-slate-600 hover:bg-slate-200"
-							}`}
-						>
-							Ukryte ({mediaList.filter((m) => m.status === "hidden").length})
-						</button>
-					</div>
-
-					<p className="text-xs text-slate-400">
-						Kliknij ikonę oka, aby ukryć zdjęcie przed gośćmi (będzie widoczne
-						tylko dla Was w ZIP i na Dysku Google).
-					</p>
-				</div>
+				<GDriveBackupCard
+					hasGDrive={hasGDrive}
+					gdriveEmail={gdriveEmail}
+					gdriveStatus={gdriveStatus}
+					gdriveProgress={gdriveProgress}
+					gdriveFolderId={gdriveFolderId}
+					gdriveExportedAt={gdriveExportedAt}
+					isGDriveConfigured={isGDriveConfigured}
+					onConnect={handleConnectGDrive}
+					onDisconnect={handleDisconnectGDrive}
+					onOpenExportModal={() => setShowExportModal(true)}
+				/>
 
 				{/* Siatka moderacji */}
-				<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-					{filteredMedia.map((item) => (
-						<div
-							key={item.id}
-							className={`relative bg-white rounded-2xl overflow-hidden border shadow-xs transition group ${
-								item.status === "hidden"
-									? "opacity-60 border-dashed border-red-300"
-									: "border-slate-200"
-							}`}
-						>
-							<div className="aspect-square relative overflow-hidden bg-slate-100">
-								<img
-									src={item.thumbUrl}
-									alt=""
-									className="w-full h-full object-cover"
-								/>
-								{item.status === "hidden" && (
-									<div className="absolute inset-0 bg-red-950/40 flex items-center justify-center text-white text-[10px] font-bold uppercase tracking-wider">
-										Ukryte
-									</div>
-								)}
-							</div>
-
-							{/* Pasek akcji pod zdjęciem */}
-							<div className="p-2.5 flex items-center justify-between gap-1 text-xs">
-								<span className="truncate text-slate-600 font-medium text-[11px]">
-									{item.uploaderName}
-								</span>
-
-								<div className="flex items-center gap-1 shrink-0">
-									<button
-										onClick={() => toggleStatus(item.id, item.status)}
-										title={
-											item.status === "ready"
-												? "Ukryj przed gośćmi"
-												: "Pokaż w galerii"
-										}
-										className={`p-1.5 rounded-lg transition ${
-											item.status === "ready"
-												? "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-												: "text-amber-600 bg-amber-50 hover:bg-amber-100"
-										}`}
-									>
-										{item.status === "ready" ? (
-											<Eye className="w-3.5 h-3.5" />
-										) : (
-											<EyeOff className="w-3.5 h-3.5" />
-										)}
-									</button>
-
-									<button
-										onClick={() => deleteMedia(item.id)}
-										title="Usuń bezpowrotnie"
-										className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
-									>
-										<Trash2 className="w-3.5 h-3.5" />
-									</button>
-								</div>
-							</div>
-						</div>
-					))}
-				</div>
+				<MediaGridWithModeration
+					mediaList={mediaList}
+					filter={filter}
+					setFilter={setFilter}
+					onToggleStatus={toggleStatus}
+					onDeleteMedia={deleteMedia}
+				/>
 			</main>
 
 			{/* Modal konfiguracji eksportu do Google Drive */}
-			{showExportModal && (
-				<div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-					<div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-100 space-y-5 animate-in fade-in zoom-in-95">
-						<div className="flex items-center gap-3">
-							<div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
-								<Cloud className="w-5 h-5" />
-							</div>
-							<div>
-								<h3 className="text-base font-bold text-slate-900">
-									Eksport na Dysk Google
-								</h3>
-								<p className="text-xs text-slate-500">
-									Wybierz zakres przesyłanych multimediów
-								</p>
-							</div>
-						</div>
-
-						<div className="space-y-3 text-xs">
-							<label className="flex items-start gap-3 p-3.5 rounded-2xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition">
-								<input
-									type="radio"
-									name="export_scope"
-									checked={includeHiddenInExport}
-									onChange={() => setIncludeHiddenInExport(true)}
-									className="mt-0.5 text-amber-600 focus:ring-amber-500"
-								/>
-								<div>
-									<span className="font-semibold text-slate-900 block">
-										Prześlij wszystko (w tym ukryte)
-									</span>
-									<span className="text-slate-500 block mt-0.5">
-										Zdjęcia ukryte przed gośćmi trafią do dedykowanego
-										podfolderu <strong>„Ukryte”</strong> na Twoim Dysku.
-									</span>
-								</div>
-							</label>
-
-							<label className="flex items-start gap-3 p-3.5 rounded-2xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition">
-								<input
-									type="radio"
-									name="export_scope"
-									checked={!includeHiddenInExport}
-									onChange={() => setIncludeHiddenInExport(false)}
-									className="mt-0.5 text-amber-600 focus:ring-amber-500"
-								/>
-								<div>
-									<span className="font-semibold text-slate-900 block">
-										Tylko widoczne multimedia
-									</span>
-									<span className="text-slate-500 block mt-0.5">
-										Pliki oznaczone jako ukryte zostaną pominięte podczas
-										eksportu.
-									</span>
-								</div>
-							</label>
-						</div>
-
-						<div className="p-3 bg-slate-50 rounded-xl text-[11px] text-slate-600 space-y-1">
-							<p>
-								📁 Na Twoim Dysku Google zostanie utworzony folder:
-								<br />
-								<span className="font-mono font-semibold text-slate-800">
-									WeddingDrop - {galleryInfo?.coupleNames || "Para Młoda"}
-								</span>
-							</p>
-							<p className="text-slate-400">
-								Pliki zostaną rozpakowane i zachowają oryginalną jakość 1:1.
-							</p>
-						</div>
-
-						<div className="flex items-center justify-end gap-2 pt-2">
-							<button
-								type="button"
-								onClick={() => setShowExportModal(false)}
-								disabled={exportLoading}
-								className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition"
-							>
-								Anuluj
-							</button>
-							<button
-								type="button"
-								onClick={handleStartExport}
-								disabled={exportLoading}
-								className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition"
-							>
-								{exportLoading ? (
-									<>
-										<Loader2 className="w-3.5 h-3.5 animate-spin" />
-										<span>Inicjalizacja...</span>
-									</>
-								) : (
-									<>
-										<Play className="w-3.5 h-3.5" />
-										<span>Rozpocznij eksport</span>
-									</>
-								)}
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
+			<GDriveExportModal
+				isOpen={showExportModal}
+				coupleNames={galleryInfo?.coupleNames || ""}
+				includeHidden={includeHiddenInExport}
+				setIncludeHidden={setIncludeHiddenInExport}
+				exportLoading={exportLoading}
+				onClose={() => setShowExportModal(false)}
+				onStartExport={handleStartExport}
+			/>
 		</div>
 	);
 }

@@ -173,24 +173,22 @@ Dla zapewnienia błyskawicznego działania zapytań SQL na tysiącach zdjęć ut
   - Oparte o nowoczesny strumień `ZipArchive` z pakietu `archiver` (brak buforowania gigabajtów w RAM).
 - `GET /media-file/*` – Bezpieczne serwowanie statycznych miniaturek i plików źródłowych z twardą weryfikacją `path.resolve` zabezpieczającą przed wyjściem poza katalog `/data`.
 
-### Panel Pary Młodej
-- `POST /api/owner` – Akcje autoryzowane hasłem właściciela (`password`):
-  - `action: "login"` – Weryfikacja hasła, zwrócenie statystyk galerii, stanu Google Drive i ustawień.
-  - `action: "toggle-status"` – Zmiana widoczności zdjęcia (`ready` <-> `hidden`) wraz z natychmiastową emisją SSE `media-updated`.
-  - `action: "delete-media"` – Fizyczne usunięcie pliku źródłowego i miniatury z dysku oraz bazy danych z powiadomieniem SSE.
-  - `action: "update-card"` – Utrwalenie w bazie zmodyfikowanych kolorów i tekstów karteczki.
-  - `action: "start-gdrive-export"` – Uruchomienie asynchronicznego eksportu multimediów na Dysk Google w tle z opcją dołączenia ukrytych zdjęć.
-  - `action: "disconnect-gdrive"` – Bezpieczne odłączenie konta Google Drive i usunięcie tokenów z bazy.
-  - `action: "get-gdrive-status"` – Pobranie aktualnego stanu transferu, liczby przetworzonych bajtów i linku do folderu.
-- `GET /api/auth/google` – Inicjalizacja autoryzacji Google OAuth 2.0 (weryfikacja hasła, podpis stanu HMAC, wymuszenie offline refresh_token).
+### Panel Pary Młodej (RESTful API)
+- `POST /api/owner/:slug/auth` – Logowanie hasłem właściciela, wydanie podpisanego tokenu HMAC-SHA256, zwrócenie statystyk galerii, stanu Google Drive i konfiguracji winietki.
+- `PATCH /api/owner/:slug/media/:id/status` – Zmiana widoczności zdjęcia (`ready` <-> `hidden`) autoryzowana tokenem HMAC, wraz z natychmiastową emisją SSE `media-updated`.
+- `DELETE /api/owner/:slug/media/:id` – Fizyczne usunięcie pliku źródłowego i miniatury z dysku oraz bazy danych z powiadomieniem SSE.
+- `PUT /api/owner/:slug/card` – Zapis zmodyfikowanych kolorów i tekstów winietki.
+- `GET /api/owner/:slug/gdrive` – Pobranie aktualnego stanu transferu, liczby przetworzonych bajtów i linku do folderu Google Drive.
+- `POST /api/owner/:slug/gdrive/export` – Uruchomienie asynchronicznego eksportu multimediów na Dysk Google w tle z opcją dołączenia ukrytych zdjęć.
+- `DELETE /api/owner/:slug/gdrive` – Bezpieczne odłączenie konta Google Drive i usunięcie tokenów z bazy.
+- `GET /api/auth/google` – Inicjalizacja autoryzacji Google OAuth 2.0 (weryfikacja tokenu HMAC, podpis stanu, wymuszenie offline refresh_token).
 - `GET /api/auth/google/callback` – Obsługa zwrotna OAuth 2.0, weryfikacja integralności tokena stanu, wymiana kodu na refresh token i przekierowanie z powrotem do panelu.
 
-### Panel Administratora
-- `POST /api/admin` – Akcje administracyjne chronione kryptograficznym tokenem HMAC-SHA256:
-  - `action: "login"` – Logowanie administratora, weryfikacja `bcrypt` i generowanie podpisanego tokena o ważności 7 dni.
-  - `action: "list-galleries"` – Zestawienie wszystkich wesel z dynamicznie agregowanymi statystykami dyskowymi.
-  - `action: "create-gallery"` – Tworzenie nowego wesela ze ścisłą walidacją sluga (`^[a-z0-9_-]+$`), generowaniem struktury folderów i haszowaniem hasła.
-  - `action: "delete-gallery"` – Całkowite i bezpowrotne usunięcie galerii z bazy oraz fizyczne usunięcie powiązanego katalogu z dysku.
+### Panel Administratora (RESTful API)
+- `POST /api/admin/auth` – Logowanie administratora, weryfikacja hasła i generowanie podpisanego tokena HMAC-SHA256 o ważności 7 dni.
+- `GET /api/admin/galleries` – Zestawienie wszystkich wesel z dynamicznie agregowanymi statystykami dyskowymi.
+- `POST /api/admin/galleries` – Tworzenie nowego wesela ze ścisłą walidacją sluga (`^[a-z0-9_-]+$`), generowaniem struktury folderów i haszowaniem hasła.
+- `DELETE /api/admin/galleries/:id` – Całkowite i bezpowrotne usunięcie galerii z bazy oraz fizyczne usunięcie powiązanego katalogu z dysku.
 
 ---
 

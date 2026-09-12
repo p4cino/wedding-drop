@@ -73,6 +73,9 @@ export default function UploaderDrawer({
 						? `${window.location.origin}/api/upload/tus`
 						: "/api/upload/tus";
 
+				let lastUpdateTime = 0;
+				let lastPercentage = -1;
+
 				const upload = new tus.Upload(item.file, {
 					endpoint: tusEndpoint,
 					retryDelays: [0, 1000, 3000, 5000],
@@ -96,13 +99,22 @@ export default function UploaderDrawer({
 					},
 					onProgress: (bytesUploaded, bytesTotal) => {
 						const percentage = Math.round((bytesUploaded / bytesTotal) * 100);
-						setFiles((prev) =>
-							prev.map((f) =>
-								f.id === item.id
-									? { ...f, progress: percentage, status: "uploading" }
-									: f,
-							),
-						);
+						const now = Date.now();
+						if (
+							percentage === 100 ||
+							percentage - lastPercentage >= 3 ||
+							now - lastUpdateTime > 100
+						) {
+							lastPercentage = percentage;
+							lastUpdateTime = now;
+							setFiles((prev) =>
+								prev.map((f) =>
+									f.id === item.id
+										? { ...f, progress: percentage, status: "uploading" }
+										: f,
+								),
+							);
+						}
 					},
 					onSuccess: () => {
 						setFiles((prev) =>

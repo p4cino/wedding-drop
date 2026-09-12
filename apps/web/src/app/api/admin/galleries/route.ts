@@ -8,7 +8,10 @@ import { verifyAdminToken } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-function getAdminTokenFromRequest(req: NextRequest, body?: any): string | null {
+function getAdminTokenFromRequest(
+	req: NextRequest,
+	body?: { token?: string } | null,
+): string | null {
 	return (
 		req.headers.get("x-admin-token") ||
 		req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ||
@@ -107,8 +110,7 @@ export async function POST(req: NextRequest) {
 				})
 				.replace(/[^a-z0-9]+/g, "-")
 				.replace(/^-+|-+$/g, "");
-			const year =
-				weddingDate.slice(0, 4) || String(new Date().getFullYear());
+			const year = weddingDate.slice(0, 4) || String(new Date().getFullYear());
 			slug = `${normalized}-${year}`;
 		}
 

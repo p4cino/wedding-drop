@@ -49,7 +49,7 @@ vi.mock("@wedding-drop/media", () => ({
 let mockGalleryList: any[] = [];
 let mockAdminList: any[] = [];
 
-import { admins, galleries } from "@wedding-drop/db";
+import { admins } from "@wedding-drop/db";
 
 vi.mock("@wedding-drop/db", async (importOriginal) => {
 	const actual = await importOriginal<Record<string, any>>();

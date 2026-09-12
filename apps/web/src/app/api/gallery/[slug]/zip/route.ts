@@ -94,13 +94,13 @@ export async function GET(
 		}
 
 		// Konwersja Node Stream do standardowego Web Stream
-		const webStream = (Readable as any).toWeb(passThrough);
+		const webStream = Readable.toWeb(passThrough);
 
 		const safeSlug = slug.replace(/[^a-zA-Z0-9_-]/g, "");
 		const dateStr = new Date().toISOString().slice(0, 10);
 		const filename = `galeria-${safeSlug}-${dateStr}.zip`;
 
-		return new Response(webStream as any, {
+		return new Response(webStream as unknown as BodyInit, {
 			headers: {
 				"Content-Type": "application/zip",
 				"Content-Disposition": `attachment; filename="${filename}"`,
