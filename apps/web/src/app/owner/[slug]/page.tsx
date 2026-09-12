@@ -43,6 +43,7 @@ export default function OwnerDashboardPage() {
 	const slug = params?.slug as string;
 
 	const [password, setPassword] = useState("");
+	const [ownerToken, setOwnerToken] = useState("");
 	const [isAuthenticated, setIsAuthenticated] = useState(false);
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
@@ -71,11 +72,15 @@ export default function OwnerDashboardPage() {
 		text: string;
 	} | null>(null);
 
-	const loadMedia = async (pwd = password) => {
+	const loadMedia = async (token = ownerToken, pwd = password) => {
 		try {
-			const res = await fetch(
-				`/api/gallery/${slug}/media?includeHidden=true&password=${encodeURIComponent(pwd)}`,
-			);
+			const headers: Record<string, string> = {};
+			if (token) headers["x-owner-token"] = token;
+			else if (pwd) headers["x-owner-password"] = pwd;
+
+			const res = await fetch(`/api/gallery/${slug}/media?includeHidden=true`, {
+				headers,
+			});
 			if (res.ok) {
 				const data = await res.json();
 				setMediaList(data.media || []);
@@ -90,19 +95,24 @@ export default function OwnerDashboardPage() {
 		setLoading(true);
 
 		try {
-			const res = await fetch("/api/owner", {
+			const res = await fetch(`/api/owner/${slug}/auth`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ action: "login", slug, password: pwd }),
+				body: JSON.stringify({ password: pwd }),
 			});
 
 			const data = await res.json();
 			if (!res.ok) {
 				setError(data.error || "Błędne hasło");
 				sessionStorage.removeItem(`owner_pwd_${slug}`);
+				sessionStorage.removeItem(`owner_token_${slug}`);
 				return;
 			}
 
+			if (data.ownerToken) {
+				setOwnerToken(data.ownerToken);
+				sessionStorage.setItem(`owner_token_${slug}`, data.ownerToken);
+			}
 			sessionStorage.setItem(`owner_pwd_${slug}`, pwd);
 			setIsAuthenticated(true);
 			setGalleryInfo(data.gallery);
@@ -115,7 +125,7 @@ export default function OwnerDashboardPage() {
 			setGDriveFolderId(data.gallery?.gdriveRootFolderId || null);
 			setGDriveExportedAt(data.gallery?.gdriveExportedAt || null);
 
-			loadMedia(pwd);
+			loadMedia(data.ownerToken, pwd);
 		} catch (_err) {
 			setError("Błąd połączenia");
 		} finally {
@@ -154,7 +164,11 @@ export default function OwnerDashboardPage() {
 				);
 			}
 
+			const savedToken = sessionStorage.getItem(`owner_token_${slug}`);
 			const savedPwd = sessionStorage.getItem(`owner_pwd_${slug}`);
+			if (savedToken) {
+				setOwnerToken(savedToken);
+			}
 			if (savedPwd) {
 				setPassword(savedPwd);
 				doLogin(savedPwd);
@@ -197,10 +211,13 @@ export default function OwnerDashboardPage() {
 
 		const interval = setInterval(async () => {
 			try {
-				const res = await fetch("/api/owner", {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ action: "get-gdrive-status", slug, password }),
+				const headers: Record<string, string> = {};
+				if (ownerToken) headers["x-owner-token"] = ownerToken;
+				else if (password) headers["x-owner-password"] = password;
+
+				const res = await fetch(`/api/owner/${slug}/gdrive`, {
+					method: "GET",
+					headers,
 				});
 				if (res.ok) {
 					const data = await res.json();
@@ -219,20 +236,24 @@ export default function OwnerDashboardPage() {
 		}, 3000);
 
 		return () => clearInterval(interval);
-	}, [isAuthenticated, gdriveStatus, slug, password]);
+	}, [isAuthenticated, gdriveStatus, slug, ownerToken, password]);
 
 	const toggleStatus = async (mediaId: string, currentStatus: string) => {
 		const newStatus = currentStatus === "ready" ? "hidden" : "ready";
 		try {
-			const res = await fetch("/api/owner", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
+			const headers: Record<string, string> = {
+				"Content-Type": "application/json",
+			};
+			if (ownerToken) headers["x-owner-token"] = ownerToken;
+			else if (password) headers["x-owner-password"] = password;
+
+			const res = await fetch(`/api/owner/${slug}/media/${mediaId}/status`, {
+				method: "PATCH",
+				headers,
 				body: JSON.stringify({
-					action: "toggle-status",
-					slug,
-					password,
-					mediaId,
 					newStatus,
+					token: ownerToken,
+					password,
 				}),
 			});
 			if (res.ok) {
@@ -250,14 +271,18 @@ export default function OwnerDashboardPage() {
 	const deleteMedia = async (mediaId: string) => {
 		if (!confirm("Czy na pewno chcesz bezpowrotnie usunąć ten plik?")) return;
 		try {
-			const res = await fetch("/api/owner", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
+			const headers: Record<string, string> = {
+				"Content-Type": "application/json",
+			};
+			if (ownerToken) headers["x-owner-token"] = ownerToken;
+			else if (password) headers["x-owner-password"] = password;
+
+			const res = await fetch(`/api/owner/${slug}/media/${mediaId}`, {
+				method: "DELETE",
+				headers,
 				body: JSON.stringify({
-					action: "delete-media",
-					slug,
+					token: ownerToken,
 					password,
-					mediaId,
 				}),
 			});
 			if (res.ok) {
@@ -270,7 +295,10 @@ export default function OwnerDashboardPage() {
 
 	// Obsługa łączenia z Dyskiem Google
 	const handleConnectGDrive = () => {
-		window.location.href = `/api/auth/google?slug=${slug}&password=${encodeURIComponent(password)}`;
+		const tokenParam = ownerToken
+			? `&token=${encodeURIComponent(ownerToken)}`
+			: "";
+		window.location.href = `/api/auth/google?slug=${slug}${tokenParam}&password=${encodeURIComponent(password)}`;
 	};
 
 	// Obsługa odłączania Dysku Google
@@ -282,10 +310,16 @@ export default function OwnerDashboardPage() {
 		)
 			return;
 		try {
-			const res = await fetch("/api/owner", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ action: "disconnect-gdrive", slug, password }),
+			const headers: Record<string, string> = {
+				"Content-Type": "application/json",
+			};
+			if (ownerToken) headers["x-owner-token"] = ownerToken;
+			else if (password) headers["x-owner-password"] = password;
+
+			const res = await fetch(`/api/owner/${slug}/gdrive`, {
+				method: "DELETE",
+				headers,
+				body: JSON.stringify({ token: ownerToken, password }),
 			});
 			if (res.ok) {
 				setHasGDrive(false);
@@ -306,12 +340,17 @@ export default function OwnerDashboardPage() {
 	const handleStartExport = async () => {
 		setExportLoading(true);
 		try {
-			const res = await fetch("/api/owner", {
+			const headers: Record<string, string> = {
+				"Content-Type": "application/json",
+			};
+			if (ownerToken) headers["x-owner-token"] = ownerToken;
+			else if (password) headers["x-owner-password"] = password;
+
+			const res = await fetch(`/api/owner/${slug}/gdrive/export`, {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers,
 				body: JSON.stringify({
-					action: "start-gdrive-export",
-					slug,
+					token: ownerToken,
 					password,
 					includeHidden: includeHiddenInExport,
 				}),

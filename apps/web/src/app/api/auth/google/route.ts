@@ -3,6 +3,7 @@ import { getGoogleAuthUrl, isGoogleDriveConfigured } from "@wedding-drop/media";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
+import { verifyOwnerToken } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -20,36 +21,48 @@ export async function GET(req: NextRequest) {
 
 		const { searchParams } = new URL(req.url);
 		const slug = searchParams.get("slug");
+		const token = searchParams.get("token");
 		const password = searchParams.get("password");
 
-		if (!slug || !password) {
+		if (!slug || (!token && !password)) {
 			return NextResponse.json(
-				{ error: "Wymagany jest slug galerii oraz hasło właściciela." },
+				{
+					error: "Wymagany jest slug galerii oraz token lub hasło właściciela.",
+				},
 				{ status: 400 },
 			);
 		}
 
 		// Weryfikacja tożsamości właściciela galerii
-		const galleryResult = await db
-			.select()
-			.from(galleries)
-			.where(eq(galleries.slug, slug))
-			.limit(1);
-
-		if (!galleryResult.length) {
+		if (token && !verifyOwnerToken(token, slug)) {
 			return NextResponse.json(
-				{ error: "Galeria nie istnieje." },
-				{ status: 404 },
+				{ error: "Nieprawidłowy token właściciela galerii." },
+				{ status: 401 },
 			);
 		}
 
-		const gallery = galleryResult[0];
-		const isValid = await bcrypt.compare(password, gallery.ownerPasswordHash);
-		if (!isValid) {
-			return NextResponse.json(
-				{ error: "Nieprawidłowe hasło właściciela galerii." },
-				{ status: 401 },
-			);
+		if (!token && password) {
+			const galleryResult = await db
+				.select()
+				.from(galleries)
+				.where(eq(galleries.slug, slug))
+				.limit(1);
+
+			if (!galleryResult.length) {
+				return NextResponse.json(
+					{ error: "Galeria nie istnieje." },
+					{ status: 404 },
+				);
+			}
+
+			const gallery = galleryResult[0];
+			const isValid = await bcrypt.compare(password, gallery.ownerPasswordHash);
+			if (!isValid) {
+				return NextResponse.json(
+					{ error: "Nieprawidłowe hasło właściciela galerii." },
+					{ status: 401 },
+				);
+			}
 		}
 
 		// Generujemy bezpieczny URL Google OAuth ze stanem HMAC

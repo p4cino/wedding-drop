@@ -2,7 +2,7 @@ import { db, galleries, mediaItems } from "@wedding-drop/db";
 import bcrypt from "bcryptjs";
 import { and, desc, eq, ne } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
-import { verifyAdminToken } from "@/app/api/admin/route";
+import { verifyAdminToken, verifyOwnerToken } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -31,9 +31,15 @@ export async function GET(
 
 		let canViewHidden = false;
 		if (includeHidden) {
+			const ownerToken =
+				req.headers.get("x-owner-token") || searchParams.get("ownerToken");
+			if (ownerToken && verifyOwnerToken(ownerToken, slug)) {
+				canViewHidden = true;
+			}
 			const ownerPassword =
 				req.headers.get("x-owner-password") || searchParams.get("password");
 			if (
+				!canViewHidden &&
 				ownerPassword &&
 				(await bcrypt.compare(ownerPassword, gallery.ownerPasswordHash))
 			) {
@@ -41,7 +47,7 @@ export async function GET(
 			}
 			const adminToken =
 				req.headers.get("x-admin-token") || searchParams.get("adminToken");
-			if (adminToken && verifyAdminToken(adminToken)) {
+			if (!canViewHidden && adminToken && verifyAdminToken(adminToken)) {
 				canViewHidden = true;
 			}
 

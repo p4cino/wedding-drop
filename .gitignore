@@ -22,7 +22,8 @@ dist/
 /data/
 data/
 tus_temp/
-galleries/
+/galleries/
+data/galleries/
 *.tar.gz
 *.zip
 
