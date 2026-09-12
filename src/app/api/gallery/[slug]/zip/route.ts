@@ -4,119 +4,116 @@ import { galleries, mediaItems } from "@/db/schema";
 import { eq, and, ne, inArray } from "drizzle-orm";
 import path from "node:path";
 import fs from "node:fs";
-import { PassThrough, Readable } from "node:stream";
-import { ZipArchive } from "archiver";
+import { Readable } from "node:stream";
+import { createGalleryZipStream } from "@/lib/zip-streamer";
 import bcrypt from "bcryptjs";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
+	req: NextRequest,
+	{ params }: { params: Promise<{ slug: string }> },
 ) {
-  try {
-    const { slug } = await params;
-    const galleryResult = await db
-      .select()
-      .from(galleries)
-      .where(eq(galleries.slug, slug))
-      .limit(1);
+	try {
+		const { slug } = await params;
+		const galleryResult = await db
+			.select()
+			.from(galleries)
+			.where(eq(galleries.slug, slug))
+			.limit(1);
 
-    if (!galleryResult.length) {
-      return NextResponse.json({ error: "Galeria nie istnieje" }, { status: 404 });
-    }
+		if (!galleryResult.length) {
+			return NextResponse.json(
+				{ error: "Galeria nie istnieje" },
+				{ status: 404 },
+			);
+		}
 
-    const gallery = galleryResult[0];
-    const { searchParams } = new URL(req.url);
-    const providedPassword = req.headers.get("x-owner-password") || searchParams.get("password");
-    let isOwner = false;
+		const gallery = galleryResult[0];
+		const { searchParams } = new URL(req.url);
+		const providedPassword =
+			req.headers.get("x-owner-password") || searchParams.get("password");
+		let isOwner = false;
 
-    if (providedPassword) {
-      isOwner = await bcrypt.compare(providedPassword, gallery.ownerPasswordHash);
-    }
+		if (providedPassword) {
+			isOwner = await bcrypt.compare(
+				providedPassword,
+				gallery.ownerPasswordHash,
+			);
+		}
 
-    // Jeśli to nie jest właściciel, sprawdzamy uprawnienia gościa
-    if (!isOwner) {
-      if (!gallery.allowGuestDownloads) {
-        return NextResponse.json(
-          { error: "Pobieranie plików zostało wyłączone przez Parę Młodą" },
-          { status: 403 }
-        );
-      }
-      if (gallery.accessPin) {
-        const pin = req.headers.get("x-access-pin") || searchParams.get("pin");
-        if (pin !== gallery.accessPin) {
-          return NextResponse.json(
-            { error: "Wymagany prawidłowy kod PIN galerii" },
-            { status: 401 }
-          );
-        }
-      }
-    }
+		// Jeśli to nie jest właściciel, sprawdzamy uprawnienia gościa
+		if (!isOwner) {
+			if (!gallery.allowGuestDownloads) {
+				return NextResponse.json(
+					{ error: "Pobieranie plików zostało wyłączone przez Parę Młodą" },
+					{ status: 403 },
+				);
+			}
+			if (gallery.accessPin) {
+				const pin = req.headers.get("x-access-pin") || searchParams.get("pin");
+				if (pin !== gallery.accessPin) {
+					return NextResponse.json(
+						{ error: "Wymagany prawidłowy kod PIN galerii" },
+						{ status: 401 },
+					);
+				}
+			}
+		}
 
-    // Właściciel pobiera zdjęcia gotowe oraz ukryte (zgodnie z obietnicą w UI)
-    const statusCondition = isOwner
-      ? and(eq(mediaItems.galleryId, gallery.id), ne(mediaItems.status, "deleted"))
-      : and(eq(mediaItems.galleryId, gallery.id), eq(mediaItems.status, "ready"));
+		// Właściciel pobiera zdjęcia gotowe oraz ukryte (zgodnie z obietnicą w UI)
+		const statusCondition = isOwner
+			? and(
+					eq(mediaItems.galleryId, gallery.id),
+					ne(mediaItems.status, "deleted"),
+				)
+			: and(
+					eq(mediaItems.galleryId, gallery.id),
+					eq(mediaItems.status, "ready"),
+				);
 
-    const items = await db
-      .select()
-      .from(mediaItems)
-      .where(statusCondition);
+		const items = await db.select().from(mediaItems).where(statusCondition);
 
-    if (items.length === 0) {
-      return NextResponse.json({ error: "Brak zdjęć do pobrania w tej galerii" }, { status: 400 });
-    }
+		if (items.length === 0) {
+			return NextResponse.json(
+				{ error: "Brak zdjęć do pobrania w tej galerii" },
+				{ status: 400 },
+			);
+		}
 
-    const dataDir = process.env.DATA_DIR || path.join(process.cwd(), "data");
+		const dataDir = process.env.DATA_DIR || path.join(process.cwd(), "data");
 
-    // Utworzenie strumienia PassThrough i archiwizera zip
-    const passThrough = new PassThrough();
-    const archive = new ZipArchive({
-      zlib: { level: 1 }, // Poziom 1 (błyskawiczna kompresja, zero niepotrzebnego obciążenia procesora N100)
-    });
+		const { stream: passThrough, addedCount } = createGalleryZipStream(
+			items,
+			dataDir,
+		);
 
-    archive.on("error", (err: any) => {
-      console.error("Błąd archiwizera ZIP:", err);
-      passThrough.destroy(err);
-    });
+		if (addedCount === 0) {
+			return NextResponse.json(
+				{ error: "Pliki fizyczne nie zostały znalezione na dysku" },
+				{ status: 404 },
+			);
+		}
 
-    archive.pipe(passThrough);
+		// Konwersja Node Stream do standardowego Web Stream
+		const webStream = (Readable as any).toWeb(passThrough);
 
-    // Dodawanie plików do archiwum
-    let addedCount = 0;
-    items.forEach((item, idx) => {
-      const fullPath = path.join(dataDir, item.storagePath);
-      if (fs.existsSync(fullPath)) {
-        const safeName = item.originalFileName.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const entryName = `${String(idx + 1).padStart(3, "0")}_${safeName}`;
-        archive.file(fullPath, { name: entryName });
-        addedCount++;
-      }
-    });
+		const safeSlug = slug.replace(/[^a-zA-Z0-9_-]/g, "");
+		const dateStr = new Date().toISOString().slice(0, 10);
+		const filename = `galeria-${safeSlug}-${dateStr}.zip`;
 
-    if (addedCount === 0) {
-      return NextResponse.json({ error: "Pliki fizyczne nie zostały znalezione na dysku" }, { status: 404 });
-    }
-
-    archive.finalize();
-
-    // Konwersja Node Stream do standardowego Web Stream
-    const webStream = (Readable as any).toWeb(passThrough);
-
-    const safeSlug = slug.replace(/[^a-zA-Z0-9_-]/g, "");
-    const dateStr = new Date().toISOString().slice(0, 10);
-    const filename = `galeria-${safeSlug}-${dateStr}.zip`;
-
-    return new Response(webStream as any, {
-      headers: {
-        "Content-Type": "application/zip",
-        "Content-Disposition": `attachment; filename="${filename}"`,
-        "Cache-Control": "no-store",
-      },
-    });
-  } catch (error) {
-    console.error("Błąd generowania ZIP:", error);
-    return NextResponse.json({ error: "Błąd serwera podczas strumieniowania ZIP" }, { status: 500 });
-  }
+		return new Response(webStream as any, {
+			headers: {
+				"Content-Type": "application/zip",
+				"Content-Disposition": `attachment; filename="${filename}"`,
+				"Cache-Control": "no-store",
+			},
+		});
+	} catch (error) {
+		console.error("Błąd generowania ZIP:", error);
+		return NextResponse.json(
+			{ error: "Błąd serwera podczas strumieniowania ZIP" },
+			{ status: 500 },
+		);
+	}
 }
