@@ -1,0 +1,85 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: wedding_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wedding
+      POSTGRES_PASSWORD: wedding_secret
+      POSTGRES_DB: wedding_drop
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wedding -d wedding_drop"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - wedding_net
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wedding_web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgres://wedding:wedding_secret@postgres:5432/wedding_drop
+      DATA_DIR: /app/data
+      APP_DOMAIN: ${APP_DOMAIN:-http://localhost}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}
+    volumes:
+      - app_data:/app/data
+    # Na serwerze z procesorem Intel N100 możesz odkomentować poniższe linie dla akceleracji grafiki QuickSync (QSV):
+    # devices:
+    #   - /dev/dri:/dev/dri
+    deploy:
+      resources:
+        limits:
+          cpus: "3.5"
+          memory: 1024M
+        reservations:
+          memory: 128M
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - wedding_net
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: wedding_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+    networks:
+      - wedding_net
+
+volumes:
+  postgres_data:
+    driver: local
+  app_data:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
+    driver: local
+
+networks:
+  wedding_net:
+    driver: bridge
