@@ -6,6 +6,7 @@
 	"types": "./src/index.ts",
 	"scripts": {
 		"db:generate": "drizzle-kit generate",
+		"db:migrate": "drizzle-kit migrate",
 		"db:push": "drizzle-kit push",
 		"lint": "biome check src/",
 		"check-types": "tsc --noEmit"

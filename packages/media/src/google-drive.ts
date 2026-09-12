@@ -39,11 +39,19 @@ export function isGoogleDriveConfigured(): boolean {
 	);
 }
 
+function getSignedStateSecret(): string {
+	return (
+		process.env.ADMIN_SECRET ||
+		process.env.ADMIN_PASSWORD ||
+		"wedding-admin-secret-fallback-key"
+	);
+}
+
 /**
  * Tworzy podpisany kryptograficznie parametr state (ochrona przed CSRF)
  */
 export function generateSignedState(gallerySlug: string): string {
-	const secret = process.env.ADMIN_PASSWORD || "wedding-drop-secret-key-123";
+	const secret = getSignedStateSecret();
 	const timestamp = Date.now();
 	const nonce = crypto.randomBytes(8).toString("hex");
 	const payload = JSON.stringify({ slug: gallerySlug, ts: timestamp, nonce });
@@ -63,7 +71,7 @@ export function generateSignedState(gallerySlug: string): string {
  */
 export function verifySignedState(stateStr: string): { slug: string } | null {
 	try {
-		const secret = process.env.ADMIN_PASSWORD || "wedding-drop-secret-key-123";
+		const secret = getSignedStateSecret();
 		const raw = Buffer.from(stateStr, "base64url").toString("utf8");
 		const { payload, hmac } = JSON.parse(raw);
 		const expectedHmac = crypto

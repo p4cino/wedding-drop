@@ -54,12 +54,7 @@ export async function POST(
 			.where(eq(cardSettings.galleryId, gallery.id))
 			.limit(1);
 
-		let progressParsed = null;
-		try {
-			if (gallery.gdriveExportProgress) {
-				progressParsed = JSON.parse(gallery.gdriveExportProgress);
-			}
-		} catch (_e) {}
+		const progressParsed = gallery.gdriveExportProgress || null;
 
 		return NextResponse.json({
 			success: true,

@@ -87,7 +87,27 @@ export default function GuestGalleryPage() {
 					const { mediaId, status } = data.update;
 					if (status === "hidden" || status === "deleted") {
 						// Natychmiastowe usunięcie ukrytego/skasowanego zdjęcia z ekranów gości
-						setItems((prev) => prev.filter((item) => item.id !== mediaId));
+						// wraz z bezpieczną korektą indeksu otwartego lightboxa
+						setItems((prev) => {
+							const deletedIndex = prev.findIndex(
+								(item) => item.id === mediaId,
+							);
+							if (deletedIndex !== -1) {
+								setLightboxIndex((curr) => {
+									if (curr === null) return null;
+									if (curr === deletedIndex) {
+										const newLength = prev.length - 1;
+										if (newLength === 0) return null;
+										return curr >= newLength ? newLength - 1 : curr;
+									}
+									if (deletedIndex < curr) {
+										return curr - 1;
+									}
+									return curr;
+								});
+							}
+							return prev.filter((item) => item.id !== mediaId);
+						});
 					}
 				}
 			} catch (_err) {

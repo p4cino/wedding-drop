@@ -42,15 +42,14 @@ test.describe("Bezpieczeństwo i Przypadki Brzegowe (Security & Edge Cases)", ()
 	test("UC4: żądanie pobrania ZIP dla pustej galerii powinno zwrócić 400 z komunikatem", async ({
 		request,
 	}) => {
-		const loginRes = await request.post("/api/admin", {
-			data: { action: "login", username: "admin", password: "admin123" },
+		const loginRes = await request.post("/api/admin/auth", {
+			data: { username: "admin", password: "admin123" },
 		});
 		const { adminToken } = await loginRes.json();
 		const emptySlug = `empty-${Date.now().toString().slice(-6)}`;
-		const createRes = await request.post("/api/admin", {
+		const createRes = await request.post("/api/admin/galleries", {
+			headers: { "x-admin-token": adminToken },
 			data: {
-				action: "create-gallery",
-				token: adminToken,
 				coupleNames: "Pusta Galeria",
 				weddingDate: "2026-12-31",
 				ownerEmail: "empty@example.com",
@@ -66,22 +65,18 @@ test.describe("Bezpieczeństwo i Przypadki Brzegowe (Security & Edge Cases)", ()
 		expect(body.error).toContain("Brak zdjęć do pobrania");
 
 		// Sprzątanie po teście
-		await request.post("/api/admin", {
-			data: {
-				action: "delete-gallery",
-				token: adminToken,
-				galleryId: createData.gallery.id,
-			},
+		await request.delete(`/api/admin/galleries/${createData.gallery.id}`, {
+			headers: { "x-admin-token": adminToken },
 		});
 	});
 
 	test("UC5: akcja administracyjna z sfałszowanym tokenem powinna zwrócić 401", async ({
 		request,
 	}) => {
-		const res = await request.post("/api/admin", {
-			data: {
-				action: "list-galleries",
-				token: "admin_1720000000000_YWRtaW4=_niepoprawny_podpis_hmac_12345",
+		const res = await request.get("/api/admin/galleries", {
+			headers: {
+				"x-admin-token":
+					"admin_1720000000000_YWRtaW4=_niepoprawny_podpis_hmac_12345",
 			},
 		});
 
@@ -93,13 +88,14 @@ test.describe("Bezpieczeństwo i Przypadki Brzegowe (Security & Edge Cases)", ()
 	test("UC6: panel właściciela powinien poprawnie obsługiwać próbę dostępu do nieistniejącej galerii", async ({
 		request,
 	}) => {
-		const res = await request.post("/api/owner", {
-			data: {
-				action: "login",
-				slug: "calkowicie-nieistniejaca-galeria",
-				password: "dowolne-haslo",
+		const res = await request.post(
+			"/api/owner/calkowicie-nieistniejaca-galeria/auth",
+			{
+				data: {
+					password: "dowolne-haslo",
+				},
 			},
-		});
+		);
 
 		expect(res.status()).toBe(404);
 		const data = await res.json();
@@ -109,15 +105,14 @@ test.describe("Bezpieczeństwo i Przypadki Brzegowe (Security & Edge Cases)", ()
 	test("UC7: tworzenie wesela z niebezpiecznym slugiem (znaki specjalne i ../) powinno zostać bezpiecznie oczyszczone", async ({
 		request,
 	}) => {
-		const loginRes = await request.post("/api/admin", {
-			data: { action: "login", username: "admin", password: "admin123" },
+		const loginRes = await request.post("/api/admin/auth", {
+			data: { username: "admin", password: "admin123" },
 		});
 		const { adminToken } = await loginRes.json();
 
-		const createRes = await request.post("/api/admin", {
+		const createRes = await request.post("/api/admin/galleries", {
+			headers: { "x-admin-token": adminToken },
 			data: {
-				action: "create-gallery",
-				token: adminToken,
 				coupleNames: "Bezpieczna Para",
 				weddingDate: "2026-11-20",
 				ownerEmail: "safe@example.com",
@@ -126,7 +121,7 @@ test.describe("Bezpieczeństwo i Przypadki Brzegowe (Security & Edge Cases)", ()
 			},
 		});
 
-		expect(createRes.status()).toBe(200);
+		expect([200, 201]).toContain(createRes.status());
 		const createData = await createRes.json();
 		expect(createData.success).toBe(true);
 		expect(createData.gallery.slug).toMatch(/^[a-z0-9_-]+$/);
@@ -134,12 +129,8 @@ test.describe("Bezpieczeństwo i Przypadki Brzegowe (Security & Edge Cases)", ()
 		expect(createData.gallery.slug).not.toContain("..");
 
 		// Sprzątanie po teście
-		await request.post("/api/admin", {
-			data: {
-				action: "delete-gallery",
-				token: adminToken,
-				galleryId: createData.gallery.id,
-			},
+		await request.delete(`/api/admin/galleries/${createData.gallery.id}`, {
+			headers: { "x-admin-token": adminToken },
 		});
 	});
 

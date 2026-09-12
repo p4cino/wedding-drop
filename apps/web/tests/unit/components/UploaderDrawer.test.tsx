@@ -6,11 +6,16 @@ import UploaderDrawer from "@/components/UploaderDrawer";
 
 let shouldFailUpload = false;
 
+interface TusMockOptions {
+	onError: (err: Error) => void;
+	onProgress: (bytesUploaded: number, bytesTotal: number) => void;
+	onSuccess: () => void;
+}
+
 vi.mock("tus-js-client", () => ({
 	Upload: vi.fn().mockImplementation(function (
-		this: any,
-		_file: any,
-		options: any,
+		_file: unknown,
+		options: TusMockOptions,
 	) {
 		return {
 			start: () => {

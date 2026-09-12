@@ -14,7 +14,7 @@ export async function DELETE(
 ) {
 	try {
 		const { slug, id: mediaId } = await params;
-		let body: any = null;
+		let body: { token?: string } | null = null;
 		try {
 			body = await req.json();
 		} catch (_e) {

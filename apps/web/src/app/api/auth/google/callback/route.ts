@@ -75,10 +75,11 @@ export async function GET(req: NextRequest) {
 			.where(eq(galleries.id, currentGallery.id));
 
 		return NextResponse.redirect(`${ownerDashboardUrl}?gdrive=connected`);
-	} catch (err: any) {
+	} catch (err: unknown) {
 		console.error("Błąd podczas przetwarzania callbacku Google OAuth:", err);
+		const errorMessage = err instanceof Error ? err.message : "auth_failed";
 		return NextResponse.redirect(
-			`${ownerDashboardUrl}?gdrive_error=${encodeURIComponent(err?.message || "auth_failed")}`,
+			`${ownerDashboardUrl}?gdrive_error=${encodeURIComponent(errorMessage)}`,
 		);
 	}
 }

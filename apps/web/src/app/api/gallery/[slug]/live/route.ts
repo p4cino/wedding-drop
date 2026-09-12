@@ -1,3 +1,4 @@
+import type { MediaItem } from "@wedding-drop/db";
 import { sseBus } from "@wedding-drop/media";
 import type { NextRequest } from "next/server";
 
@@ -21,7 +22,7 @@ export async function GET(
 			);
 
 			// Nasłuch na nowe pliki dla tego konkretnego wesela
-			const onNewMedia = (mediaItem: any) => {
+			const onNewMedia = (mediaItem: MediaItem) => {
 				try {
 					const payload = JSON.stringify({
 						type: "new-media",
@@ -47,7 +48,7 @@ export async function GET(
 			const updateEventName = `media-updated:${slug}`;
 			const gdriveEventName = `gdrive-progress:${slug}`;
 
-			const onMediaUpdated = (update: any) => {
+			const onMediaUpdated = (update: { mediaId: string; status: string }) => {
 				try {
 					const payload = JSON.stringify({
 						type: "media-updated",
@@ -62,7 +63,7 @@ export async function GET(
 				}
 			};
 
-			const onGDriveProgress = (progress: any) => {
+			const onGDriveProgress = (progress: Record<string, unknown>) => {
 				try {
 					const payload = JSON.stringify({
 						type: "gdrive-progress",

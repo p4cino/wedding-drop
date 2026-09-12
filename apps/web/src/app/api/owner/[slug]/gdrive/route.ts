@@ -20,12 +20,7 @@ export async function GET(
 		}
 
 		const g = auth.gallery;
-		let progress = null;
-		try {
-			if (g.gdriveExportProgress) {
-				progress = JSON.parse(g.gdriveExportProgress);
-			}
-		} catch (_e) {}
+		const progress = g.gdriveExportProgress || null;
 
 		return NextResponse.json({
 			success: true,
@@ -48,7 +43,7 @@ export async function DELETE(
 ) {
 	try {
 		const { slug } = await params;
-		let body: any = null;
+		let body: { token?: string } | null = null;
 		try {
 			body = await req.json();
 		} catch (_e) {

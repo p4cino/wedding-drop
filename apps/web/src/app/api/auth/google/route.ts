@@ -69,14 +69,12 @@ export async function GET(req: NextRequest) {
 		const authUrl = getGoogleAuthUrl(slug);
 
 		return NextResponse.redirect(authUrl);
-	} catch (err: any) {
+	} catch (err: unknown) {
 		console.error("Błąd inicjalizacji Google OAuth:", err);
-		return NextResponse.json(
-			{
-				error:
-					err?.message || "Błąd serwera podczas inicjalizacji Google OAuth.",
-			},
-			{ status: 500 },
-		);
+		const errorMsg =
+			err instanceof Error
+				? err.message
+				: "Błąd serwera podczas inicjalizacji Google OAuth.";
+		return NextResponse.json({ error: errorMsg }, { status: 500 });
 	}
 }
