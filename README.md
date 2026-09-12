@@ -52,8 +52,13 @@ docker compose up -d --build
 
 Docker pobierze obrazy, zbuduje aplikację i uruchomi 3 kontenery:
 - `wedding_postgres` – Baza danych PostgreSQL 16 Alpine ze zoptymalizowanymi indeksami złożonymi
-- `wedding_web` – Aplikacja Next.js 14 + serwer TUS + Sharp/FFmpeg (z limitem współbieżności i watchdogiem)
+- `wedding_web` – Monorepo Turborepo (Node.js 24 Alpine + Next.js 16 + serwer TUS + Sharp/FFmpeg z limitem współbieżności i watchdogiem)
 - `wedding_caddy` – Reverse proxy z automatycznym HTTPS i blokadą noindex
+
+### Architektura Monorepo (pnpm + Turborepo + Biome):
+- `apps/web`: Aplikacja Next.js 16, App Router, SSR, serwer HTTP (`server.ts`), komponenty i testy integracyjne.
+- `packages/db`: Drizzle ORM, schemat PostgreSQL, migracje i connection pool singleton.
+- `packages/media`: Potok przetwarzania mediów (Sharp, FFmpeg, TUS, SSE, PDF A6, QR, ZIP, Google Drive).
 
 ### Adresy URL w przeglądarce:
 - **Strona główna**: [http://localhost](http://localhost)
@@ -107,15 +112,19 @@ Aby aplikacja działała na Twojej publicznej domenie z darmowym certyfikatem Le
  
 ### 1. Testy Jednostkowe i Integracyjne (Vitest)
 ```bash
-# Uruchomienie 74 testów jednostkowych i integracyjnych
-docker run --rm -v "${PWD}:/app" -w /app node:22-alpine npm test
+# Uruchomienie 80 testów jednostkowych i integracyjnych w monorepo
+pnpm turbo run test
+# lub w kontenerze Docker (Node 24 Alpine)
+docker run --rm -v "${PWD}:/app" -w /app node:24-alpine sh -c "corepack enable && pnpm -r test"
 ```
 
 ### 2. Testy End-to-End (Playwright)
 Pakiet **32 unikalnych scenariuszy testowych (łącznie 96 testów)** uruchamianych w profilach Desktop Chromium, Mobile Chrome oraz Mobile Safari (WebKit):
 ```bash
 # Uruchomienie pełnego zestawu Playwright E2E
-docker run --rm --network wedding-drop_wedding_net -v wedding_playwright_browsers:/ms-playwright -v "${PWD}:/app" -w /app -e BASE_URL=http://wedding_web:3000 mcr.microsoft.com/playwright:v1.50.0-noble npx playwright test
+pnpm --filter @wedding-drop/web test:e2e
+# lub w sieci Docker
+docker run --rm --network wedding-drop_wedding_net -v wedding_playwright_browsers:/ms-playwright -v "${PWD}:/app" -w /app/apps/web -e BASE_URL=http://wedding_web:3000 mcr.microsoft.com/playwright:v1.50.0-noble npx playwright test
 ```
 Pokrywa:
 - **Panel Administratora**: logowanie danymi admina, walidacja błędu hasła, tworzenie wesela, obsługa kolizji sluga, usuwanie galerii.

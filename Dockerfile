@@ -1,31 +1,52 @@
-FROM node:22-alpine AS base
+# 1. Etap przycinania monorepo (Turborepo Pruner)
+FROM node:24-alpine AS pruner
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+RUN npm install -g turbo
+COPY . .
+RUN turbo prune @wedding-drop/web --docker
 
-# Instalacja FFmpeg i narzędzi wymaganych do obróbki wideo i natywnych modułów
-RUN apk add --no-cache ffmpeg libc6-compat python3 make g++
-
+# 2. Etap instalacji zależności i budowy aplikacji
+FROM node:24-alpine AS builder
+RUN apk add --no-cache libc6-compat python3 make g++ ffmpeg
 WORKDIR /app
 
-# Kopiowanie zależności
-COPY package.json ./
-RUN npm install
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Kopiowanie kodu źródłowego i konfiguracji testów
-COPY tsconfig.json next.config.mjs tailwind.config.ts postcss.config.mjs drizzle.config.ts server.ts vitest.config.ts playwright.config.ts ./
-COPY src ./src
-COPY tests ./tests
-COPY e2e ./e2e
+# Kopiowanie wyodrębnionych definicji pakietów
+COPY --from=pruner /app/out/json/ .
+COPY pnpm-lock.yaml ./pnpm-lock.yaml
+COPY pnpm-workspace.yaml ./pnpm-workspace.yaml
 
-# Budowa produkcyjna Next.js
+RUN pnpm install --frozen-lockfile
+
+# Kopiowanie kodu źródłowego
+COPY --from=pruner /app/out/full/ .
+COPY turbo.json turbo.json
+COPY biome.json biome.json
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm run build
 
-# Folder na dane
+# Budowa produkcyjna Next.js przez pnpm / Turborepo
+RUN pnpm --filter @wedding-drop/web build
+
+# 3. Etap produkcyjny (Minimalny Runner zoptymalizowany pod Intel N100)
+FROM node:24-alpine AS runner
+RUN apk add --no-cache ffmpeg libc6-compat
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOST=0.0.0.0
+
+COPY --from=builder /app ./
+
 RUN mkdir -p /app/data/galleries /app/data/tus_temp
 
 EXPOSE 3000
 
-ENV PORT=3000
-ENV HOST=0.0.0.0
-
-CMD ["npm", "run", "start"]
+CMD ["pnpm", "--filter", "@wedding-drop/web", "start"]

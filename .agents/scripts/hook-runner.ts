@@ -52,7 +52,7 @@ async function main() {
   // If invoked as a Stop hook or with --typecheck, perform non-blocking typecheck check
   if (forceTypecheck || payload.terminationReason) {
     try {
-      execSync("npx tsc --noEmit", { stdio: "ignore" });
+      execSync("pnpm -r check-types", { stdio: "ignore" });
     } catch {
       // Non-blocking warning on stop: do not prevent agent exit, but log or output if needed
     }
