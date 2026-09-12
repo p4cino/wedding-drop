@@ -7,7 +7,8 @@
 	"scripts": {
 		"db:generate": "drizzle-kit generate",
 		"db:push": "drizzle-kit push",
-		"lint": "biome check src/"
+		"lint": "biome check src/",
+		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
 		"bcryptjs": "^3.0.3",
