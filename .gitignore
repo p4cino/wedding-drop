@@ -9,6 +9,7 @@ node_modules/
 out/
 build/
 dist/
+*.tsbuildinfo
 
 # Pliki środowiskowe i wrażliwe (Sekrety, Hasła, Klucze API)
 .env
