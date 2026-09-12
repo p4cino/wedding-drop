@@ -1,0 +1,22 @@
+{$APP_DOMAIN:localhost} {
+    # Blokada indeksowania przez wyszukiwarki (Google, Bing, itp.)
+    header {
+        X-Robots-Tag "noindex, nofollow, noarchive, nosnippet"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # Reverse proxy do aplikacji Next.js
+    reverse_proxy web:3000 {
+        # Wyłączenie buforowania dla Server-Sent Events (SSE) i płynnego streamingu
+        flush_interval -1
+
+        transport http {
+            response_header_timeout 600s
+        }
+    }
+
+    # Kompresja zstd i gzip
+    encode zstd gzip
+}
