@@ -79,6 +79,9 @@ This workspace provides specialized skills and tools in `.agents/`:
   - `wedding-ops`: Managing Docker Compose, Caddy SSL, Drizzle migrations (`packages/db`), and Backup/Restore.
   - `wedding-media-pipeline`: TUS upload, Sharp/FFmpeg processing, watchdog, SSE event bus (`packages/media`).
   - `wedding-gdrive`: Google Drive OAuth 2.0 and background export workflows (`packages/media`).
+  - `thermo-nuclear-code-quality-review`: Rygorystyczny audyt jakości kodu i architektury (zasada 1k linii, redukcja spaghetti, uproszczenia "code judo", czystość warstw i kontraktów typów).
+- **Subagents**:
+  - `thermo-nuclear-code-quality-review`: Dedykowany subagent do bezkompromisowej analizy diffów, reguły 1000 linii, wykrywania rozrostu spaghetti i architektonicznych uproszczeń kodu.
 - **Helper Scripts**:
   - `.agents/scripts/ops-helper.ts`: Quick operations (backup, restore, status) via `npx tsx`.
   - `.agents/scripts/test-runner.ts`: Test orchestration via `npx tsx` / `pnpm`.
