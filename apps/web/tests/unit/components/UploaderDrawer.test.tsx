@@ -12,23 +12,25 @@ interface TusMockOptions {
 	onSuccess: () => void;
 }
 
-vi.mock("tus-js-client", () => ({
-	Upload: vi.fn().mockImplementation(function (
-		_file: unknown,
-		options: TusMockOptions,
-	) {
-		return {
-			start: () => {
-				if (shouldFailUpload) {
-					options.onError(new Error("Błąd sieci"));
-				} else {
-					options.onProgress(50, 100);
-					options.onSuccess();
-				}
-			},
-		};
-	}),
-}));
+vi.mock("tus-js-client", () => {
+	class MockUpload {
+		options: TusMockOptions;
+		constructor(_file: unknown, options: TusMockOptions) {
+			this.options = options;
+		}
+		start() {
+			if (shouldFailUpload) {
+				this.options.onError(new Error("Błąd sieci"));
+			} else {
+				this.options.onProgress(50, 100);
+				this.options.onSuccess();
+			}
+		}
+	}
+	return {
+		Upload: MockUpload,
+	};
+});
 
 describe("UploaderDrawer Component", () => {
 	beforeEach(() => {
@@ -149,5 +151,28 @@ describe("UploaderDrawer Component", () => {
 		await waitFor(() => {
 			expect(container.querySelector(".text-red-500")).toBeInTheDocument();
 		});
+	});
+
+	it("powinien wywołać click na ukrytym input[type=file] po kliknięciu strefy drop", () => {
+		const { container } = render(
+			<UploaderDrawer
+				gallerySlug="kasia-i-tomek"
+				isOpen={true}
+				onClose={vi.fn()}
+			/>,
+		);
+
+		const fileInput = container.querySelector(
+			'input[type="file"]',
+		) as HTMLInputElement;
+		const clickSpy = vi.spyOn(fileInput, "click");
+
+		const dropzone = screen.getByText(
+			/Kliknij, aby wybrać z galerii lub aparatu/i,
+		).parentElement;
+		if (dropzone) {
+			fireEvent.click(dropzone);
+			expect(clickSpy).toHaveBeenCalled();
+		}
 	});
 });

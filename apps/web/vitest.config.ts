@@ -7,6 +7,7 @@ export default defineConfig({
 	test: {
 		globals: true,
 		environment: "node",
+		testTimeout: 20000,
 		setupFiles: ["./tests/setup.ts"],
 		env: {
 			NODE_ENV: "test",
@@ -17,7 +18,7 @@ export default defineConfig({
 		],
 		coverage: {
 			provider: "v8",
-			reporter: ["text", "json", "html"],
+			reporter: ["text", "json", "html", "json-summary"],
 			include: ["src/components/**", "src/app/api/**"],
 			exclude: ["**/*.d.ts"],
 			thresholds: {

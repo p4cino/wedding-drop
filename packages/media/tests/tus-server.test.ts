@@ -60,8 +60,42 @@ describe("tus-server configuration", () => {
 		}
 	});
 
-	it("powinien obsłużyć zdarzenie POST_FINISH i wywołać scheduleMediaProcessing", async () => {
+	it("powinien obsłużyć zdarzenie POST_FINISH i wywołać scheduleMediaProcessing z domyślnymi metadanymi", async () => {
 		const server = initTusServer(tempDir);
+		vi.clearAllMocks();
+
+		const mockUploadDefault = {
+			id: "upl-default",
+			size: 2048,
+			metadata: {
+				gallerySlug: "kasia-i-tomek",
+			},
+		};
+
+		(
+			server as unknown as {
+				emit: (
+					event: string,
+					req: unknown,
+					res: unknown,
+					upload: unknown,
+				) => void;
+			}
+		).emit(EVENTS.POST_FINISH, {}, {}, mockUploadDefault);
+
+		expect(scheduleMediaProcessing).toHaveBeenCalledWith(
+			expect.objectContaining({
+				fileType: "image",
+				uploaderName: "Gość weselny",
+				originalName: "plik",
+				mimeType: "image/jpeg",
+			}),
+		);
+	});
+
+	it("powinien obsłużyć zdarzenie POST_FINISH dla pliku wideo i wywołać scheduleMediaProcessing", async () => {
+		const server = initTusServer(tempDir);
+		vi.clearAllMocks();
 
 		const mockUpload = {
 			id: "upl-123",
@@ -84,7 +118,11 @@ describe("tus-server configuration", () => {
 				) => void;
 			}
 		).emit(EVENTS.POST_FINISH, {}, {}, mockUpload);
-		expect(scheduleMediaProcessing).toHaveBeenCalled();
+		expect(scheduleMediaProcessing).toHaveBeenCalledWith(
+			expect.objectContaining({
+				fileType: "video",
+			}),
+		);
 	});
 
 	it("powinien pominąć przetwarzanie w POST_FINISH, gdy brak gallerySlug", async () => {

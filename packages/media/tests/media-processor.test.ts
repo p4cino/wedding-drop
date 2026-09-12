@@ -9,7 +9,7 @@ import {
 } from "../src/media-processor.js";
 import { sseBus } from "../src/sse-bus.js";
 
-let mockGalleryResult: any[] = [{ id: "mock-gal-id" }];
+let mockGalleryResult: unknown[] = [{ id: "mock-gal-id" }];
 
 vi.mock("@wedding-drop/db", () => ({
 	db: {
@@ -52,16 +52,21 @@ vi.mock("node:fs", () => ({
 
 let mockSpawnExitCode = 0;
 let mockSpawnError: Error | null = null;
+let mockSpawnHangs = false;
 
 vi.mock("node:child_process", () => ({
 	spawn: vi.fn(() => {
-		const listeners: Record<string, ((...args: any[]) => void)[]> = {};
+		const listeners: Record<string, ((...args: unknown[]) => void)[]> = {};
 		const proc = {
 			kill: vi.fn(),
-			on: (event: string, cb: (...args: any[]) => void) => {
+			on: (event: string, cb: (...args: unknown[]) => void) => {
 				listeners[event] = listeners[event] || [];
 				listeners[event].push(cb);
 				if (event === "close") {
+					if (mockSpawnHangs) {
+						// Symulacja wiszącego procesu FFmpeg (nie emitujemy close)
+						return proc;
+					}
 					setTimeout(() => {
 						if (mockSpawnError) {
 							const errCbs = listeners.error || [];
@@ -103,6 +108,7 @@ describe("media-processor service", () => {
 		mockGalleryResult = [{ id: "mock-gal-id" }];
 		mockSpawnExitCode = 0;
 		mockSpawnError = null;
+		mockSpawnHangs = false;
 	});
 
 	it("powinien mieć skonfigurowaną kolejkę z limitem concurrency = 2 dla Intel N100", () => {
@@ -209,5 +215,114 @@ describe("media-processor service", () => {
 
 		await scheduleMediaProcessing(task);
 		expect(sseBus.notifyNewMedia).toHaveBeenCalled();
+	});
+
+	it("powinien obsłużyć błąd biblioteki Sharp podczas przetwarzania uszkodzonego zdjęcia", async () => {
+		const sharpMod = (await import("sharp")).default as unknown as ReturnType<
+			typeof vi.fn
+		>;
+		sharpMod.mockImplementationOnce(() => {
+			throw new Error("Uszkodzony plik JPEG");
+		});
+
+		const consoleErrorSpy = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => {});
+
+		const task: ProcessTask = {
+			uploadId: "upl-corrupt-img",
+			tempFilePath: "/tmp/fake-corrupt.jpg",
+			gallerySlug: "kasia-i-tomek",
+			uploaderName: "Gość",
+			originalName: "corrupt.jpg",
+			fileType: "image",
+			mimeType: "image/jpeg",
+			fileSize: 500,
+			dataDir: "/tmp/data",
+		};
+
+		await scheduleMediaProcessing(task);
+		expect(consoleErrorSpy).toHaveBeenCalledWith(
+			expect.stringContaining("[Processor] Sharp error dla pliku"),
+			expect.any(Error),
+		);
+		consoleErrorSpy.mockRestore();
+	});
+
+	it("powinien zastosować wartości domyślne gdy brak nazwy użytkownika i brak miniatury na dysku", async () => {
+		const fsMod = await import("node:fs");
+		vi.mocked(fsMod.default.existsSync).mockReturnValue(false);
+
+		const task: ProcessTask = {
+			uploadId: "upl-fallback",
+			tempFilePath: "/tmp/fallback.jpg",
+			gallerySlug: "kasia-i-tomek",
+			uploaderName: "",
+			originalName: "anon.jpg",
+			fileType: "image",
+			mimeType: "",
+			fileSize: 1000,
+			dataDir: "/tmp/data",
+		};
+
+		await scheduleMediaProcessing(task);
+		expect(sseBus.notifyNewMedia).toHaveBeenCalledWith(
+			"kasia-i-tomek",
+			expect.anything(),
+		);
+	});
+
+	it("powinien bezpiecznie przechwycić błąd krytyczny w processTask i zalogować go w konsoli", async () => {
+		const fsPromisesMod = await import("node:fs/promises");
+		const err = new Error("Dysk jest tylko do odczytu (EACCES)");
+		vi.mocked(fsPromisesMod.default.mkdir).mockRejectedValueOnce(err);
+		vi.mocked(fsPromisesMod.mkdir).mockRejectedValueOnce(err);
+
+		const consoleErrorSpy = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => {});
+
+		const task: ProcessTask = {
+			uploadId: "upl-crit-err",
+			tempFilePath: "/tmp/crit.jpg",
+			gallerySlug: "kasia-i-tomek",
+			uploaderName: "Gość",
+			originalName: "crit.jpg",
+			fileType: "image",
+			mimeType: "image/jpeg",
+			fileSize: 500,
+			dataDir: "/tmp/data",
+		};
+
+		await scheduleMediaProcessing(task);
+		expect(consoleErrorSpy).toHaveBeenCalledWith(
+			expect.stringContaining("[Processor] Błąd krytyczny"),
+			expect.any(Error),
+		);
+		consoleErrorSpy.mockRestore();
+	});
+
+	it("powinien ubić proces FFmpeg przez SIGKILL przy przekroczeniu limitu czasu watchdog", async () => {
+		vi.useFakeTimers();
+		mockSpawnHangs = true;
+
+		const task: ProcessTask = {
+			uploadId: "upl-vid-hang",
+			tempFilePath: "/tmp/fake-video.mp4",
+			gallerySlug: "kasia-i-tomek",
+			uploaderName: "Kamerzysta",
+			originalName: "hang.mp4",
+			fileType: "video",
+			mimeType: "video/mp4",
+			fileSize: 20000000,
+			dataDir: "/tmp/data",
+		};
+
+		const promise = scheduleMediaProcessing(task);
+		await vi.advanceTimersByTimeAsync(26000);
+		await promise;
+
+		expect(spawn).toHaveBeenCalled();
+		vi.useRealTimers();
 	});
 });

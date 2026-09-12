@@ -1,0 +1,76 @@
+name: E2E Tests (Playwright) - On Demand
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: "Profil przeglądarki do uruchomienia testów Playwright"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - "all"
+          - "chromium"
+          - "Mobile Chrome"
+          - "Mobile Safari"
+      base_url:
+        description: "Adres URL docelowego środowiska (pozostaw domyślny http://localhost:3000, aby uruchomić kontenery z docker-compose)"
+        required: false
+        default: "http://localhost:3000"
+
+jobs:
+  e2e:
+    name: Playwright E2E (${{ inputs.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers with OS dependencies
+        run: pnpm --filter @wedding-drop/web exec playwright install --with-deps
+
+      - name: Start local application via Docker Compose (if target is localhost)
+        if: startsWith(inputs.base_url, 'http://localhost') || startsWith(inputs.base_url, 'https://localhost')
+        run: |
+          mkdir -p data/galleries
+          docker compose up -d postgres web
+          echo "Oczekiwanie na gotowość serwera web..."
+          timeout 90s bash -c 'until curl -sf http://localhost:3000/ > /dev/null; do sleep 3; echo "Czekanie..."; done'
+          echo "Serwer web jest gotowy!"
+
+      - name: Run Playwright tests
+        env:
+          BASE_URL: ${{ inputs.base_url }}
+          CI: "true"
+        run: |
+          if [ "${{ inputs.project }}" = "all" ]; then
+            pnpm --filter @wedding-drop/web exec playwright test
+          else
+            pnpm --filter @wedding-drop/web exec playwright test --project="${{ inputs.project }}"
+          fi
+
+      - name: Upload Playwright test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ inputs.project }}
+          path: apps/web/playwright-report/
+          retention-days: 14
+
+      - name: Teardown Docker Compose
+        if: always()
+        run: docker compose down -v || true
