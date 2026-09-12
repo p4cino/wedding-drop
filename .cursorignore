@@ -1,0 +1,49 @@
+# Pliki ignorowane przez asystentów AI (indeksowanie, wyszukiwanie semantyczne i kontekst)
+
+# Pakiety i biblioteki zewnętrzne
+node_modules/**
+
+# Kompilaty i pamięć podręczna Next.js
+.next/**
+out/**
+build/**
+dist/**
+
+# Pliki środowiskowe (Sekrety, Hasła, Klucze Google OAuth)
+.env
+.env*.local
+.env.production
+!.env.example
+
+# Magazyn multimediów gości (Tysiące zdjęć i filmów)
+data/**
+/data/**
+tus_temp/**
+galleries/**
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.gif
+*.mp4
+*.mov
+*.webm
+*.avi
+*.mkv
+*.zip
+*.tar.gz
+
+# Kopie zapasowe i zrzuty bazy danych
+backups/**
+/backups/**
+*.sql
+
+# Raporty z testów i artefakty Playwright / Vitest
+coverage/**
+playwright-report/**
+test-results/**
+blob-report/**
+
+# Logi i pliki blokad pakietów
+*.log
+package-lock.json

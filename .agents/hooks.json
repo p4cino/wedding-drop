@@ -1,0 +1,12 @@
+{
+  "wedding-validation-gate": {
+    "enabled": true,
+    "Stop": [
+      {
+        "type": "command",
+        "command": "npx tsx .agents/scripts/hook-runner.ts 2>nul || docker run --rm -v c:/Users/Wojci/.gemini/antigravity-ide/scratch/wedding-drop:/app -w /app node:22-alpine npx tsx .agents/scripts/hook-runner.ts",
+        "timeout": 30
+      }
+    ]
+  }
+}
