@@ -6,7 +6,7 @@ Welcome to the **WeddingDrop** repository. This document serves as the project's
 
 ## 1. Project Overview
 
-WeddingDrop is a self-hosted, multi-tenant web application designed to collect wedding photos and videos from guests via QR codes. It is optimized for domestic low-power microservers (specifically **Intel N100** quad-core mini-PCs) running 100% inside **Docker** with **Caddy** (TLS reverse proxy), **Next.js 14 / Node.js** (App Router & HTTP server), and **PostgreSQL 16** with **Drizzle ORM**.
+WeddingDrop is a self-hosted, multi-tenant web application designed to collect wedding photos and videos from guests via QR codes. It is optimized for domestic low-power microservers (specifically **Intel N100** quad-core mini-PCs) running 100% inside **Docker** with **Caddy** (TLS reverse proxy), **Next.js 16 / Node.js** (App Router & HTTP server), and **PostgreSQL 16** with **Drizzle ORM**.
 
 ---
 

@@ -10,12 +10,36 @@
 	},
 	"formatter": {
 		"enabled": true,
-		"indentStyle": "tab"
+		"indentStyle": "tab",
+		"lineEnding": "lf"
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
 	},
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"preset": "recommended"
+			"recommended": true,
+			"a11y": {
+				"recommended": false
+			},
+			"correctness": {
+				"useExhaustiveDependencies": "warn",
+				"noInvalidUseBeforeDeclaration": "warn"
+			},
+			"suspicious": {
+				"noThenProperty": "warn",
+				"noExplicitAny": "warn",
+				"noArrayIndexKey": "warn"
+			},
+			"performance": {
+				"noImgElement": "off"
+			},
+			"complexity": {
+				"noImportantStyles": "off"
+			}
 		}
 	},
 	"javascript": {
