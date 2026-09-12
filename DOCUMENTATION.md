@@ -30,16 +30,17 @@ graph TD
         Caddy["Caddy v2 Reverse Proxy\n- Automatyczny TLS\n- Nagłówki noindex\n- Kompresja zstd/gzip\n- Flush SSE bez buforowania"]
     end
 
-    subgraph "Kontener wedding_web (Next.js 14 + Node HTTP)"
-        NextCore["Next.js App Router (UI & API)"]
-        TusServer["@tus/server (TUS Protocol 1.0.0)"]
-        SSEBus["SSE Event Bus (new-media, media-updated)"]
-        PdfGen["pdf-lib (Wektorowy PDF A6 300 DPI)"]
-        ZipStream["archiver (Strumieniowany ZIP)"]
-        MediaQueue["p-queue (Concurrency = 2)\nThrottling dla Intel N100"]
-        Sharp["Sharp (WebP Miniaturki + EXIF auto-rotate)"]
-        FFmpeg["FFmpeg (Klatki kluczowe z wideo + Watchdog 25s)"]
-        StaticServe["Bezpieczny serwer /media-file/* (Path.resolve sandbox)"]
+    subgraph "Kontener wedding_web (Turborepo Monorepo / Node 24 Alpine)"
+        NextCore["apps/web: Next.js 16 App Router (UI & API)"]
+        TusServer["packages/media: @tus/server (TUS Protocol 1.0.0)"]
+        SSEBus["packages/media: SSE Event Bus (new-media, media-updated)"]
+        PdfGen["packages/media: pdf-lib (Wektorowy PDF A6 300 DPI)"]
+        ZipStream["packages/media: archiver (Strumieniowany ZIP)"]
+        MediaQueue["packages/media: p-queue (Concurrency = 2)\nThrottling dla Intel N100"]
+        Sharp["packages/media: Sharp (WebP Miniaturki + EXIF auto-rotate)"]
+        FFmpeg["packages/media: FFmpeg (Klatki kluczowe z wideo + Watchdog 25s)"]
+        DbPkg["packages/db: Drizzle ORM + Connection Pool Singleton"]
+        StaticServe["apps/web/server.ts: Bezpieczny serwer /media-file/* (Path.resolve sandbox)"]
     end
 
     subgraph "Warstwa Danych (Docker Volumes)"
@@ -259,26 +260,26 @@ docker run --rm -v wedding-drop_app_data:/data -v $(pwd):/backup alpine tar -xzf
 
 ---
 
-## 9. Strategia Testów i Pokrycie (Test Suites)
+## 9. Strategia Testów i Narzędzia Jakościowe (Turborepo + Biome)
 
-Projekt objęty jest dwupoziomową piramidą testów automatycznych:
+Projekt objęty jest dwupoziomową piramidą testów automatycznych oraz standardami Biome:
 
-1. **Testy Jednostkowe i Integracyjne (Vitest)**:
-   - Liczba testów: **74 testy** w 11 plikach.
-   - Środowisko: Kontener `node:22-alpine` z mockami bazy danych i bibliotek Sharp/FFmpeg/PDFKit.
-   - Zakres: autoryzacja HMAC, sanityzacja slugów i ochrona przed Directory Traversal, reguły biznesowe, TUS event hooks, singleton SSE w `globalThis`, obsługa archiver v8.
-   - Uruchomienie: `docker run --rm -v "${PWD}:/app" -w /app node:22-alpine npm test`
+1. **Jakość Kodu i Formatowanie (Biome)**:
+   - Zastąpiono ESLint i Prettier nowoczesnym linterem/formatterem **Biome**.
+   - Weryfikacja: `pnpm biome check apps/ packages/`.
+   - Weryfikacja typów TypeScript w całym monorepo: `pnpm -r check-types`.
 
-2. **Testy End-to-End (Playwright)**:
-   - Liczba testów: **32 unikalne scenariusze (96 testów łącznych)**.
+2. **Testy Jednostkowe i Integracyjne (Vitest)**:
+   - Liczba testów: **80 testów** w 11 plikach.
+   - `packages/media/tests/`: 28 testów potoku przetwarzania mediów, integracji Google Drive i wznawialnego serwera TUS.
+   - `apps/web/tests/`: 52 testy integracyjne tras API (`admin`, `gallery`, `owner`) oraz komponentów UI (`LightboxModal`, `MediaGrid`, `UploaderDrawer`).
+   - Uruchomienie: `pnpm turbo run test` lub `docker run --rm -v "${PWD}:/app" -w /app node:24-alpine sh -c "corepack enable && pnpm -r test"`
+
+3. **Testy End-to-End (Playwright)**:
+   - Liczba testów: **32 unikalne scenariusze (96 testów łącznych)** w katalogu `apps/web/e2e/`.
    - Macierz środowiskowa: **Desktop Chromium**, **Mobile Chrome (Pixel 5)**, **Mobile Safari (iPhone 13 / WebKit)**.
-   - Zakres:
-     - `admin-management.spec.ts` (6 UC): logowanie admina, walidacja błędu hasła, tworzenie wesela z unikalnym slugiem, bezpieczna obsługa kolizji sluga, usuwanie galerii z potwierdzeniem dialogu.
-     - `owner-moderation.spec.ts` (7 UC): logowanie hasłem, pobieranie ZIP z hasłem (w tym zdjęć ukrytych), moderacja widoczności (`ready` <-> `hidden`), filtrowanie zakładek, usuwanie multimediów, link do karty A6.
-     - `guest-journey.spec.ts` (7 UC): widok gościa i nagłówek live, stan pusty, drawer uploadu, siatka kafelków z podpisami autorów, pełnoekranowy Lightbox z nawigacją klawiaturą, **gesty Touch Swipe na smartfonach** oraz pobieranie plików.
-     - `card-customizer.spec.ts` (5 UC): podgląd karty `#printable-card` z kodem QR, zmiana palet kolorystycznych i test wartości HEX, reaktywna edycja nagłówka i instrukcji na żywo, dynamiczny link pobrania wektorowego PDF, ochrona stanu `loading`.
-     - `security-and-edge-cases.spec.ts` (7 UC): blokada dostępu do ukrytych zdjęć (401), ekran 404, sandbox Directory Traversal (`/media-file/*`), pobieranie pustego ZIP (400), blokada fałszywych tokenów HMAC (401), błąd logowania właściciela do nieistniejącej galerii (404), sanityzacja złośliwego sluga z path traversal (`zly slug!@# z path/../`).
-   - Uruchomienie: `docker run --rm --network wedding-drop_wedding_net -v wedding_playwright_browsers:/ms-playwright -v "${PWD}:/app" -w /app -e BASE_URL=http://wedding_web:3000 mcr.microsoft.com/playwright:v1.50.0-noble npx playwright test`
+   - Uruchomienie: `pnpm --filter @wedding-drop/web test:e2e` lub w sieci Docker:
+     `docker run --rm --network wedding-drop_wedding_net -v wedding_playwright_browsers:/ms-playwright -v "${PWD}:/app" -w /app/apps/web -e BASE_URL=http://wedding_web:3000 mcr.microsoft.com/playwright:v1.50.0-noble npx playwright test`
 
 ---
 

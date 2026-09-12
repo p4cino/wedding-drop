@@ -4,13 +4,25 @@ Welcome to the **WeddingDrop** repository. This document serves as the project's
 
 ---
 
-## 1. Project Overview
+WeddingDrop is a self-hosted, multi-tenant web application designed to collect wedding photos and videos from guests via QR codes. It is structured as a **Turborepo monorepo** managed with **pnpm workspaces** and **Biome**, optimized for domestic low-power microservers (specifically **Intel N100** quad-core mini-PCs) running 100% inside **Docker** with **Caddy** (TLS reverse proxy), **Node.js 24 Alpine / Next.js 16** (App Router & HTTP server), and **PostgreSQL 16** with **Drizzle ORM**.
 
-WeddingDrop is a self-hosted, multi-tenant web application designed to collect wedding photos and videos from guests via QR codes. It is optimized for domestic low-power microservers (specifically **Intel N100** quad-core mini-PCs) running 100% inside **Docker** with **Caddy** (TLS reverse proxy), **Next.js 16 / Node.js** (App Router & HTTP server), and **PostgreSQL 16** with **Drizzle ORM**.
+### Monorepo Packages:
+- `apps/web` (`@wedding-drop/web`): Next.js 16 frontend, App Router, server actions, API routes, and unified HTTP server (`server.ts`).
+- `packages/db` (`@wedding-drop/db`): Drizzle ORM schema, migrations, connection pool singleton, and admin bootstrap.
+- `packages/media` (`@wedding-drop/media`): Media processing pipeline, TUS 1.0.0 server, Sharp & FFmpeg thumbnailing, SSE event bus, PDF A6 table cards, QR codes, streamed ZIPs, and Google Drive exporter.
 
 ---
 
-## 2. Non-Negotiable Architecture Constraints
+## 2. Monorepo Tooling & Standards
+
+- **Package Manager**: **PNPM only** (`pnpm-workspace.yaml`). Never use `npm` or `yarn`.
+- **Linting & Formatting**: **Biome** (`biome.json`). Prettier and ESLint are decommissioned. Use `pnpm biome check apps/ packages/` with tab indentation and double quotes.
+- **Orchestration**: **Turborepo** (`turbo.json`). Tasks `build`, `test`, `lint`, `check-types`, `dev` are managed through Turbo.
+- **Docker Architecture**: Multi-stage build on `node:24-alpine` utilizing `turbo prune @wedding-drop/web --docker` for minimal production image footprint.
+
+---
+
+## 3. Non-Negotiable Architecture Constraints
 
 Any code changes must strictly adhere to the following hardware and architectural invariants:
 
@@ -30,10 +42,10 @@ Any code changes must strictly adhere to the following hardware and architectura
 
 ---
 
-## 3. Security & Privacy Rules
+## 4. Security & Privacy Rules
 
 - **Path Traversal Sandboxing**:
-  - Any file serving route (such as `/media-file/*` in `server.ts`) MUST verify that `path.resolve(targetPath)` resides strictly inside the configured `/data` directory.
+  - Any file serving route (such as `/media-file/*` in `apps/web/server.ts`) MUST verify that `path.resolve(targetPath)` resides strictly inside the configured `/data` directory.
   - Reject any path containing `..`, null bytes, or resolving outside the boundary with `403 Forbidden` or `404 Not Found`.
 - **Slug Sanitization**:
   - Slugs MUST strictly conform to `^[a-z0-9_-]+$`. Always apply `.toLowerCase().replace(/[^a-z0-9_-]/g, "")`.
@@ -47,7 +59,7 @@ Any code changes must strictly adhere to the following hardware and architectura
 
 ---
 
-## 4. Mobile UX & Real-Time Gallery
+## 5. Mobile UX & Real-Time Gallery
 
 - **Guest First (Zero Friction)**:
   - Guests must never be forced to log in, register, or download an app.
@@ -59,15 +71,15 @@ Any code changes must strictly adhere to the following hardware and architectura
 
 ---
 
-## 5. Skills & Automation Tools
+## 6. Skills & Automation Tools
 
 This workspace provides specialized skills and tools in `.agents/`:
 - **Skills**:
-  - `wedding-qa`: Running Vitest (74 tests) and Playwright E2E test suites (32 scenarios / 96 tests across Desktop and Mobile).
-  - `wedding-ops`: Managing Docker Compose, Caddy SSL, Drizzle migrations, and Backup/Restore.
-  - `wedding-media-pipeline`: TUS upload, Sharp/FFmpeg processing, watchdog, SSE event bus.
-  - `wedding-gdrive`: Google Drive OAuth 2.0 and background export workflows.
+  - `wedding-qa`: Running Vitest (80 tests across packages) and Playwright E2E test suites (32 scenarios / 96 tests across Desktop and Mobile).
+  - `wedding-ops`: Managing Docker Compose, Caddy SSL, Drizzle migrations (`packages/db`), and Backup/Restore.
+  - `wedding-media-pipeline`: TUS upload, Sharp/FFmpeg processing, watchdog, SSE event bus (`packages/media`).
+  - `wedding-gdrive`: Google Drive OAuth 2.0 and background export workflows (`packages/media`).
 - **Helper Scripts**:
   - `.agents/scripts/ops-helper.ts`: Quick operations (backup, restore, status) via `npx tsx`.
-  - `.agents/scripts/test-runner.ts`: Test orchestration via `npx tsx`.
+  - `.agents/scripts/test-runner.ts`: Test orchestration via `npx tsx` / `pnpm`.
   - `.agents/scripts/hook-runner.ts`: Validation hook runner for `hooks.json`.

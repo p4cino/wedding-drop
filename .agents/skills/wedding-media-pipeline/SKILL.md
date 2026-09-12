@@ -28,9 +28,12 @@ Szczegółowy diagram i parametry znajdziesz w dokumencie [pipeline-architecture
 
 ## 2. Kluczowe Pliki Źródłowe
 
-- `server.ts`: Konfiguracja serwera `@tus/server`, obsługa tras `/api/upload/tus/*` oraz bezpieczne serwowanie `/media-file/*`.
-- `src/components/UploaderDrawer.tsx`: Komponent kliencki React z obsługą kolejkowania plików, paskiem postępu i wznawianiem.
-- `src/app/api/gallery/[slug]/live/route.ts`: Endpoint SSE subskrybujący zdarzenia z globalnego singletonu `globalThis.__wedding_sse_bus__`.
+- `apps/web/server.ts`: Konfiguracja serwera `@tus/server`, obsługa tras `/api/upload/tus/*` oraz bezpieczne serwowanie `/media-file/*`.
+- `apps/web/src/components/UploaderDrawer.tsx`: Komponent kliencki React z obsługą kolejkowania plików, paskiem postępu i wznawianiem.
+- `apps/web/src/app/api/gallery/[slug]/live/route.ts`: Endpoint SSE subskrybujący zdarzenia z globalnego singletonu `globalThis.__wedding_sse_bus__`.
+- `packages/media/src/media-processor.ts`: Logika przetwarzania Sharp i FFmpeg z kolejką PQueue (`concurrency: 2`).
+- `packages/media/src/tus-server.ts`: Konfiguracja instancji serwera TUS z hookami `POST_FINISH`.
+- `packages/media/src/sse-bus.ts`: Implementacja magistrali zdarzeń SSE.
 
 ---
 

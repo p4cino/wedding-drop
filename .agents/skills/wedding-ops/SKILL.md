@@ -14,7 +14,7 @@ Ten skill zawiera procedury operacyjne i wdrożeniowe dla aplikacji **WeddingDro
 
 Stos produkcyjny składa się z 3 współpracujących kontenerów:
 1. **`wedding_postgres`**: Baza danych PostgreSQL 16 Alpine z dedykowanymi indeksami złożonymi i wolumenem `postgres_data`.
-2. **`wedding_web`**: Next.js 14, serwer TUS, Sharp, FFmpeg z limitem `concurrency: 2` i wolumenem danych `app_data`.
+2. **`wedding_web`**: Node.js 24 Alpine, Next.js 16 (`apps/web`), serwer TUS, Sharp, FFmpeg z limitem `concurrency: 2` i wolumenem danych `app_data`. Zbudowany z wieloetapowego Dockerfile z wykorzystaniem `turbo prune`.
 3. **`wedding_caddy`**: Reverse proxy Caddy v2 z automatycznym certyfikatem HTTPS Let's Encrypt i nagłówkami `noindex`.
 
 Szczegóły sieci i konfiguracji Caddyfile znajdziesz w dokumencie [docker-caddy.md](./references/docker-caddy.md).
@@ -46,14 +46,14 @@ docker compose down
 
 ## 3. Zarządzanie Bazą Danych i Drizzle ORM
 
-Schemat bazodanowy zdefiniowany jest w `src/db/schema.ts`, a konfiguracja w `drizzle.config.ts`.
+Schemat bazodanowy zdefiniowany jest w `packages/db/src/schema.ts`, a konfiguracja w `packages/db/drizzle.config.ts`.
 
 ```bash
-# Generowanie plików migracji na podstawie zmian w src/db/schema.ts
-npm run db:generate
+# Generowanie plików migracji na podstawie zmian w schema.ts
+pnpm --filter @wedding-drop/db db:generate
 
 # Bezpośrednie wdrożenie zmian schematu do aktywnej bazy danych
-npm run db:push
+pnpm --filter @wedding-drop/db db:push
 
 # Bezpośredni dostęp do konsoli psql w kontenerze
 docker exec -it wedding_postgres psql -U wedding -d wedding_drop

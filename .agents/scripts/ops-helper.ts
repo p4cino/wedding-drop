@@ -123,10 +123,10 @@ function main() {
       handleRestore(args.slice(1));
       break;
     case "db:push":
-      run("npm run db:push");
+      run("pnpm --filter @wedding-drop/db db:push");
       break;
     case "db:generate":
-      run("npm run db:generate");
+      run("pnpm --filter @wedding-drop/db db:generate");
       break;
     case "logs": {
       const service = args[1] || "";
