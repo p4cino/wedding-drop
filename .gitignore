@@ -4,6 +4,7 @@ node_modules/
 .pnp.js
 
 # Środowisko uruchomieniowe i Build Next.js
+.turbo/
 .next/
 out/
 build/
