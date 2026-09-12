@@ -1,0 +1,62 @@
+# Dependencje
+node_modules/
+/.pnp
+.pnp.js
+
+# Środowisko uruchomieniowe i Build Next.js
+.next/
+out/
+build/
+dist/
+
+# Pliki środowiskowe i wrażliwe (Sekrety, Hasła, Klucze API)
+.env
+.env*.local
+.env.production
+.env.staging
+!.env.example
+
+# Dane multimedialne i magazyn fizyczny (Wrzutki gości)
+/data/
+data/
+tus_temp/
+galleries/
+*.tar.gz
+*.zip
+
+# Kopie zapasowe (Baza i Media)
+/backups/
+backups/
+*.sql
+
+# Raporty z testów i pokrycia kodu
+coverage/
+test-results/
+playwright-report/
+blob-report/
+.nyc_output/
+
+# Logi systemowe
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Pliki systemowe i edytory
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sublime-workspace
+
+# Certyfikaty SSL Caddy (jeśli generowane lokalnie w projekcie)
+.caddy/
+caddy_data/
+caddy_config/
