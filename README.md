@@ -15,6 +15,40 @@ Kompletna, samoobsługowa aplikacja internetowa do zbierania zdjęć i filmów z
 
 ---
 
+## 📸 Zrzuty Ekranu
+
+### 📱 Doświadczenie Gościa Weselnego (100% Mobile First)
+Bez instalacji aplikacji ze sklepów i bez rejestracji – gość skanuje kod QR ze stolika, natychmiast przegląda zdjęcia na żywo i wysyła własne prosto z rolki aparatu dzięki wznawialnemu protokołowi TUS:
+
+<p align="center">
+  <img src="docs/screenshots/01-guest-gallery-mobile.png" width="370" alt="Galeria gościa weselnego na żywo" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/screenshots/02-upload-drawer-mobile.png" width="370" alt="Drawer wznawialnego uploadu TUS z podpisem" />
+</p>
+
+### 💌 Generator Winietek na Stoliki Weselne (Format A6 / 300 DPI)
+Wbudowany wektorowy generator wizytówek na stoły z dynamicznym kodem QR, wyborem eleganckich motywów kolorystycznych i opcją natychmiastowego druku:
+
+<p align="center">
+  <img src="docs/screenshots/03-table-card-creator.png" width="850" alt="Generator winietek na stoliki weselne A6" />
+</p>
+
+### 💍 Panel Pary Młodej (Moderacja Treści, Eksport ZIP i Google Drive)
+Dedykowany panel właściciela galerii chroniony hasłem – statystyki w czasie rzeczywistym, moderacja widoczności zdjęć jednym kliknięciem, pobieranie strumieniowego archiwum ZIP oraz automatyczny backup do chmury Google Drive:
+
+<p align="center">
+  <img src="docs/screenshots/04-owner-dashboard.png" width="850" alt="Panel Pary Młodej z moderacją i integracją Google Drive" />
+</p>
+
+### ⚙️ Panel Główny Administratora Systemu
+Szybki podgląd wszystkich ślubów, zarządzanie przestrzenią dyskową oraz błyskawiczne tworzenie nowych wesel:
+
+<p align="center">
+  <img src="docs/screenshots/05-admin-panel.png" width="850" alt="Panel Administratora Systemu WeddingDrop" />
+</p>
+
+---
+
 ## 🌟 Główne Funkcje
 
 1. **Dla Gości (100% Mobile First)**:
