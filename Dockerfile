@@ -1,5 +1,5 @@
 # 1. Etap przycinania monorepo (Turborepo Pruner)
-FROM node:24-alpine AS pruner
+FROM node:26-alpine AS pruner
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 RUN npm install -g turbo
@@ -7,7 +7,7 @@ COPY . .
 RUN turbo prune @wedding-drop/web --docker
 
 # 2. Etap instalacji zależności i budowy aplikacji
-FROM node:24-alpine AS builder
+FROM node:26-alpine AS builder
 RUN apk add --no-cache libc6-compat python3 make g++ ffmpeg
 WORKDIR /app
 
@@ -46,7 +46,7 @@ RUN rm -rf \
     packages/*/src
 
 # 3. Etap produkcyjny (Minimalny Runner zoptymalizowany pod Intel N100)
-FROM node:24-alpine AS runner
+FROM node:26-alpine AS runner
 RUN apk add --no-cache ffmpeg libc6-compat
 WORKDIR /app
 
