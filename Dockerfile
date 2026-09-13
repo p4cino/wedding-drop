@@ -6,7 +6,7 @@ RUN npm install -g turbo
 COPY . .
 RUN turbo prune @wedding-drop/web --docker
 
-# 2. Etap instalacji zależności i budowy aplikacji
+# 2. Etap instalacji WSZYSTKICH zależności i budowy aplikacji
 FROM node:24-alpine AS builder
 RUN apk add --no-cache libc6-compat python3 make g++ ffmpeg
 WORKDIR /app
@@ -32,22 +32,25 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Budowa produkcyjna Next.js przez pnpm / Turborepo
 RUN pnpm --filter @wedding-drop/web build
 
-# Odchudzenie warstwy /app przed przekopiowaniem do runnera
-# 1. Usunięcie narzędzi developerskich z node_modules
-RUN pnpm install --prod --ignore-scripts --prefer-offline
-# 2. Usunięcie masywnych folderów z pamięcią podręczną
-RUN rm -rf \
-    .turbo \
-    node_modules/.cache \
-    apps/web/.next/cache \
-    packages/*/.turbo \
-    packages/*/node_modules/.cache \
-    apps/web/src \
-    packages/*/src
+# 3. Etap instalacji TYLKO zależności produkcyjnych
+FROM node:24-alpine AS prod-deps
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@latest --activate
+COPY --from=pruner /app/out/json/ .
+COPY pnpm-lock.yaml ./pnpm-lock.yaml
+COPY pnpm-workspace.yaml ./pnpm-workspace.yaml
+RUN npm pkg delete scripts.prepare && pnpm install --prod --frozen-lockfile
 
-# 3. Etap produkcyjny (Minimalny Runner zoptymalizowany pod Intel N100)
+# 4. Etap produkcyjny (Minimalny Runner zoptymalizowany pod Intel N100)
 FROM node:24-alpine AS runner
-RUN apk add --no-cache ffmpeg libc6-compat
+RUN apk update && apk upgrade --no-cache && \
+    apk add --no-cache libc6-compat
+
+# Pobranie statycznie skompilowanego FFmpeg
+RUN wget -qO- https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz | tar Jx && \
+    cp ffmpeg-*-static/ffmpeg /usr/local/bin/ && \
+    cp ffmpeg-*-static/ffprobe /usr/local/bin/ && \
+    rm -rf ffmpeg-*
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -55,13 +58,23 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOST=0.0.0.0
 
-COPY --from=builder /app ./
+# Kopiowanie node_modules (tylko produkcyjne)
+COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=prod-deps /app/apps/web/node_modules ./apps/web/node_modules
+COPY --from=prod-deps /app/packages/db/node_modules ./packages/db/node_modules
+COPY --from=prod-deps /app/packages/media/node_modules ./packages/media/node_modules
+
+# Kopiowanie wysoce zoptymalizowanego trybu standalone Next.js, ale z pominięciem jego wadliwego node_modules
+COPY --from=builder /app/apps/web/.next/standalone/apps/web/server.js ./apps/web/
+COPY --from=builder /app/apps/web/.next/standalone/apps/web/.next ./apps/web/.next
+COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder /app/apps/web/public ./apps/web/public
+COPY --from=builder /app/apps/web/dist ./apps/web/dist
+COPY --from=builder /app/packages/db/migrations ./packages/db/migrations
 
 RUN mkdir -p /app/data/galleries /app/data/tus_temp
 
 EXPOSE 3000
 
-# Bezpośrednie uruchomienie serwera bez ciężkiego managera procesów pnpm
-# (natychmiastowa obsługa sygnałów SIGTERM i minimalne zużycie RAM na Intel N100)
 WORKDIR /app/apps/web
 CMD ["node", "dist/server.js"]
