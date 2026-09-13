@@ -248,4 +248,90 @@ describe("LightboxModal Component", () => {
 		fireEvent.touchEnd(modal);
 		expect(onNavigate).not.toHaveBeenCalled();
 	});
+
+	it("powinien obsługiwać pułapkę fokusu Tab i Shift+Tab wewnątrz modala", () => {
+		const { container } = render(
+			<LightboxModal
+				items={mockItems}
+				currentIndex={0}
+				onClose={vi.fn()}
+				onNavigate={vi.fn()}
+			/>,
+		);
+
+		const buttons = container.querySelectorAll("button, a[href]");
+		expect(buttons.length).toBeGreaterThan(1);
+		const firstButton = buttons[0] as HTMLElement;
+		const lastButton = buttons[buttons.length - 1] as HTMLElement;
+
+		// Focus na pierwszym elemencie + Shift+Tab -> przenosi na ostatni
+		firstButton.focus();
+		expect(document.activeElement).toBe(firstButton);
+
+		fireEvent.keyDown(window, { key: "Tab", shiftKey: true });
+		expect(document.activeElement).toBe(lastButton);
+
+		// Focus na ostatnim elemencie + Tab -> przenosi na pierwszy
+		lastButton.focus();
+		expect(document.activeElement).toBe(lastButton);
+
+		fireEvent.keyDown(window, { key: "Tab", shiftKey: false });
+		expect(document.activeElement).toBe(firstButton);
+
+		// Tab na elemencie pośrednim nie wymusza pętli
+		firstButton.focus();
+		fireEvent.keyDown(window, { key: "Tab", shiftKey: false });
+		// normalne zachowanie
+	});
+
+	it("nie powinien reagować na nawigację strzałkami poza zakresem", () => {
+		const onNavigate = vi.fn();
+		render(
+			<LightboxModal
+				items={mockItems}
+				currentIndex={0}
+				onClose={vi.fn()}
+				onNavigate={onNavigate}
+			/>,
+		);
+
+		// ArrowLeft na pierwszym elemencie (index 0) nie powinien nawigować wstecz
+		fireEvent.keyDown(window, { key: "ArrowLeft" });
+		expect(onNavigate).not.toHaveBeenCalled();
+	});
+
+	it("nie powinien nawigować ArrowRight poza ostatni element", () => {
+		const onNavigate = vi.fn();
+		render(
+			<LightboxModal
+				items={mockItems}
+				currentIndex={mockItems.length - 1}
+				onClose={vi.fn()}
+				onNavigate={onNavigate}
+			/>,
+		);
+
+		fireEvent.keyDown(window, { key: "ArrowRight" });
+		expect(onNavigate).not.toHaveBeenCalled();
+	});
+
+	it("powinien przywrócić fokus na poprzedni element po zamknięciu", () => {
+		const triggerButton = document.createElement("button");
+		document.body.appendChild(triggerButton);
+		triggerButton.focus();
+		expect(document.activeElement).toBe(triggerButton);
+
+		const { unmount } = render(
+			<LightboxModal
+				items={mockItems}
+				currentIndex={0}
+				onClose={vi.fn()}
+				onNavigate={vi.fn()}
+			/>,
+		);
+
+		unmount();
+		expect(document.activeElement).toBe(triggerButton);
+		document.body.removeChild(triggerButton);
+	});
 });

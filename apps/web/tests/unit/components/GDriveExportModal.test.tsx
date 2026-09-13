@@ -77,4 +77,59 @@ describe("GDriveExportModal Component", () => {
 			screen.getByRole("button", { name: /Inicjalizacja.../i }),
 		).toBeDisabled();
 	});
+
+	it("powinien przełączyć na tylko widoczne multimedia", () => {
+		const setIncludeHiddenMock = vi.fn();
+		render(
+			<GDriveExportModal
+				isOpen={true}
+				coupleNames="Kasia i Tomek"
+				includeHidden={true}
+				setIncludeHidden={setIncludeHiddenMock}
+				exportLoading={false}
+				onClose={vi.fn()}
+				onStartExport={vi.fn()}
+			/>,
+		);
+
+		const radioVisibleOnly = screen.getByLabelText(
+			/Tylko widoczne multimedia/i,
+		);
+		fireEvent.click(radioVisibleOnly);
+		expect(setIncludeHiddenMock).toHaveBeenCalledWith(false);
+	});
+
+	it("powinien zamykać się po wciśnięciu Escape tylko gdy nie trwa eksport", () => {
+		const onCloseMock = vi.fn();
+		const { rerender } = render(
+			<GDriveExportModal
+				isOpen={true}
+				coupleNames="Kasia i Tomek"
+				includeHidden={false}
+				setIncludeHidden={vi.fn()}
+				exportLoading={false}
+				onClose={onCloseMock}
+				onStartExport={vi.fn()}
+			/>,
+		);
+
+		fireEvent.keyDown(window, { key: "Escape" });
+		expect(onCloseMock).toHaveBeenCalledTimes(1);
+
+		// Gdy trwa eksport (exportLoading = true)
+		rerender(
+			<GDriveExportModal
+				isOpen={true}
+				coupleNames="Kasia i Tomek"
+				includeHidden={false}
+				setIncludeHidden={vi.fn()}
+				exportLoading={true}
+				onClose={onCloseMock}
+				onStartExport={vi.fn()}
+			/>,
+		);
+
+		fireEvent.keyDown(window, { key: "Escape" });
+		expect(onCloseMock).toHaveBeenCalledTimes(1); // nadal 1, nie wzrosło
+	});
 });

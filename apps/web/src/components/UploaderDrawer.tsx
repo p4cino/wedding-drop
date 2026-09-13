@@ -208,18 +208,12 @@ export default function UploaderDrawer({
 					</div>
 
 					{/* Strefa wyboru plików */}
-					<div
-						role="button"
-						tabIndex={isUploading ? -1 : 0}
-						onClick={() => !isUploading && fileInputRef.current?.click()}
-						onKeyDown={(e) => {
-							if (!isUploading && (e.key === "Enter" || e.key === " ")) {
-								e.preventDefault();
-								fileInputRef.current?.click();
-							}
-						}}
+					<button
+						type="button"
+						disabled={isUploading}
+						onClick={() => fileInputRef.current?.click()}
 						aria-label="Kliknij, aby wybrać zdjęcia lub filmy z galerii lub aparatu"
-						className="border-2 border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/40 rounded-2xl p-6 text-center cursor-pointer transition group focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
+						className="w-full border-2 border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/40 rounded-2xl p-6 text-center cursor-pointer transition group focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						<input
 							ref={fileInputRef}
@@ -238,7 +232,7 @@ export default function UploaderDrawer({
 						<p className="text-xs text-slate-500 mt-1">
 							Obsługa zdjęć JPEG, PNG, HEIC oraz filmów MP4/MOV
 						</p>
-					</div>
+					</button>
 
 					{/* Lista wybranych plików */}
 					{files.length > 0 && (

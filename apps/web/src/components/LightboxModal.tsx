@@ -34,28 +34,21 @@ export default function LightboxModal({
 	const dialogRef = React.useRef<HTMLDivElement>(null);
 	const previousFocusRef = React.useRef<HTMLElement | null>(null);
 
+	const isOpen = currentIndex !== null;
+
 	// Zachowanie i przywracanie fokusu przed otwarciem / po zamknięciu modala
 	useEffect(() => {
-		if (currentIndex !== null) {
-			previousFocusRef.current = document.activeElement as HTMLElement | null;
-			// Przeniesienie fokusu do modala
-			const timer = setTimeout(() => {
-				const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
-					'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-				);
-				if (focusable && focusable.length > 0) {
-					focusable[0]?.focus();
-				} else {
-					dialogRef.current?.focus();
-				}
-			}, 50);
+		if (!isOpen) return;
+		previousFocusRef.current = document.activeElement as HTMLElement | null;
+		const focusable = dialogRef.current?.querySelector<HTMLElement>(
+			'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+		);
+		(focusable || dialogRef.current)?.focus();
 
-			return () => {
-				clearTimeout(timer);
-				previousFocusRef.current?.focus();
-			};
-		}
-	}, [currentIndex]);
+		return () => {
+			previousFocusRef.current?.focus();
+		};
+	}, [isOpen]);
 
 	// Obsługa klawiatury: Escape, strzałki oraz pułapka fokusu Tab
 	useEffect(() => {
@@ -87,16 +80,12 @@ export default function LightboxModal({
 				const firstElement = focusables[0];
 				const lastElement = focusables[focusables.length - 1];
 
-				if (e.shiftKey) {
-					if (document.activeElement === firstElement) {
-						e.preventDefault();
-						lastElement?.focus();
-					}
-				} else {
-					if (document.activeElement === lastElement) {
-						e.preventDefault();
-						firstElement?.focus();
-					}
+				if (e.shiftKey && document.activeElement === firstElement) {
+					e.preventDefault();
+					lastElement?.focus();
+				} else if (!e.shiftKey && document.activeElement === lastElement) {
+					e.preventDefault();
+					firstElement?.focus();
 				}
 			}
 		};
