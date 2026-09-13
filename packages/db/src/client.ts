@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import bcrypt from "bcryptjs";
+import { hash } from "@node-rs/bcrypt";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
@@ -58,10 +58,10 @@ export async function initDatabase() {
 		const existingAdmins = await client`SELECT count(*) FROM admins`;
 		if (parseInt(existingAdmins[0].count, 10) === 0) {
 			const defaultAdminPass = process.env.ADMIN_PASSWORD || "admin123";
-			const hash = await bcrypt.hash(defaultAdminPass, 10);
+			const passwordHash = await hash(defaultAdminPass, 10);
 			await client`
 				INSERT INTO admins (username, password_hash)
-				VALUES ('admin', ${hash})
+				VALUES ('admin', ${passwordHash})
 			`;
 			console.log(
 				`[DB] Utworzono domyślnego administratora: login='admin', hasło='${defaultAdminPass}'`,

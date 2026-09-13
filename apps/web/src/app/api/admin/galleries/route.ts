@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { hash } from "@node-rs/bcrypt";
 import {
 	cardSettings,
 	createGalleryDto,
@@ -7,7 +8,6 @@ import {
 	galleries,
 	mediaItems,
 } from "@wedding-drop/db";
-import bcrypt from "bcryptjs";
 import { desc, eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { verifyAdminToken } from "@/lib/auth";
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
 			slug = `${slug}-${Math.random().toString(36).substring(2, 6)}`;
 		}
 
-		const ownerPasswordHash = await bcrypt.hash(ownerPassword, 10);
+		const ownerPasswordHash = await hash(ownerPassword, 10);
 		const maxStorageBytes = maxStorageGb
 			? Math.floor(maxStorageGb) * 1024 * 1024 * 1024
 			: 0;

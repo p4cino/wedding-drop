@@ -1,5 +1,5 @@
+import { compare } from "@node-rs/bcrypt";
 import { adminLoginDto, admins, db } from "@wedding-drop/db";
-import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { generateAdminToken } from "@/lib/auth";
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 			);
 		}
 
-		const isValid = await bcrypt.compare(password, adminResult[0].passwordHash);
+		const isValid = await compare(password, adminResult[0].passwordHash);
 		if (!isValid) {
 			return NextResponse.json({ error: "Błędne hasło" }, { status: 401 });
 		}

@@ -16,11 +16,9 @@ vi.mock("node:fs", () => ({
 	existsSync: vi.fn(() => mockExists),
 }));
 
-vi.mock("bcryptjs", () => ({
-	default: {
-		compare: vi.fn((pwd: string) => Promise.resolve(pwd === "sekret123")),
-		hash: vi.fn(() => Promise.resolve("hashed")),
-	},
+vi.mock("@node-rs/bcrypt", () => ({
+	compare: vi.fn((pwd: string) => Promise.resolve(pwd === "sekret123")),
+	hash: vi.fn(() => Promise.resolve("hashed")),
 }));
 
 vi.mock("archiver", () => {

@@ -41,11 +41,9 @@ vi.mock("drizzle-orm/postgres-js/migrator", () => ({
 	migrate: vi.fn().mockResolvedValue(undefined),
 }));
 
-// Mock bcryptjs
-vi.mock("bcryptjs", () => ({
-	default: {
-		hash: vi.fn().mockResolvedValue("mocked_hash_value"),
-	},
+// Mock bcrypt
+vi.mock("@node-rs/bcrypt", () => ({
+	hash: vi.fn().mockResolvedValue("mocked_hash_value"),
 }));
 
 describe("Database Client and InitDatabase", () => {
@@ -57,7 +55,7 @@ describe("Database Client and InitDatabase", () => {
 		mockAdminCount = "0";
 		const migrator = await import("drizzle-orm/postgres-js/migrator");
 		migrateMock = migrator.migrate as unknown as ReturnType<typeof vi.fn>;
-		const bcrypt = (await import("bcryptjs")).default;
+		const bcrypt = await import("@node-rs/bcrypt");
 		bcryptMock = bcrypt as unknown as { hash: ReturnType<typeof vi.fn> };
 	});
 

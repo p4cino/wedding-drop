@@ -17,15 +17,13 @@ import { DELETE as ownerMediaDelete } from "@/app/api/owner/[slug]/media/[id]/ro
 import { PATCH as ownerMediaStatusPatch } from "@/app/api/owner/[slug]/media/[id]/status/route";
 import { generateAdminToken, generateOwnerToken } from "@/lib/auth";
 
-vi.mock("bcryptjs", () => ({
-	default: {
-		compare: vi
-			.fn()
-			.mockImplementation((pwd) =>
-				Promise.resolve(pwd === "admin123" || pwd === "owner123"),
-			),
-		hash: vi.fn().mockResolvedValue("hash123"),
-	},
+vi.mock("@node-rs/bcrypt", () => ({
+	compare: vi
+		.fn()
+		.mockImplementation((pwd) =>
+			Promise.resolve(pwd === "admin123" || pwd === "owner123"),
+		),
+	hash: vi.fn().mockResolvedValue("hash123"),
 }));
 
 vi.mock("node:fs/promises", () => ({
