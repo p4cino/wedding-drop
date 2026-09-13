@@ -2,6 +2,7 @@ import withSerwistInit from "@serwist/next";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+	output: "standalone",
 	reactStrictMode: true,
 	poweredByHeader: false,
 	transpilePackages: ["@wedding-drop/db", "@wedding-drop/media"],

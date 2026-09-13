@@ -33,21 +33,16 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm --filter @wedding-drop/web build
 
 # Odchudzenie warstwy /app przed przekopiowaniem do runnera
-# 1. Usunięcie narzędzi developerskich z node_modules
-RUN pnpm install --prod --ignore-scripts --prefer-offline
-# 2. Usunięcie masywnych folderów z pamięcią podręczną
-RUN rm -rf \
-    .turbo \
-    node_modules/.cache \
-    apps/web/.next/cache \
-    packages/*/.turbo \
-    packages/*/node_modules/.cache \
-    apps/web/src \
-    packages/*/src
-
 # 3. Etap produkcyjny (Minimalny Runner zoptymalizowany pod Intel N100)
 FROM node:24-alpine AS runner
-RUN apk add --no-cache ffmpeg libc6-compat
+RUN apk update && apk upgrade --no-cache && \
+    apk add --no-cache libc6-compat
+
+# Pobranie statycznie skompilowanego FFmpeg w celu ominięcia setek pakietów i podatności Alpine (CVE)
+RUN wget -qO- https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz | tar Jx && \
+    cp ffmpeg-*-static/ffmpeg /usr/local/bin/ && \
+    cp ffmpeg-*-static/ffprobe /usr/local/bin/ && \
+    rm -rf ffmpeg-*
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -55,7 +50,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOST=0.0.0.0
 
-COPY --from=builder /app ./
+# Kopiowanie wysoce zoptymalizowanego trybu standalone Next.js (tylko to co niezbędne)
+COPY --from=builder /app/apps/web/.next/standalone ./
+COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder /app/apps/web/public ./apps/web/public
+COPY --from=builder /app/apps/web/dist ./apps/web/dist
 
 RUN mkdir -p /app/data/galleries /app/data/tus_temp
 
