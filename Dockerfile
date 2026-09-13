@@ -41,7 +41,9 @@ RUN rm -rf \
     node_modules/.cache \
     apps/web/.next/cache \
     packages/*/.turbo \
-    packages/*/node_modules/.cache
+    packages/*/node_modules/.cache \
+    apps/web/src \
+    packages/*/src
 
 # 3. Etap produkcyjny (Minimalny Runner zoptymalizowany pod Intel N100)
 FROM node:24-alpine AS runner
@@ -62,4 +64,4 @@ EXPOSE 3000
 # Bezpośrednie uruchomienie serwera bez ciężkiego managera procesów pnpm
 # (natychmiastowa obsługa sygnałów SIGTERM i minimalne zużycie RAM na Intel N100)
 WORKDIR /app/apps/web
-CMD ["npx", "tsx", "server.ts"]
+CMD ["node", "dist/server.js"]

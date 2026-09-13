@@ -4,8 +4,8 @@
 	"private": true,
 	"scripts": {
 		"dev": "tsx watch server.ts",
-		"build": "next build",
-		"start": "NODE_ENV=production tsx server.ts",
+		"build": "tsup && next build",
+		"start": "NODE_ENV=production node dist/server.js",
 		"test": "vitest run",
 		"test:coverage": "vitest run --coverage",
 		"test:e2e": "playwright test",
@@ -13,7 +13,6 @@
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@serwist/next": "^9.5.12",
 		"@wedding-drop/db": "workspace:*",
 		"@wedding-drop/media": "workspace:*",
 		"bcryptjs": "^3.0.3",
@@ -26,13 +25,13 @@
 		"qrcode": "^1.5.4",
 		"react": "^19.3.0",
 		"react-dom": "^19.3.0",
-		"serwist": "^9.5.12",
 		"tailwind-merge": "^3.6.0",
 		"tus-js-client": "^4.3.1",
 		"zod": "^4.6.2"
 	},
 	"devDependencies": {
 		"@playwright/test": "^1.63.0",
+		"@serwist/next": "^9.5.12",
 		"@tailwindcss/postcss": "^4.3.3",
 		"@testing-library/jest-dom": "^7.0.1",
 		"@testing-library/react": "^16.3.3",
@@ -42,12 +41,14 @@
 		"@types/qrcode": "^1.5.6",
 		"@types/react": "^19.3.0",
 		"@types/react-dom": "^19.3.0",
-		"@vitejs/plugin-react": "^4.3.4",
+		"@vitejs/plugin-react": "^4.7.0",
 		"@vitest/coverage-v8": "^5.0.0",
 		"autoprefixer": "^10.5.6",
 		"jsdom": "^30.0.1",
 		"postcss": "^8.5.28",
+		"serwist": "^9.5.12",
 		"tailwindcss": "^4.3.3",
+		"tsup": "^8.5.1",
 		"tsx": "^4.23.13",
 		"typescript": "^7.0.2",
 		"vitest": "^5.0.0"
