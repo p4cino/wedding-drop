@@ -70,8 +70,6 @@ COPY --from=builder /app/apps/web/.next/standalone/apps/web/.next ./apps/web/.ne
 COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder /app/apps/web/public ./apps/web/public
 COPY --from=builder /app/apps/web/dist ./apps/web/dist
-COPY --from=builder /app/packages/db/dist ./packages/db/dist
-COPY --from=builder /app/packages/media/dist ./packages/media/dist
 
 RUN mkdir -p /app/data/galleries /app/data/tus_temp
 
