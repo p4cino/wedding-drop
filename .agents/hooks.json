@@ -1,10 +1,22 @@
 {
 	"wedding-validation-gate": {
 		"enabled": true,
+		"PostToolUse": [
+			{
+				"matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "npx tsx scripts/hook-runner.ts --format 2>nul || npx tsx .agents/scripts/hook-runner.ts --format",
+						"timeout": 15
+					}
+				]
+			}
+		],
 		"Stop": [
 			{
 				"type": "command",
-				"command": "npx tsx .agents/scripts/hook-runner.ts 2>nul || docker run --rm -v c:/Users/Wojci/.gemini/antigravity-ide/scratch/wedding-drop:/app -w /app node:22-alpine npx tsx .agents/scripts/hook-runner.ts",
+				"command": "npx tsx scripts/hook-runner.ts 2>nul || npx tsx .agents/scripts/hook-runner.ts 2>nul || docker run --rm -v c:/Users/Wojci/.gemini/antigravity-ide/scratch/wedding-drop:/app -w /app node:22-alpine npx tsx .agents/scripts/hook-runner.ts",
 				"timeout": 30
 			}
 		]
