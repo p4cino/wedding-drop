@@ -1,5 +1,16 @@
 # WeddingDrop 💍 - Self-Hosted Fotowrzutka Ślubna
 
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg?style=flat-square)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D24%20Alpine-339933?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white)](docker-compose.yml)
+[![Turborepo](https://img.shields.io/badge/Turborepo-Monorepo-EF4444?style=flat-square&logo=turborepo&logoColor=white)](turbo.json)
+[![pnpm](https://img.shields.io/badge/pnpm-12.4.1-F69220?style=flat-square&logo=pnpm&logoColor=white)](pnpm-lock.yaml)
+[![Biome](https://img.shields.io/badge/Biome-v2.5.13-60A5FA?style=flat-square&logo=biome&logoColor=white)](biome.json)
+[![Vitest](https://img.shields.io/badge/Vitest-80%20passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](package.json)
+[![Playwright](https://img.shields.io/badge/Playwright-96%20E2E%20passing-2EAD33?style=flat-square&logo=playwright&logoColor=white)](package.json)
+[![Hardware](https://img.shields.io/badge/Hardware-Intel%20N100%20Optimized-0071C5?style=flat-square&logo=intel&logoColor=white)](#-optymalizacje-pod-procesor-intel-n100)
+
 Kompletna, samoobsługowa aplikacja internetowa do zbierania zdjęć i filmów z wesel, zaprojektowana z myślą o serwerach domowych i mini-PC (np. z procesorem **Intel N100**). Działa w 100% w środowisku **Docker**, bez żadnych płatnych planów i bez limitów.
 
 ---
@@ -132,3 +143,21 @@ Pokrywa:
 - **Ścieżka Gościa & Mobile UX**: przeglądanie galerii na żywo, drawer uploadu TUS, siatka zdjęć z podpisami, pełnoekranowy Lightbox z gestami **Touch Swipe** (przesuwanie palcem lewo/prawo) oraz pobieranie plików.
 - **Kreator Winietek A6**: podgląd karty `#printable-card` z kodem QR, zmiana palet barwnych, edycja tekstów na żywo, generowanie wektorowego PDF (300 DPI) z parametrami w URL.
 - **Bezpieczeństwo & Edge Cases**: blokada ukrytych zdjęć (401), ekran 404, ochrona sandbox Directory Traversal, pobieranie ZIP pustej galerii (400), blokada fałszywych tokenów HMAC (401), sanityzacja złośliwego sluga z path traversal.
+
+---
+
+## 📄 Licencja
+
+Projekt **WeddingDrop** jest wolnym i otwartym oprogramowaniem (Free & Open Source Software) publikowanym na warunkach licencji **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+
+### Co to oznacza w praktyce?
+- **Wolność użytkowania**: Możesz bezpłatnie uruchamiać i hostować aplikację na własne potrzeby prywatne oraz komercyjne (np. obsługa wesel Twoich klientów).
+- **Wolność modyfikacji**: Możesz w pełni dostosowywać kod do swoich wymagań i dodawać nowe funkcje.
+- **Copyleft (w duchu WordPressa)**: Jeśli zmodyfikujesz kod źródłowy WeddingDrop i udostępnisz go gościom lub klientom — w tym również **przez sieć jako usługę online (SaaS/Cloud)** — masz prawny obowiązek udostępnić pełny kod źródłowy wprowadzonych ulepszeń na tej samej licencji (AGPL-3.0).
+- **Ochrona wolności społeczności**: Żadna firma ani podmiot trzeci nie może zamknąć projektu ani dystrybuować zmodyfikowanej wersji jako zamkniętego oprogramowania własnościowego (proprietary software).
+- **Brak gwarancji**: Oprogramowanie jest dostarczane w stanie "tak jak jest" (AS IS), bez jakichkolwiek dorozumianych gwarancji.
+
+Pełny, oficjalny tekst licencji znajduje się w pliku [LICENSE](LICENSE).
+
+Copyright (C) 2026 WeddingDrop Contributors
+
