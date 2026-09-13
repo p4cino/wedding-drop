@@ -32,6 +32,17 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Budowa produkcyjna Next.js przez pnpm / Turborepo
 RUN pnpm --filter @wedding-drop/web build
 
+# Odchudzenie warstwy /app przed przekopiowaniem do runnera
+# 1. Usunięcie narzędzi developerskich z node_modules
+RUN pnpm install --prod --ignore-scripts --prefer-offline
+# 2. Usunięcie masywnych folderów z pamięcią podręczną
+RUN rm -rf \
+    .turbo \
+    node_modules/.cache \
+    apps/web/.next/cache \
+    packages/*/.turbo \
+    packages/*/node_modules/.cache
+
 # 3. Etap produkcyjny (Minimalny Runner zoptymalizowany pod Intel N100)
 FROM node:24-alpine AS runner
 RUN apk add --no-cache ffmpeg libc6-compat

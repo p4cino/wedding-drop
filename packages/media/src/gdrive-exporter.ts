@@ -284,8 +284,11 @@ async function runExportTask(
 			}
 
 			queue.add(async () => {
-				const localPath = path.join(dataDir, item.storagePath);
-				if (!fs.existsSync(localPath)) {
+				const localPath = path.join(
+					/*turbopackIgnore: true*/ dataDir,
+					item.storagePath,
+				);
+				if (!fs.existsSync(/*turbopackIgnore: true*/ localPath)) {
 					console.warn(`Plik lokalny nie istnieje: ${localPath}`);
 					return;
 				}

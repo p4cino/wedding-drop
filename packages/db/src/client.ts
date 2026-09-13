@@ -31,8 +31,8 @@ function getMigrationsFolder(): string {
 
 	for (const candidate of candidates) {
 		if (
-			fs.existsSync(candidate) &&
-			fs.existsSync(path.join(candidate, "meta"))
+			fs.existsSync(/*turbopackIgnore: true*/ candidate) &&
+			fs.existsSync(path.join(/*turbopackIgnore: true*/ candidate, "meta"))
 		) {
 			return candidate;
 		}
