@@ -45,8 +45,12 @@ export async function DELETE(
 			const dataDir = process.env.DATA_DIR || path.join(process.cwd(), "data");
 
 			// Usunięcie plików z dysku
-			await fs.unlink(path.join(dataDir, item.storagePath)).catch(() => {});
-			await fs.unlink(path.join(dataDir, item.thumbPath)).catch(() => {});
+			await fs
+				.unlink(path.join(/*turbopackIgnore: true*/ dataDir, item.storagePath))
+				.catch(() => {});
+			await fs
+				.unlink(path.join(/*turbopackIgnore: true*/ dataDir, item.thumbPath))
+				.catch(() => {});
 
 			await db.delete(mediaItems).where(eq(mediaItems.id, mediaId));
 

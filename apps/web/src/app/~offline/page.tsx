@@ -1,5 +1,6 @@
 import { WifiOff } from "lucide-react";
 import type { Metadata } from "next";
+import { RefreshButton } from "./RefreshButton";
 
 export const metadata: Metadata = {
 	title: "Brak połączenia z internetem",
@@ -17,13 +18,7 @@ export default function OfflineFallbackPage() {
 				nie martw się - wysyłanie zostanie automatycznie wznowione po powrocie
 				internetu.
 			</p>
-			<button
-				type="button"
-				onClick={() => window.location.reload()}
-				className="px-6 py-3 bg-slate-900 text-white rounded-full font-medium hover:bg-slate-800 transition shadow-md"
-			>
-				Spróbuj odświeżyć
-			</button>
+			<RefreshButton />
 		</div>
 	);
 }
