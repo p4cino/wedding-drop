@@ -55,7 +55,12 @@ let mockMediaList: Record<string, unknown>[] = [];
 let mockGDriveResult: Record<string, unknown>[] = [];
 let shouldThrowDb = false;
 
-import { admins, cardSettings, mediaItems, galleryGdriveExports } from "@wedding-drop/db";
+import {
+	admins,
+	cardSettings,
+	galleryGdriveExports,
+	mediaItems,
+} from "@wedding-drop/db";
 
 vi.mock("@wedding-drop/db", async (importOriginal) => {
 	const actual = await importOriginal<Record<string, unknown>>();
@@ -87,6 +92,7 @@ vi.mock("@wedding-drop/db", async (importOriginal) => {
 								where: vi.fn(() => ({
 									limit: vi.fn().mockImplementation(() =>
 										Promise.resolve(
+											// biome-ignore lint/suspicious/noExplicitAny: test mock
 											mockGalleryList.map((g: any) => ({
 												gallery: g,
 												gdrive: g.gdriveRefreshToken

@@ -21,14 +21,18 @@ vi.mock("@wedding-drop/db", () => {
 	const mockSelect = vi.fn(() => {
 		let isJoined = false;
 		return {
+			// biome-ignore lint/suspicious/noExplicitAny: test mock
 			from: vi.fn((table: any) => {
 				const buildResult = () => {
 					const isGalleries =
 						table?.id === "galleries.id" ||
 						String(table?.slug || "").includes("galleries") ||
 						table === "galleries.slug";
-					const currentData = isGalleries ? mockGalleriesResult : mockMediaResult;
+					const currentData = isGalleries
+						? mockGalleriesResult
+						: mockMediaResult;
 					if (isJoined && isGalleries) {
+						// biome-ignore lint/suspicious/noExplicitAny: test mock
 						return currentData.map((g: any) => ({
 							gallery: g,
 							gdrive: g.gdriveRefreshToken

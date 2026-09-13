@@ -51,7 +51,10 @@ export async function GET(req: NextRequest) {
 		const galleryResult = await db
 			.select({ gallery: galleries, gdrive: galleryGdriveExports })
 			.from(galleries)
-			.leftJoin(galleryGdriveExports, eq(galleries.id, galleryGdriveExports.galleryId))
+			.leftJoin(
+				galleryGdriveExports,
+				eq(galleries.id, galleryGdriveExports.galleryId),
+			)
 			.where(eq(galleries.slug, slug))
 			.limit(1);
 
@@ -62,7 +65,8 @@ export async function GET(req: NextRequest) {
 		}
 
 		const { gallery: currentGallery, gdrive: currentGDrive } = galleryResult[0];
-		const refreshTokenToSave = tokens.refresh_token || currentGDrive?.refreshToken;
+		const refreshTokenToSave =
+			tokens.refresh_token || currentGDrive?.refreshToken;
 
 		if (currentGDrive) {
 			await db
@@ -70,7 +74,8 @@ export async function GET(req: NextRequest) {
 				.set({
 					refreshToken: refreshTokenToSave,
 					accountEmail: email || currentGDrive.accountEmail,
-					exportStatus: currentGDrive.exportStatus === "running" ? "running" : "idle",
+					exportStatus:
+						currentGDrive.exportStatus === "running" ? "running" : "idle",
 				})
 				.where(eq(galleryGdriveExports.galleryId, currentGallery.id));
 		} else {

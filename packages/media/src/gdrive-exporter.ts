@@ -1,7 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
-import { db, type Gallery, galleries, mediaItems, galleryGdriveExports } from "@wedding-drop/db";
-import { and, eq, ne } from "drizzle-orm";
+import {
+	db,
+	type Gallery,
+	galleries,
+	galleryGdriveExports,
+	mediaItems,
+} from "@wedding-drop/db";
+import { and, eq, type InferSelectModel, ne } from "drizzle-orm";
 import PQueue from "p-queue";
 import {
 	checkStorageQuota,
@@ -53,7 +59,10 @@ export async function startGalleryDriveExport(
 			gdrive: galleryGdriveExports,
 		})
 		.from(galleries)
-		.leftJoin(galleryGdriveExports, eq(galleries.id, galleryGdriveExports.galleryId))
+		.leftJoin(
+			galleryGdriveExports,
+			eq(galleries.id, galleryGdriveExports.galleryId),
+		)
 		.where(eq(galleries.slug, slug))
 		.limit(1);
 
@@ -63,7 +72,7 @@ export async function startGalleryDriveExport(
 
 	const { gallery, gdrive } = galleryResult[0];
 
-	if (!gdrive || !gdrive.refreshToken) {
+	if (!gdrive?.refreshToken) {
 		throw new Error("Dysk Google nie jest podłączony do tej galerii.");
 	}
 
@@ -91,7 +100,7 @@ export async function startGalleryDriveExport(
  */
 async function runExportTask(
 	gallery: Gallery,
-	gdrive: any,
+	gdrive: InferSelectModel<typeof galleryGdriveExports>,
 	options: { includeHidden?: boolean },
 ) {
 	const slug = gallery.slug;
@@ -199,8 +208,7 @@ async function runExportTask(
 		// 4. Przygotowanie struktury folderów (zabezpieczenie przed duplikatami)
 		const rootFolderName = `WeddingDrop - ${gallery.coupleNames}`;
 		const rootFolderId =
-			gdrive.rootFolderId ||
-			(await ensureDriveFolder(drive, rootFolderName));
+			gdrive.rootFolderId || (await ensureDriveFolder(drive, rootFolderName));
 
 		const photosFolderId =
 			gdrive.photosFolderId ||

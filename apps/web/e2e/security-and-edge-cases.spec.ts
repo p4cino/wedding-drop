@@ -165,7 +165,9 @@ test.describe("Bezpieczeństwo i Przypadki Brzegowe (Security & Edge Cases)", ()
 		});
 		expect(listRes.status()).toBe(200);
 		const listData = await listRes.json();
-		expect(listData.galleries.some((g: any) => g.slug === restSlug)).toBe(true);
+		expect(
+			listData.galleries.some((g: { slug: string }) => g.slug === restSlug),
+		).toBe(true);
 
 		// Logowanie pary młodej REST POST /api/owner/[slug]/auth
 		const ownerAuthRes = await request.post(`/api/owner/${restSlug}/auth`, {

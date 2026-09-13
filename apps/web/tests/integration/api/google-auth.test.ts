@@ -40,6 +40,7 @@ vi.mock("@wedding-drop/db", () => {
 						where: vi.fn(() => ({
 							limit: vi.fn().mockImplementation(() =>
 								Promise.resolve(
+									// biome-ignore lint/suspicious/noExplicitAny: test mock
 									mockGalleryList.map((g: any) => ({
 										gallery: g,
 										gdrive: g.gdriveRefreshToken

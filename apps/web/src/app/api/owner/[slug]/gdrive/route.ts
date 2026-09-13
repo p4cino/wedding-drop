@@ -1,4 +1,4 @@
-import { db, galleries, galleryGdriveExports } from "@wedding-drop/db";
+import { db, galleryGdriveExports } from "@wedding-drop/db";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { authenticateOwner } from "@/lib/auth";

@@ -1,9 +1,15 @@
-import { cardSettings, db, galleries, mediaItems, galleryGdriveExports } from "@wedding-drop/db";
+import {
+	cardSettings,
+	db,
+	galleries,
+	galleryGdriveExports,
+	mediaItems,
+} from "@wedding-drop/db";
 import { isGoogleDriveConfigured } from "@wedding-drop/media";
+import bcrypt from "bcryptjs";
 import { eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { generateOwnerToken } from "@/lib/auth";
-import bcrypt from "bcryptjs";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +25,10 @@ export async function POST(
 		const galleryResult = await db
 			.select({ gallery: galleries, gdrive: galleryGdriveExports })
 			.from(galleries)
-			.leftJoin(galleryGdriveExports, eq(galleries.id, galleryGdriveExports.galleryId))
+			.leftJoin(
+				galleryGdriveExports,
+				eq(galleries.id, galleryGdriveExports.galleryId),
+			)
 			.where(eq(galleries.slug, slug))
 			.limit(1);
 

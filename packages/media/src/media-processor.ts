@@ -57,7 +57,8 @@ async function processMediaTask(task: ProcessTask) {
 		await fs.mkdir(rawDir, { recursive: true });
 		await fs.mkdir(thumbsDir, { recursive: true });
 
-		const safeExt = path.extname(originalName) || (fileType === "video" ? ".mp4" : ".jpg");
+		const safeExt =
+			path.extname(originalName) || (fileType === "video" ? ".mp4" : ".jpg");
 		const rawFileName = `${uploadId}${safeExt}`;
 		const targetRawPath = path.join(rawDir, rawFileName);
 		const thumbFileName = `${uploadId}_thumb.webp`;
@@ -65,11 +66,17 @@ async function processMediaTask(task: ProcessTask) {
 
 		await fs.rename(tempFilePath, targetRawPath);
 
-		const mediaProps = fileType === "image"
-			? await processImage(targetRawPath, targetThumbPath)
-			: await processVideo(targetRawPath, targetThumbPath);
+		const mediaProps =
+			fileType === "image"
+				? await processImage(targetRawPath, targetThumbPath)
+				: await processVideo(targetRawPath, targetThumbPath);
 
-		const relativeRaw = path.posix.join("galleries", gallerySlug, "raw", rawFileName);
+		const relativeRaw = path.posix.join(
+			"galleries",
+			gallerySlug,
+			"raw",
+			rawFileName,
+		);
 		const relativeThumb = existsSync(targetThumbPath)
 			? path.posix.join("galleries", gallerySlug, "thumbs", thumbFileName)
 			: relativeRaw;
@@ -80,7 +87,8 @@ async function processMediaTask(task: ProcessTask) {
 				galleryId: gallery.id,
 				uploaderName: uploaderName || "Gość weselny",
 				fileType,
-				mimeType: mimeType || (fileType === "video" ? "video/mp4" : "image/jpeg"),
+				mimeType:
+					mimeType || (fileType === "video" ? "video/mp4" : "image/jpeg"),
 				originalFileName: originalName,
 				fileSize,
 				storagePath: relativeRaw,
@@ -107,7 +115,10 @@ async function processImage(rawPath: string, thumbPath: string) {
 		const metadata = await image.metadata();
 		width = metadata.width || null;
 		height = metadata.height || null;
-		await image.resize(500, 500, { fit: "cover", position: "center" }).webp({ quality: 80 }).toFile(thumbPath);
+		await image
+			.resize(500, 500, { fit: "cover", position: "center" })
+			.webp({ quality: 80 })
+			.toFile(thumbPath);
 	} catch (err) {
 		console.error("[Processor] Sharp error:", err);
 	}
