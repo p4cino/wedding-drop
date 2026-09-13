@@ -36,6 +36,25 @@ vi.mock("@wedding-drop/db", () => {
 		db: {
 			select: vi.fn(() => ({
 				from: vi.fn(() => ({
+					leftJoin: vi.fn(() => ({
+						where: vi.fn(() => ({
+							limit: vi.fn().mockImplementation(() =>
+								Promise.resolve(
+									// biome-ignore lint/suspicious/noExplicitAny: test mock
+									mockGalleryList.map((g: any) => ({
+										gallery: g,
+										gdrive: g.gdriveRefreshToken
+											? {
+													refreshToken: g.gdriveRefreshToken,
+													accountEmail: g.gdriveAccountEmail,
+													exportStatus: g.gdriveExportStatus,
+												}
+											: null,
+									})),
+								),
+							),
+						})),
+					})),
 					where: vi.fn(() => ({
 						limit: vi
 							.fn()
@@ -48,10 +67,16 @@ vi.mock("@wedding-drop/db", () => {
 					where: vi.fn().mockResolvedValue([]),
 				})),
 			})),
+			insert: vi.fn(() => ({
+				values: vi.fn().mockResolvedValue([]),
+			})),
 		},
 		galleries: {
 			id: "galleries.id",
 			slug: "galleries.slug",
+		},
+		galleryGdriveExports: {
+			galleryId: "gallery_gdrive_exports.gallery_id",
 		},
 	};
 });

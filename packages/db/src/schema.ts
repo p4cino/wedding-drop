@@ -25,23 +25,6 @@ export const galleries = pgTable("galleries", {
 		.notNull()
 		.default(0), // 0 = bez limitu
 	expiresAt: timestamp("expires_at", { withTimezone: true }),
-	// Integracja z Google Drive
-	gdriveRefreshToken: text("gdrive_refresh_token"),
-	gdriveAccountEmail: text("gdrive_account_email"),
-	gdriveRootFolderId: text("gdrive_root_folder_id"),
-	gdrivePhotosFolderId: text("gdrive_photos_folder_id"),
-	gdriveVideosFolderId: text("gdrive_videos_folder_id"),
-	gdriveHiddenFolderId: text("gdrive_hidden_folder_id"),
-	gdriveExportStatus: text("gdrive_export_status").notNull().default("idle"), // 'idle' | 'running' | 'completed' | 'failed' | 'interrupted'
-	gdriveExportProgress: jsonb("gdrive_export_progress").$type<{
-		processedFiles: number;
-		totalFiles: number;
-		processedBytes: number;
-		totalBytes: number;
-		currentFile?: string | null;
-		error?: string | null;
-	}>(),
-	gdriveExportedAt: timestamp("gdrive_exported_at", { withTimezone: true }),
 	createdAt: timestamp("created_at", { withTimezone: true })
 		.defaultNow()
 		.notNull(),
@@ -114,8 +97,40 @@ export const admins = pgTable("admins", {
 		.notNull(),
 });
 
+export const galleryGdriveExports = pgTable("gallery_gdrive_exports", {
+	id: uuid("id").defaultRandom().primaryKey(),
+	galleryId: uuid("gallery_id")
+		.notNull()
+		.unique()
+		.references(() => galleries.id, { onDelete: "cascade" }),
+	refreshToken: text("refresh_token"),
+	accountEmail: text("account_email"),
+	rootFolderId: text("root_folder_id"),
+	photosFolderId: text("photos_folder_id"),
+	videosFolderId: text("videos_folder_id"),
+	hiddenFolderId: text("hidden_folder_id"),
+	exportStatus: text("export_status").notNull().default("idle"), // 'idle' | 'running' | 'completed' | 'failed' | 'interrupted'
+	exportProgress: jsonb("export_progress").$type<{
+		processedFiles: number;
+		totalFiles: number;
+		processedBytes: number;
+		totalBytes: number;
+		currentFile?: string | null;
+		error?: string | null;
+	}>(),
+	exportedAt: timestamp("exported_at", { withTimezone: true }),
+	createdAt: timestamp("created_at", { withTimezone: true })
+		.defaultNow()
+		.notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true })
+		.defaultNow()
+		.notNull(),
+});
+
 export type Gallery = typeof galleries.$inferSelect;
 export type NewGallery = typeof galleries.$inferInsert;
 export type CardSetting = typeof cardSettings.$inferSelect;
 export type MediaItem = typeof mediaItems.$inferSelect;
 export type NewMediaItem = typeof mediaItems.$inferInsert;
+export type GalleryGdriveExport = typeof galleryGdriveExports.$inferSelect;
+export type NewGalleryGdriveExport = typeof galleryGdriveExports.$inferInsert;

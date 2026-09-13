@@ -8,6 +8,13 @@
 			"when": 1789230251555,
 			"tag": "0000_luxuriant_wolfsbane",
 			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1789291370439,
+			"tag": "0001_busy_swordsman",
+			"breakpoints": true
 		}
 	]
 }

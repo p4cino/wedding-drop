@@ -18,21 +18,67 @@ vi.mock("@wedding-drop/db", () => {
 		})),
 	}));
 
-	const mockSelect = vi.fn(() => ({
-		from: vi.fn((table) => ({
-			where: vi.fn(() => {
-				const isGalleries =
-					String(table?.slug || "").includes("galleries") ||
-					table === "galleries.slug";
-				const currentData = isGalleries ? mockGalleriesResult : mockMediaResult;
-				const promise = Promise.resolve(currentData);
-				(promise as unknown as { limit: unknown }).limit = vi
-					.fn()
-					.mockResolvedValue(currentData);
-				return promise;
+	const mockSelect = vi.fn(() => {
+		let isJoined = false;
+		return {
+			// biome-ignore lint/suspicious/noExplicitAny: test mock
+			from: vi.fn((table: any) => {
+				const buildResult = () => {
+					const isGalleries =
+						table?.id === "galleries.id" ||
+						String(table?.slug || "").includes("galleries") ||
+						table === "galleries.slug";
+					const currentData = isGalleries
+						? mockGalleriesResult
+						: mockMediaResult;
+					if (isJoined && isGalleries) {
+						// biome-ignore lint/suspicious/noExplicitAny: test mock
+						return currentData.map((g: any) => ({
+							gallery: g,
+							gdrive: g.gdriveRefreshToken
+								? {
+										refreshToken: g.gdriveRefreshToken,
+										accountEmail: g.gdriveAccountEmail,
+										exportStatus: g.gdriveExportStatus,
+										exportProgress: g.gdriveExportProgress,
+										exportedAt: g.gdriveExportedAt,
+										rootFolderId: g.gdriveRootFolderId,
+										photosFolderId: g.gdrivePhotosFolderId,
+										videosFolderId: g.gdriveVideosFolderId,
+										hiddenFolderId: g.gdriveHiddenFolderId,
+									}
+								: null,
+						}));
+					}
+					return currentData;
+				};
+
+				return {
+					where: vi.fn(() => {
+						const result = buildResult();
+						const promise = Promise.resolve(result);
+						(promise as unknown as { limit: unknown }).limit = vi
+							.fn()
+							.mockResolvedValue(result);
+						return promise;
+					}),
+					leftJoin: vi.fn(() => {
+						isJoined = true;
+						return {
+							where: vi.fn(() => {
+								const result = buildResult();
+								const promise = Promise.resolve(result);
+								(promise as unknown as { limit: unknown }).limit = vi
+									.fn()
+									.mockResolvedValue(result);
+								return promise;
+							}),
+						};
+					}),
+				};
 			}),
-		})),
-	}));
+		};
+	});
 
 	return {
 		db: {
@@ -43,6 +89,9 @@ vi.mock("@wedding-drop/db", () => {
 			id: "galleries.id",
 			slug: "galleries.slug",
 			gdriveExportStatus: "galleries.gdriveExportStatus",
+		},
+		galleryGdriveExports: {
+			galleryId: "gallery_gdrive_exports.gallery_id",
 		},
 		mediaItems: {
 			id: "mediaItems.id",

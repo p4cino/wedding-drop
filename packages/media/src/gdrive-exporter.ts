@@ -1,7 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
-import { db, type Gallery, galleries, mediaItems } from "@wedding-drop/db";
-import { and, eq, ne } from "drizzle-orm";
+import {
+	db,
+	type Gallery,
+	galleries,
+	galleryGdriveExports,
+	mediaItems,
+} from "@wedding-drop/db";
+import { and, eq, type InferSelectModel, ne } from "drizzle-orm";
 import PQueue from "p-queue";
 import {
 	checkStorageQuota,
@@ -26,9 +32,9 @@ export interface ExportProgress {
 export async function recoverInterruptedExports() {
 	try {
 		await db
-			.update(galleries)
-			.set({ gdriveExportStatus: "interrupted" })
-			.where(eq(galleries.gdriveExportStatus, "running"));
+			.update(galleryGdriveExports)
+			.set({ exportStatus: "interrupted" })
+			.where(eq(galleryGdriveExports.exportStatus, "running"));
 		console.log(
 			"Startup Recovery: Sprawdzono przerwane zadania eksportu Google Drive.",
 		);
@@ -48,8 +54,15 @@ export async function startGalleryDriveExport(
 	options: { includeHidden?: boolean } = {},
 ): Promise<{ success: boolean; message?: string; alreadyRunning?: boolean }> {
 	const galleryResult = await db
-		.select()
+		.select({
+			gallery: galleries,
+			gdrive: galleryGdriveExports,
+		})
 		.from(galleries)
+		.leftJoin(
+			galleryGdriveExports,
+			eq(galleries.id, galleryGdriveExports.galleryId),
+		)
 		.where(eq(galleries.slug, slug))
 		.limit(1);
 
@@ -57,13 +70,13 @@ export async function startGalleryDriveExport(
 		throw new Error("Galeria nie istnieje");
 	}
 
-	const gallery = galleryResult[0];
+	const { gallery, gdrive } = galleryResult[0];
 
-	if (!gallery.gdriveRefreshToken) {
+	if (!gdrive?.refreshToken) {
 		throw new Error("Dysk Google nie jest podłączony do tej galerii.");
 	}
 
-	if (gallery.gdriveExportStatus === "running") {
+	if (gdrive.exportStatus === "running") {
 		return {
 			success: false,
 			alreadyRunning: true,
@@ -72,7 +85,7 @@ export async function startGalleryDriveExport(
 	}
 
 	// Uruchomienie w tle (bez blokowania odpowiedzi HTTP)
-	runExportTask(gallery, options).catch((err) => {
+	runExportTask(gallery, gdrive, options).catch((err) => {
 		console.error(
 			`Nieobsłużony błąd w zadaniu eksportu Google Drive dla galerii ${slug}:`,
 			err,
@@ -87,6 +100,7 @@ export async function startGalleryDriveExport(
  */
 async function runExportTask(
 	gallery: Gallery,
+	gdrive: InferSelectModel<typeof galleryGdriveExports>,
 	options: { includeHidden?: boolean },
 ) {
 	const slug = gallery.slug;
@@ -95,10 +109,10 @@ async function runExportTask(
 	try {
 		// 1. Zmiana statusu na 'running'
 		await db
-			.update(galleries)
+			.update(galleryGdriveExports)
 			.set({
-				gdriveExportStatus: "running",
-				gdriveExportProgress: {
+				exportStatus: "running",
+				exportProgress: {
 					totalFiles: 0,
 					processedFiles: 0,
 					totalBytes: 0,
@@ -107,7 +121,7 @@ async function runExportTask(
 					error: null,
 				},
 			})
-			.where(eq(galleries.id, gallery.id));
+			.where(eq(galleryGdriveExports.galleryId, gallery.id));
 
 		sseBus.notifyGDriveProgress(slug, {
 			status: "running",
@@ -115,10 +129,10 @@ async function runExportTask(
 		});
 
 		// 2. Pobranie klienta i plików do wysłania
-		if (!gallery.gdriveRefreshToken) {
-			throw new Error("Dysk Google nie jest podłączony do tej galerii.");
+		if (!gdrive.refreshToken) {
+			throw new Error("Missing refreshToken in export task");
 		}
-		const drive = getDriveClientForGallery(gallery.gdriveRefreshToken);
+		const drive = getDriveClientForGallery(gdrive.refreshToken);
 
 		const allItems = await db
 			.select()
@@ -139,11 +153,11 @@ async function runExportTask(
 
 		if (itemsToExport.length === 0) {
 			await db
-				.update(galleries)
+				.update(galleryGdriveExports)
 				.set({
-					gdriveExportStatus: "completed",
-					gdriveExportedAt: new Date(),
-					gdriveExportProgress: {
+					exportStatus: "completed",
+					exportedAt: new Date(),
+					exportProgress: {
 						totalFiles: 0,
 						processedFiles: 0,
 						totalBytes: 0,
@@ -152,7 +166,7 @@ async function runExportTask(
 						error: null,
 					},
 				})
-				.where(eq(galleries.id, gallery.id));
+				.where(eq(galleryGdriveExports.galleryId, gallery.id));
 
 			sseBus.notifyGDriveProgress(slug, {
 				status: "completed",
@@ -176,10 +190,10 @@ async function runExportTask(
 			const errorMsg = `Brak miejsca na Dysku Google. Wymagane: ${neededMB} MB, Dostępne: ${freeMB} MB.`;
 
 			await db
-				.update(galleries)
+				.update(galleryGdriveExports)
 				.set({
-					gdriveExportStatus: "failed",
-					gdriveExportProgress: {
+					exportStatus: "failed",
+					exportProgress: {
 						totalFiles: itemsToExport.length,
 						processedFiles: 0,
 						totalBytes: bytesNeeded,
@@ -188,7 +202,7 @@ async function runExportTask(
 						error: errorMsg,
 					},
 				})
-				.where(eq(galleries.id, gallery.id));
+				.where(eq(galleryGdriveExports.galleryId, gallery.id));
 
 			sseBus.notifyGDriveProgress(slug, { status: "failed", error: errorMsg });
 			return;
@@ -197,18 +211,17 @@ async function runExportTask(
 		// 4. Przygotowanie struktury folderów (zabezpieczenie przed duplikatami)
 		const rootFolderName = `WeddingDrop - ${gallery.coupleNames}`;
 		const rootFolderId =
-			gallery.gdriveRootFolderId ||
-			(await ensureDriveFolder(drive, rootFolderName));
+			gdrive.rootFolderId || (await ensureDriveFolder(drive, rootFolderName));
 
 		const photosFolderId =
-			gallery.gdrivePhotosFolderId ||
+			gdrive.photosFolderId ||
 			(await ensureDriveFolder(drive, "Zdjęcia", rootFolderId));
 
 		const videosFolderId =
-			gallery.gdriveVideosFolderId ||
+			gdrive.videosFolderId ||
 			(await ensureDriveFolder(drive, "Filmy", rootFolderId));
 
-		let hiddenFolderId = gallery.gdriveHiddenFolderId;
+		let hiddenFolderId = gdrive.hiddenFolderId;
 		const hasHidden = itemsToExport.some((i) => i.status === "hidden");
 		if (hasHidden && !hiddenFolderId) {
 			hiddenFolderId = await ensureDriveFolder(drive, "Ukryte", rootFolderId);
@@ -216,14 +229,14 @@ async function runExportTask(
 
 		// Zapisujemy ID folderów w bazie, aby nigdy nie tworzyć ich ponownie
 		await db
-			.update(galleries)
+			.update(galleryGdriveExports)
 			.set({
-				gdriveRootFolderId: rootFolderId,
-				gdrivePhotosFolderId: photosFolderId,
-				gdriveVideosFolderId: videosFolderId,
-				gdriveHiddenFolderId: hiddenFolderId || null,
+				rootFolderId: rootFolderId,
+				photosFolderId: photosFolderId,
+				videosFolderId: videosFolderId,
+				hiddenFolderId: hiddenFolderId || null,
 			})
-			.where(eq(galleries.id, gallery.id));
+			.where(eq(galleryGdriveExports.galleryId, gallery.id));
 
 		// 5. Śledzenie postępu i kolejka p-queue z concurrency: 2
 		let processedFiles = itemsToExport.filter((i) =>
@@ -250,11 +263,11 @@ async function runExportTask(
 			};
 
 			await db
-				.update(galleries)
+				.update(galleryGdriveExports)
 				.set({
-					gdriveExportProgress: progressObj,
+					exportProgress: progressObj,
 				})
-				.where(eq(galleries.id, gallery.id));
+				.where(eq(galleryGdriveExports.galleryId, gallery.id));
 
 			sseBus.notifyGDriveProgress(slug, {
 				status: "running",
@@ -329,13 +342,13 @@ async function runExportTask(
 		};
 
 		await db
-			.update(galleries)
+			.update(galleryGdriveExports)
 			.set({
-				gdriveExportStatus: "completed",
-				gdriveExportedAt: new Date(),
-				gdriveExportProgress: finalProgress,
+				exportStatus: "completed",
+				exportedAt: new Date(),
+				exportProgress: finalProgress,
 			})
-			.where(eq(galleries.id, gallery.id));
+			.where(eq(galleryGdriveExports.galleryId, gallery.id));
 
 		sseBus.notifyGDriveProgress(slug, {
 			status: "completed",
@@ -351,10 +364,10 @@ async function runExportTask(
 			err instanceof Error ? err.message : "Wystąpił błąd podczas eksportu.";
 
 		await db
-			.update(galleries)
+			.update(galleryGdriveExports)
 			.set({
-				gdriveExportStatus: "failed",
-				gdriveExportProgress: {
+				exportStatus: "failed",
+				exportProgress: {
 					totalFiles: 0,
 					processedFiles: 0,
 					totalBytes: 0,
@@ -363,7 +376,7 @@ async function runExportTask(
 					error: errorMsg,
 				},
 			})
-			.where(eq(galleries.id, gallery.id));
+			.where(eq(galleryGdriveExports.galleryId, gallery.id));
 
 		sseBus.notifyGDriveProgress(slug, {
 			status: "failed",

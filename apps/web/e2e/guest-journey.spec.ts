@@ -183,7 +183,9 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 
 		// 1. Symulacja Swipe w lewo (przesunięcie palca z 300px do 100px -> diff > 45px -> Następne zdjęcie)
 		await page.evaluate(() => {
-			const el = document.querySelector("div.fixed.inset-0.z-50")!;
+			const el = document.querySelector(
+				"div.fixed.inset-0.z-50",
+			) as HTMLElement;
 			const fire = (type: string, x: number) => {
 				const ev = new CustomEvent(type, { bubbles: true });
 				Object.defineProperty(ev, "targetTouches", {
@@ -202,7 +204,9 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 
 		// 2. Symulacja Swipe w prawo (przesunięcie palca z 100px do 300px -> diff < -45px -> Poprzednie zdjęcie)
 		await page.evaluate(() => {
-			const el = document.querySelector("div.fixed.inset-0.z-50")!;
+			const el = document.querySelector(
+				"div.fixed.inset-0.z-50",
+			) as HTMLElement;
 			const fire = (type: string, x: number) => {
 				const ev = new CustomEvent(type, { bubbles: true });
 				Object.defineProperty(ev, "targetTouches", {

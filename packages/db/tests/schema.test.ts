@@ -28,15 +28,6 @@ describe("Database Schema Definitions", () => {
 		expect(cols.allowVideos).toBeDefined();
 		expect(cols.maxStorageBytes).toBeDefined();
 		expect(cols.expiresAt).toBeDefined();
-		expect(cols.gdriveRefreshToken).toBeDefined();
-		expect(cols.gdriveAccountEmail).toBeDefined();
-		expect(cols.gdriveRootFolderId).toBeDefined();
-		expect(cols.gdrivePhotosFolderId).toBeDefined();
-		expect(cols.gdriveVideosFolderId).toBeDefined();
-		expect(cols.gdriveHiddenFolderId).toBeDefined();
-		expect(cols.gdriveExportStatus).toBeDefined();
-		expect(cols.gdriveExportProgress).toBeDefined();
-		expect(cols.gdriveExportedAt).toBeDefined();
 		expect(cols.createdAt).toBeDefined();
 		expect(cols.updatedAt).toBeDefined();
 
@@ -44,7 +35,24 @@ describe("Database Schema Definitions", () => {
 		expect(cols.allowGuestDownloads.default).toBe(true);
 		expect(cols.allowVideos.default).toBe(true);
 		expect(cols.maxStorageBytes.default).toBe(0);
-		expect(cols.gdriveExportStatus.default).toBe("idle");
+	});
+
+	it("powinien definiować tabelę galleryGdriveExports ze wszystkimi wymaganymi kolumnami", () => {
+		const cols = getTableColumns(dbExports.galleryGdriveExports);
+		expect(cols.id).toBeDefined();
+		expect(cols.galleryId).toBeDefined();
+		expect(cols.refreshToken).toBeDefined();
+		expect(cols.accountEmail).toBeDefined();
+		expect(cols.rootFolderId).toBeDefined();
+		expect(cols.photosFolderId).toBeDefined();
+		expect(cols.videosFolderId).toBeDefined();
+		expect(cols.hiddenFolderId).toBeDefined();
+		expect(cols.exportStatus).toBeDefined();
+		expect(cols.exportProgress).toBeDefined();
+		expect(cols.exportedAt).toBeDefined();
+		expect(cols.createdAt).toBeDefined();
+
+		expect(cols.exportStatus.default).toBe("idle");
 	});
 
 	it("powinien definiować tabelę cardSettings z domyślnymi stylami papeterii A6", () => {

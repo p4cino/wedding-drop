@@ -1,4 +1,10 @@
-import { cardSettings, db, galleries, mediaItems } from "@wedding-drop/db";
+import {
+	cardSettings,
+	db,
+	galleries,
+	galleryGdriveExports,
+	mediaItems,
+} from "@wedding-drop/db";
 import { isGoogleDriveConfigured } from "@wedding-drop/media";
 import bcrypt from "bcryptjs";
 import { eq, sql } from "drizzle-orm";
@@ -17,8 +23,12 @@ export async function POST(
 		const { password } = body;
 
 		const galleryResult = await db
-			.select()
+			.select({ gallery: galleries, gdrive: galleryGdriveExports })
 			.from(galleries)
+			.leftJoin(
+				galleryGdriveExports,
+				eq(galleries.id, galleryGdriveExports.galleryId),
+			)
 			.where(eq(galleries.slug, slug))
 			.limit(1);
 
@@ -29,7 +39,7 @@ export async function POST(
 			);
 		}
 
-		const gallery = galleryResult[0];
+		const { gallery, gdrive } = galleryResult[0];
 
 		const isValid = await bcrypt.compare(password, gallery.ownerPasswordHash);
 		if (!isValid) {
@@ -54,7 +64,7 @@ export async function POST(
 			.where(eq(cardSettings.galleryId, gallery.id))
 			.limit(1);
 
-		const progressParsed = gallery.gdriveExportProgress || null;
+		const progressParsed = gdrive?.exportProgress || null;
 
 		return NextResponse.json({
 			success: true,
@@ -66,12 +76,12 @@ export async function POST(
 				weddingDate: gallery.weddingDate,
 				allowGuestDownloads: gallery.allowGuestDownloads,
 				allowVideos: gallery.allowVideos,
-				hasGDrive: Boolean(gallery.gdriveRefreshToken),
-				gdriveAccountEmail: gallery.gdriveAccountEmail,
-				gdriveExportStatus: gallery.gdriveExportStatus,
+				hasGDrive: Boolean(gdrive?.refreshToken),
+				gdriveAccountEmail: gdrive?.accountEmail,
+				gdriveExportStatus: gdrive?.exportStatus,
 				gdriveExportProgress: progressParsed,
-				gdriveExportedAt: gallery.gdriveExportedAt,
-				gdriveRootFolderId: gallery.gdriveRootFolderId,
+				gdriveExportedAt: gdrive?.exportedAt,
+				gdriveRootFolderId: gdrive?.rootFolderId,
 			},
 			stats: stats[0] || { totalFiles: 0, totalBytes: 0 },
 			cardSettings: card[0] || null,

@@ -1,4 +1,4 @@
 ﻿{
-    "name":  "thermo-nuclear-review",
-    "description":  "Thermo-nuclear code quality review skill and subagent for maintainability, anti-spaghetti, and structural simplification"
+	"name": "thermo-nuclear-review",
+	"description": "Thermo-nuclear code quality review skill and subagent for maintainability, anti-spaghetti, and structural simplification"
 }
