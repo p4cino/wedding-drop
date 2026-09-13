@@ -49,7 +49,7 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOST=0.0.0.0
-ENV NODE_PATH=/app/node_modules:/app/apps/web/node_modules:/app/apps/web/.next/node_modules
+ENV NODE_PATH=/app/node_modules:/app/node_modules/.pnpm/node_modules:/app/apps/web/node_modules
 
 # Kopiowanie wysoce zoptymalizowanego trybu standalone Next.js (tylko to co niezbędne)
 COPY --from=builder /app/apps/web/.next/standalone ./
