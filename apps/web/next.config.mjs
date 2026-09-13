@@ -17,6 +17,7 @@ const nextConfig = {
 		"@tus/file-store",
 		"postgres",
 	],
+	turbopack: {},
 };
 
 const withSerwist = withSerwistInit({
