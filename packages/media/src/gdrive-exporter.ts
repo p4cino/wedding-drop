@@ -129,6 +129,9 @@ async function runExportTask(
 		});
 
 		// 2. Pobranie klienta i plików do wysłania
+		if (!gdrive.refreshToken) {
+			throw new Error("Missing refreshToken in export task");
+		}
 		const drive = getDriveClientForGallery(gdrive.refreshToken);
 
 		const allItems = await db
