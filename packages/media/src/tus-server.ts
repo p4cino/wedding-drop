@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { FileStore } from "@tus/file-store";
 import { EVENTS, Server } from "@tus/server";
+import { tusUploadMetadataDto } from "@wedding-drop/db";
 import { scheduleMediaProcessing } from "./media-processor";
 
 export function initTusServer(dataDir: string) {
@@ -21,8 +22,8 @@ export function initTusServer(dataDir: string) {
 		},
 		onUploadCreate: async (_req, upload) => {
 			const metadata = upload.metadata || {};
-			const gallerySlug = metadata.gallerySlug;
-			if (!gallerySlug) {
+			const parseResult = tusUploadMetadataDto.safeParse(metadata);
+			if (!parseResult.success) {
 				throw {
 					status_code: 400,
 					body: "Błąd: Brak wymaganego parametru gallerySlug w metadanych.",
@@ -33,17 +34,21 @@ export function initTusServer(dataDir: string) {
 	});
 
 	server.on(EVENTS.POST_FINISH, async (_req, _res, upload) => {
-		const meta = upload.metadata || {};
-		const gallerySlug = meta.gallerySlug;
-		if (!gallerySlug) {
+		const parseResult = tusUploadMetadataDto.safeParse(upload.metadata || {});
+		if (!parseResult.success) {
 			console.warn(
-				`[TUS] Pominięto przetwarzanie uploadu ${upload.id} - brak gallerySlug`,
+				`[TUS] Pominięto przetwarzanie uploadu ${upload.id} - błąd metadanych:`,
+				parseResult.error.flatten(),
 			);
 			return;
 		}
-		const uploaderName = meta.uploaderName || "Gość weselny";
-		const originalName = meta.originalName || "plik";
-		const mimeType = meta.fileType || "image/jpeg";
+
+		const {
+			gallerySlug,
+			uploaderName,
+			originalName,
+			fileType: mimeType,
+		} = parseResult.data;
 		const isVideo =
 			mimeType.startsWith("video") ||
 			/\.(mp4|mov|avi|webm)$/i.test(originalName);

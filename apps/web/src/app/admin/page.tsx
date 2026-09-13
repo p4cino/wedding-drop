@@ -1,5 +1,6 @@
 "use client";
 
+import { adminLoginDto, createGalleryDto } from "@wedding-drop/db/validators";
 import {
 	Calendar,
 	Check,
@@ -51,13 +52,20 @@ export default function AdminDashboardPage() {
 	const handleLogin = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setError("");
+
+		const valResult = adminLoginDto.safeParse({ username, password });
+		if (!valResult.success) {
+			setError(valResult.error.issues[0]?.message || "Błędne dane logowania");
+			return;
+		}
+
 		setLoading(true);
 
 		try {
 			const res = await fetch("/api/admin/auth", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ username, password }),
+				body: JSON.stringify(valResult.data),
 			});
 
 			const data = await res.json();
@@ -96,6 +104,21 @@ export default function AdminDashboardPage() {
 		e.preventDefault();
 		if (!token) return;
 
+		const valResult = createGalleryDto.safeParse({
+			coupleNames,
+			weddingDate,
+			ownerEmail,
+			ownerPassword,
+			customSlug,
+		});
+
+		if (!valResult.success) {
+			alert(
+				valResult.error.issues[0]?.message || "Nieprawidłowe dane formularza",
+			);
+			return;
+		}
+
 		try {
 			const res = await fetch("/api/admin/galleries", {
 				method: "POST",
@@ -103,13 +126,7 @@ export default function AdminDashboardPage() {
 					"Content-Type": "application/json",
 					"x-admin-token": token,
 				},
-				body: JSON.stringify({
-					coupleNames,
-					weddingDate,
-					ownerEmail,
-					ownerPassword,
-					customSlug,
-				}),
+				body: JSON.stringify(valResult.data),
 			});
 
 			const data = await res.json();

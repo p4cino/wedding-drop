@@ -1,4 +1,4 @@
-import { admins, db } from "@wedding-drop/db";
+import { adminLoginDto, admins, db } from "@wedding-drop/db";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
@@ -9,13 +9,23 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
 	try {
 		const body = await req.json();
-		const { username, password } = body;
+		const parseResult = adminLoginDto.safeParse(body);
+		if (!parseResult.success) {
+			return NextResponse.json(
+				{
+					error:
+						parseResult.error.issues[0]?.message || "Błędne dane logowania",
+					details: parseResult.error.flatten(),
+				},
+				{ status: 400 },
+			);
+		}
 
-		const user = username || "admin";
+		const { username, password } = parseResult.data;
 		const adminResult = await db
 			.select()
 			.from(admins)
-			.where(eq(admins.username, user))
+			.where(eq(admins.username, username))
 			.limit(1);
 
 		if (!adminResult.length) {
@@ -33,7 +43,7 @@ export async function POST(req: NextRequest) {
 		// Bezpieczny, kryptograficznie podpisany token HMAC
 		return NextResponse.json({
 			success: true,
-			adminToken: generateAdminToken(user),
+			adminToken: generateAdminToken(username),
 		});
 	} catch (error) {
 		console.error("Błąd w endpoint admin auth:", error);

@@ -1,5 +1,6 @@
 "use client";
 
+import { ownerLoginDto } from "@wedding-drop/db/validators";
 import {
 	AlertCircle,
 	CheckCircle2,
@@ -88,13 +89,20 @@ export default function OwnerDashboardPage() {
 	const doLogin = useCallback(
 		async (pwd: string) => {
 			setError("");
+
+			const valResult = ownerLoginDto.safeParse({ password: pwd });
+			if (!valResult.success) {
+				setError(valResult.error.issues[0]?.message || "Hasło jest wymagane");
+				return;
+			}
+
 			setLoading(true);
 
 			try {
 				const res = await fetch(`/api/owner/${slug}/auth`, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ password: pwd }),
+					body: JSON.stringify(valResult.data),
 				});
 
 				const data = await res.json();
