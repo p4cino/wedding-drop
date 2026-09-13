@@ -1,4 +1,4 @@
-import { db, galleries } from "@wedding-drop/db";
+import { db, galleries, galleryGdriveExports } from "@wedding-drop/db";
 import { exchangeCodeForTokens, verifySignedState } from "@wedding-drop/media";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
@@ -49,8 +49,9 @@ export async function GET(req: NextRequest) {
 
 		// 4. Zapisanie tokenów w bazie danych dla tego wesela
 		const galleryResult = await db
-			.select()
+			.select({ gallery: galleries, gdrive: galleryGdriveExports })
 			.from(galleries)
+			.leftJoin(galleryGdriveExports, eq(galleries.id, galleryGdriveExports.galleryId))
 			.where(eq(galleries.slug, slug))
 			.limit(1);
 
@@ -60,19 +61,26 @@ export async function GET(req: NextRequest) {
 			);
 		}
 
-		const currentGallery = galleryResult[0];
-		const refreshTokenToSave =
-			tokens.refresh_token || currentGallery.gdriveRefreshToken;
+		const { gallery: currentGallery, gdrive: currentGDrive } = galleryResult[0];
+		const refreshTokenToSave = tokens.refresh_token || currentGDrive?.refreshToken;
 
-		await db
-			.update(galleries)
-			.set({
-				gdriveRefreshToken: refreshTokenToSave,
-				gdriveAccountEmail: email || currentGallery.gdriveAccountEmail,
-				gdriveExportStatus:
-					currentGallery.gdriveExportStatus === "running" ? "running" : "idle",
-			})
-			.where(eq(galleries.id, currentGallery.id));
+		if (currentGDrive) {
+			await db
+				.update(galleryGdriveExports)
+				.set({
+					refreshToken: refreshTokenToSave,
+					accountEmail: email || currentGDrive.accountEmail,
+					exportStatus: currentGDrive.exportStatus === "running" ? "running" : "idle",
+				})
+				.where(eq(galleryGdriveExports.galleryId, currentGallery.id));
+		} else {
+			await db.insert(galleryGdriveExports).values({
+				galleryId: currentGallery.id,
+				refreshToken: refreshTokenToSave || "",
+				accountEmail: email || null,
+				exportStatus: "idle",
+			});
+		}
 
 		return NextResponse.redirect(`${ownerDashboardUrl}?gdrive=connected`);
 	} catch (err: unknown) {

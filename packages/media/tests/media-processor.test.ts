@@ -243,7 +243,7 @@ describe("media-processor service", () => {
 
 		await scheduleMediaProcessing(task);
 		expect(consoleErrorSpy).toHaveBeenCalledWith(
-			expect.stringContaining("[Processor] Sharp error dla pliku"),
+			expect.stringContaining("[Processor] Sharp error:"),
 			expect.any(Error),
 		);
 		consoleErrorSpy.mockRestore();

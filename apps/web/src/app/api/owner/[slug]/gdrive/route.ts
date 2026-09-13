@@ -1,4 +1,4 @@
-import { db, galleries } from "@wedding-drop/db";
+import { db, galleries, galleryGdriveExports } from "@wedding-drop/db";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { authenticateOwner } from "@/lib/auth";
@@ -19,17 +19,23 @@ export async function GET(
 			);
 		}
 
-		const g = auth.gallery;
-		const progress = g.gdriveExportProgress || null;
+		const gdriveResult = await db
+			.select()
+			.from(galleryGdriveExports)
+			.where(eq(galleryGdriveExports.galleryId, auth.gallery.id))
+			.limit(1);
+
+		const g = gdriveResult[0] || null;
+		const progress = g?.exportProgress || null;
 
 		return NextResponse.json({
 			success: true,
-			hasGDrive: Boolean(g.gdriveRefreshToken),
-			gdriveAccountEmail: g.gdriveAccountEmail,
-			gdriveExportStatus: g.gdriveExportStatus,
+			hasGDrive: Boolean(g?.refreshToken),
+			gdriveAccountEmail: g?.accountEmail,
+			gdriveExportStatus: g?.exportStatus || "idle",
 			gdriveExportProgress: progress,
-			gdriveExportedAt: g.gdriveExportedAt,
-			gdriveRootFolderId: g.gdriveRootFolderId,
+			gdriveExportedAt: g?.exportedAt,
+			gdriveRootFolderId: g?.rootFolderId,
 		});
 	} catch (error) {
 		console.error("Błąd pobierania statusu Google Drive:", error);
@@ -46,9 +52,7 @@ export async function DELETE(
 		let body: { token?: string } | null = null;
 		try {
 			body = await req.json();
-		} catch (_e) {
-			// Body is optional
-		}
+		} catch (_e) {}
 
 		const auth = await authenticateOwner(req, slug, body);
 		if (!auth.authorized || !auth.gallery) {
@@ -59,14 +63,8 @@ export async function DELETE(
 		}
 
 		await db
-			.update(galleries)
-			.set({
-				gdriveRefreshToken: null,
-				gdriveAccountEmail: null,
-				gdriveExportStatus: "idle",
-				gdriveExportProgress: null,
-			})
-			.where(eq(galleries.id, auth.gallery.id));
+			.delete(galleryGdriveExports)
+			.where(eq(galleryGdriveExports.galleryId, auth.gallery.id));
 
 		return NextResponse.json({
 			success: true,

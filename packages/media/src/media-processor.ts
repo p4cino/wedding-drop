@@ -23,10 +23,10 @@ export interface ProcessTask {
 }
 
 export async function scheduleMediaProcessing(task: ProcessTask) {
-	return mediaQueue.add(() => processMedia(task));
+	return mediaQueue.add(() => processMediaTask(task));
 }
 
-async function processMedia(task: ProcessTask) {
+async function processMediaTask(task: ProcessTask) {
 	const {
 		uploadId,
 		tempFilePath,
@@ -40,79 +40,36 @@ async function processMedia(task: ProcessTask) {
 	} = task;
 
 	try {
-		// 1. Wyszukanie ID galerii w bazie
 		const galleryResult = await db
 			.select()
 			.from(galleries)
 			.where(eq(galleries.slug, gallerySlug))
 			.limit(1);
 		if (!galleryResult.length) {
-			console.error(`[Processor] Galeria ${gallerySlug} nie istnieje w bazie.`);
+			console.error(`[Processor] Galeria ${gallerySlug} nie istnieje.`);
 			await fs.unlink(tempFilePath).catch(() => {});
 			return;
 		}
 		const gallery = galleryResult[0];
 
-		// 2. Przygotowanie docelowych folderów
 		const rawDir = path.join(dataDir, "galleries", gallerySlug, "raw");
 		const thumbsDir = path.join(dataDir, "galleries", gallerySlug, "thumbs");
 		await fs.mkdir(rawDir, { recursive: true });
 		await fs.mkdir(thumbsDir, { recursive: true });
 
-		const safeExt =
-			path.extname(originalName) || (fileType === "video" ? ".mp4" : ".jpg");
+		const safeExt = path.extname(originalName) || (fileType === "video" ? ".mp4" : ".jpg");
 		const rawFileName = `${uploadId}${safeExt}`;
 		const targetRawPath = path.join(rawDir, rawFileName);
-
-		// Przeniesienie pliku z TUS temp do docelowego folderu raw
-		await fs.rename(tempFilePath, targetRawPath);
-
 		const thumbFileName = `${uploadId}_thumb.webp`;
 		const targetThumbPath = path.join(thumbsDir, thumbFileName);
 
-		let width: number | null = null;
-		let height: number | null = null;
-		const duration: number | null = null;
+		await fs.rename(tempFilePath, targetRawPath);
 
-		// 3. Generowanie miniaturki
-		if (fileType === "image") {
-			try {
-				const sharp = (await import("sharp")).default;
-				const image = sharp(targetRawPath, { failOn: "none" }).rotate(); // Auto-obrót z EXIF!
-				const metadata = await image.metadata();
-				width = metadata.width || null;
-				height = metadata.height || null;
+		const mediaProps = fileType === "image"
+			? await processImage(targetRawPath, targetThumbPath)
+			: await processVideo(targetRawPath, targetThumbPath);
 
-				// Miniaturka kwadratowa WebP 500x500 do szybkiego gridu
-				await image
-					.resize(500, 500, { fit: "cover", position: "center" })
-					.webp({ quality: 80 })
-					.toFile(targetThumbPath);
-			} catch (sharpErr) {
-				console.error(
-					`[Processor] Sharp error dla pliku ${rawFileName}:`,
-					sharpErr,
-				);
-			}
-		} else {
-			// Dla wideo wyciągamy klatkę kluczową z 1. sekundy za pomocą FFmpeg
-			try {
-				await extractVideoThumbnail(targetRawPath, targetThumbPath);
-			} catch (ffmpegErr) {
-				console.warn(
-					`[Processor] FFmpeg niedostępny lub błąd miniatury wideo, używam placeholdera.`,
-					ffmpegErr,
-				);
-			}
-		}
-
-		// 4. Zapis do bazy danych PostgreSQL (zawsze ze znormalizowanymi ukośnikami POSIX)
-		const relativeRaw = path.posix.join(
-			"galleries",
-			gallerySlug,
-			"raw",
-			rawFileName,
-		);
+		const relativeRaw = path.posix.join("galleries", gallerySlug, "raw", rawFileName);
 		const relativeThumb = existsSync(targetThumbPath)
 			? path.posix.join("galleries", gallerySlug, "thumbs", thumbFileName)
 			: relativeRaw;
@@ -123,30 +80,47 @@ async function processMedia(task: ProcessTask) {
 				galleryId: gallery.id,
 				uploaderName: uploaderName || "Gość weselny",
 				fileType,
-				mimeType:
-					mimeType || (fileType === "video" ? "video/mp4" : "image/jpeg"),
+				mimeType: mimeType || (fileType === "video" ? "video/mp4" : "image/jpeg"),
 				originalFileName: originalName,
 				fileSize,
 				storagePath: relativeRaw,
 				thumbPath: relativeThumb,
-				width,
-				height,
-				duration,
+				width: mediaProps.width,
+				height: mediaProps.height,
+				duration: mediaProps.duration,
 				status: "ready",
 			})
 			.returning();
 
-		// 5. Powiadomienie gości w czasie rzeczywistym (SSE)
 		sseBus.notifyNewMedia(gallerySlug, newMedia);
-		console.log(
-			`[Processor] Pomyślnie przetworzono plik: ${originalName} dla galerii ${gallerySlug}`,
-		);
 	} catch (err) {
-		console.error(
-			`[Processor] Błąd krytyczny przetwarzania pliku ${originalName}:`,
-			err,
-		);
+		console.error(`[Processor] Błąd krytyczny pliku ${originalName}:`, err);
 	}
+}
+
+async function processImage(rawPath: string, thumbPath: string) {
+	let width: number | null = null;
+	let height: number | null = null;
+	try {
+		const sharp = (await import("sharp")).default;
+		const image = sharp(rawPath, { failOn: "none" }).rotate();
+		const metadata = await image.metadata();
+		width = metadata.width || null;
+		height = metadata.height || null;
+		await image.resize(500, 500, { fit: "cover", position: "center" }).webp({ quality: 80 }).toFile(thumbPath);
+	} catch (err) {
+		console.error("[Processor] Sharp error:", err);
+	}
+	return { width, height, duration: null };
+}
+
+async function processVideo(rawPath: string, thumbPath: string) {
+	try {
+		await extractVideoThumbnail(rawPath, thumbPath);
+	} catch (err) {
+		console.warn("[Processor] FFmpeg error:", err);
+	}
+	return { width: null, height: null, duration: null };
 }
 
 function extractVideoThumbnail(

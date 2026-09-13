@@ -36,11 +36,10 @@ graph TD
         SSEBus["packages/media: SSE Event Bus (new-media, media-updated)"]
         PdfGen["packages/media: pdf-lib (Wektorowy PDF A6 300 DPI)"]
         ZipStream["packages/media: archiver (Strumieniowany ZIP)"]
-        MediaQueue["packages/media: p-queue (Concurrency = 2)\nThrottling dla Intel N100"]
+        MediaQueue["packages/media: p-queue (Concurrency = 2)\nThrottling dla Intel N100\nDispatcher i strategie dla Image/Video"]
         Sharp["packages/media: Sharp (WebP Miniaturki + EXIF auto-rotate)"]
         FFmpeg["packages/media: FFmpeg (Klatki kluczowe z wideo + Watchdog 25s)"]
         DbPkg["packages/db: Drizzle ORM + Connection Pool Singleton"]
-        StaticServe["apps/web/server.ts: Bezpieczny serwer /media-file/* (Path.resolve sandbox)"]
     end
 
     subgraph "Warstwa Danych (Docker Volumes)"
@@ -54,7 +53,7 @@ graph TD
 
     Caddy -->|"Proxy do web:3000"| NextCore
     Caddy -->|"/api/upload/tus/*"| TusServer
-    Caddy -->|"/media-file/*"| StaticServe
+    Caddy -->|"/media-file/* (Bezpośrednie serwowanie, Byte-Range)"| Filesystem
 
     TusServer -->|"Zapis chunków"| Filesystem
     TusServer -->|"POST_FINISH hook"| MediaQueue
@@ -108,6 +107,22 @@ graph TD
 | `allow_guest_downloads` | BOOLEAN | Zezwolenie gościom na pobieranie zdjęć w pełnej rozdzielczości i ZIP |
 | `allow_videos` | BOOLEAN | Zgoda na wrzucanie plików wideo |
 | `max_storage_bytes` | BIGINT | Limit miejsca (0 = bez limitu) |
+| `created_at` | TIMESTAMPTZ | Znacznik czasu utworzenia |
+
+### Tabela `gallery_gdrive_exports`
+| Kolumna | Typ | Opis |
+|---|---|---|
+| `id` | UUID | Klucz główny |
+| `gallery_id` | UUID FK | Odwołanie do `galleries.id` (`ON DELETE CASCADE`), relacja 1:1 |
+| `refresh_token` | TEXT | Token odświeżania OAuth 2.0 |
+| `account_email` | TEXT | Zautoryzowany adres e-mail dysku |
+| `root_folder_id` | TEXT | Główne ID folderu wesela na dysku |
+| `photos_folder_id` | TEXT | ID folderu na zdjęcia |
+| `videos_folder_id` | TEXT | ID folderu na filmy |
+| `hidden_folder_id` | TEXT | ID folderu na ukryte pliki |
+| `export_status` | TEXT | Status eksportu (`idle`, `running`, `completed`, `failed`, `interrupted`) |
+| `export_progress` | JSONB | Bieżący postęp (`processedFiles`, `totalFiles`, `processedBytes` itp.) |
+| `exported_at` | TIMESTAMPTZ | Data ostatniego eksportu |
 | `created_at` | TIMESTAMPTZ | Znacznik czasu utworzenia |
 
 ### Tabela `card_settings`
@@ -171,7 +186,7 @@ Dla zapewnienia błyskawicznego działania zapytań SQL na tysiącach zdjęć ut
   - Weryfikuje uprawnienie `allowGuestDownloads` oraz PIN galerii.
   - Przy podaniu hasła właściciela (`?password=`) do archiwum dołączane są również zdjęcia ukryte (`status: "hidden"`).
   - Oparte o nowoczesny strumień `ZipArchive` z pakietu `archiver` (brak buforowania gigabajtów w RAM).
-- `GET /media-file/*` – Bezpieczne serwowanie statycznych miniaturek i plików źródłowych z twardą weryfikacją `path.resolve` zabezpieczającą przed wyjściem poza katalog `/data`.
+- `GET /media-file/*` – Bezpośrednie serwowanie statycznych plików przez zoptymalizowane proxy Caddy (bez udziału Node.js), z pełną obsługą cache i nagłówków Byte-Range.
 
 ### Panel Pary Młodej (RESTful API)
 - `POST /api/owner/:slug/auth` – Logowanie hasłem właściciela, wydanie podpisanego tokenu HMAC-SHA256, zwrócenie statystyk galerii, stanu Google Drive i konfiguracji winietki.
@@ -239,7 +254,7 @@ docker run --rm -v wedding-drop_app_data:/data -v $(pwd):/backup alpine tar -xzf
    - Token posiada 7-dniowy okres ważności.
 2. **Ochrona przed Atakami Path Traversal (Directory Traversal)**:
    - Tworzenie sluga galerii (`customSlug`) jest ściśle sanityzowane wyrażeniem `replace(/[^a-z0-9_-]/g, "")`. Wszelkie znaki specjalne (`!@#`), spacje, kropki oraz ukośniki (`/`, `..`) są natychmiast usuwane, uniemożliwiając manipulację strukturą katalogów dyskowych.
-   - Endpoint serwowania plików `/media-file/*` w `server.ts` weryfikuje ścieżkę bezwzględną za pomocą `path.resolve`, odrzucając próby wyjścia poza katalog `/data`.
+   - Serwowanie plików multimedialnych dla endpointu `/media-file/*` zostało oddelegowane do webserwera Caddy, co niweluje ryzyko ataków typu directory traversal na poziomie Node.js, oferując przy okazji bardzo wysoką wydajność, w tym natywną obsługę zapytań `Byte-Range`.
 3. **Prywatność Zdjęć Ukrytych**:
    - Zdjęcia o statusie `hidden` oraz `deleted` są niedostępne dla publicznych zapytań gości.
    - Próba odczytu zdjęć ukrytych parametrem `includeHidden=true` bez poświadczeń właściciela kończy się błędem HTTP 401.

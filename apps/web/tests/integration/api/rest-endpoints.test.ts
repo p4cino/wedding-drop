@@ -52,9 +52,10 @@ let mockGalleryList: Record<string, unknown>[] = [];
 let mockAdminList: Record<string, unknown>[] = [];
 let mockCardList: Record<string, unknown>[] = [];
 let mockMediaList: Record<string, unknown>[] = [];
+let mockGDriveResult: Record<string, unknown>[] = [];
 let shouldThrowDb = false;
 
-import { admins, cardSettings, mediaItems } from "@wedding-drop/db";
+import { admins, cardSettings, mediaItems, galleryGdriveExports } from "@wedding-drop/db";
 
 vi.mock("@wedding-drop/db", async (importOriginal) => {
 	const actual = await importOriginal<Record<string, unknown>>();
@@ -71,6 +72,7 @@ vi.mock("@wedding-drop/db", async (importOriginal) => {
 						if (table === admins) result = mockAdminList;
 						else if (table === cardSettings) result = mockCardList;
 						else if (table === mediaItems) result = mockMediaList;
+						else if (table === galleryGdriveExports) result = mockGDriveResult;
 
 						return {
 							where: vi.fn(() => ({
@@ -82,6 +84,25 @@ vi.mock("@wedding-drop/db", async (importOriginal) => {
 								then: (resolve: (val: unknown) => unknown) => resolve(result),
 							})),
 							leftJoin: vi.fn(() => ({
+								where: vi.fn(() => ({
+									limit: vi.fn().mockImplementation(() =>
+										Promise.resolve(
+											mockGalleryList.map((g: any) => ({
+												gallery: g,
+												gdrive: g.gdriveRefreshToken
+													? {
+															refreshToken: g.gdriveRefreshToken,
+															accountEmail: g.gdriveAccountEmail,
+															exportStatus: g.gdriveExportStatus,
+															exportProgress: g.gdriveExportProgress,
+															exportedAt: g.gdriveExportedAt,
+															rootFolderId: g.gdriveRootFolderId,
+														}
+													: null,
+											})),
+										),
+									),
+								})),
 								groupBy: vi.fn(() => ({
 									orderBy: vi.fn().mockResolvedValue(mockGalleryList),
 								})),
@@ -172,6 +193,15 @@ describe("REST API Endpoints", () => {
 				galleryId: "gal-1",
 				storagePath: "galleries/test/raw/file.jpg",
 				thumbPath: "galleries/test/thumbs/file.webp",
+			},
+		];
+
+		mockGDriveResult = [
+			{
+				galleryId: "gal-1",
+				refreshToken: "token123",
+				accountEmail: "kasia@gmail.com",
+				exportStatus: "idle",
 			},
 		];
 	});
