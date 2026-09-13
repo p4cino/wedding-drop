@@ -2,7 +2,6 @@ import withSerwistInit from "@serwist/next";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-	output: "standalone",
 	reactStrictMode: true,
 	poweredByHeader: false,
 	transpilePackages: ["@wedding-drop/db", "@wedding-drop/media"],
@@ -16,6 +15,7 @@ const nextConfig = {
 		"@tus/server",
 		"@tus/file-store",
 		"postgres",
+		"googleapis",
 	],
 	turbopack: {},
 };
@@ -23,7 +23,7 @@ const nextConfig = {
 const withSerwist = withSerwistInit({
 	swSrc: "src/app/sw.ts",
 	swDest: "public/sw.js",
-	disable: process.env.NODE_ENV === "development",
+	disable: process.env.NODE_ENV !== "production",
 });
 
 export default withSerwist(nextConfig);
