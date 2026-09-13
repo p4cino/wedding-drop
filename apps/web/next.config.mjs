@@ -17,6 +17,8 @@ const nextConfig = {
 		"@tus/file-store",
 		"postgres",
 		"googleapis",
+		"drizzle-orm",
+		"@node-rs/bcrypt",
 	],
 	turbopack: {},
 };
