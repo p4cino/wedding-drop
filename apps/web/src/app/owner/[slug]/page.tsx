@@ -378,7 +378,7 @@ export default function OwnerDashboardPage() {
 			<div className="min-h-screen flex items-center justify-center bg-[#FAF8F5] p-4">
 				<div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-200/80">
 					<div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-700 mx-auto mb-4">
-						<Lock className="w-6 h-6" />
+						<Lock className="w-6 h-6" aria-hidden="true" />
 					</div>
 					<h2 className="font-serif-luxury text-2xl font-bold text-center text-slate-900 mb-1">
 						Panel Pary Młodej
@@ -390,31 +390,44 @@ export default function OwnerDashboardPage() {
 
 					<form onSubmit={handleLogin} className="space-y-4">
 						{error && (
-							<div className="p-3 text-xs bg-red-50 text-red-700 rounded-xl border border-red-200">
+							<div
+								id="owner-login-error"
+								role="alert"
+								aria-live="assertive"
+								className="p-3 text-xs bg-red-50 text-red-700 rounded-xl border border-red-200"
+							>
 								{error}
 							</div>
 						)}
 
 						<div>
-							<label className="block text-xs font-semibold text-slate-700 mb-1.5">
+							<label
+								htmlFor="owner-pwd-input"
+								className="block text-xs font-semibold text-slate-700 mb-1.5"
+							>
 								Hasło właściciela
 							</label>
 							<input
+								id="owner-pwd-input"
 								type="password"
 								required
+								aria-invalid={Boolean(error)}
+								aria-describedby={error ? "owner-login-error" : undefined}
 								value={password}
 								onChange={(e) => setPassword(e.target.value)}
 								placeholder="Wpisz hasło dostępu"
-								className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+								className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500"
 							/>
 						</div>
 
 						<button
 							type="submit"
 							disabled={loading}
-							className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition shadow-sm flex items-center justify-center gap-2"
+							className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition shadow-sm flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 						>
-							{loading && <Loader2 className="w-4 h-4 animate-spin" />}
+							{loading && (
+								<Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+							)}
 							<span>{loading ? "Logowanie..." : "Zaloguj się"}</span>
 						</button>
 					</form>
@@ -432,6 +445,8 @@ export default function OwnerDashboardPage() {
 			{/* Toast powiadomień */}
 			{gdriveToast && (
 				<div
+					role="status"
+					aria-live="polite"
 					className={`fixed top-4 right-4 z-50 max-w-md p-4 rounded-2xl shadow-xl border flex items-start gap-3 transition-all animate-in fade-in slide-in-from-top-4 ${
 						gdriveToast.type === "success"
 							? "bg-emerald-50 border-emerald-200 text-emerald-900"
@@ -439,15 +454,23 @@ export default function OwnerDashboardPage() {
 					}`}
 				>
 					{gdriveToast.type === "success" ? (
-						<CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+						<CheckCircle2
+							className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5"
+							aria-hidden="true"
+						/>
 					) : (
-						<AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+						<AlertCircle
+							className="w-5 h-5 text-red-600 shrink-0 mt-0.5"
+							aria-hidden="true"
+						/>
 					)}
 					<div className="text-xs font-medium flex-1">{gdriveToast.text}</div>
 					<button
 						type="button"
 						onClick={() => setGDriveToast(null)}
-						className="text-xs font-bold opacity-60 hover:opacity-100"
+						aria-label="Zamknij powiadomienie"
+						title="Zamknij powiadomienie"
+						className="text-xs font-bold opacity-60 hover:opacity-100 p-1 focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:outline-none rounded"
 					>
 						✕
 					</button>
@@ -469,25 +492,26 @@ export default function OwnerDashboardPage() {
 					<Link
 						href={`/g/${slug}`}
 						target="_blank"
-						className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+						className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 					>
-						<ExternalLink className="w-3.5 h-3.5" />
+						<ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
 						<span>Zobacz galerię gościa</span>
+						<span className="sr-only">(otwiera się w nowej karcie)</span>
 					</Link>
 
 					<Link
 						href={`/g/${slug}/card`}
-						className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition"
+						className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 					>
-						<QrCode className="w-3.5 h-3.5" />
+						<QrCode className="w-3.5 h-3.5" aria-hidden="true" />
 						<span>Karteczka A6</span>
 					</Link>
 
 					<a
 						href={`/api/gallery/${slug}/zip?token=${encodeURIComponent(ownerToken)}`}
-						className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-900 text-white shadow-sm transition"
+						className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-900 text-white shadow-sm transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 					>
-						<Download className="w-4 h-4" />
+						<Download className="w-4 h-4" aria-hidden="true" />
 						<span>Pobierz ZIP</span>
 					</a>
 				</div>

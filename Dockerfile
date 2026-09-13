@@ -22,6 +22,7 @@ RUN pnpm install --frozen-lockfile
 
 # Kopiowanie kodu źródłowego
 COPY --from=pruner /app/out/full/ .
+COPY packages/db/migrations ./packages/db/migrations
 COPY turbo.json turbo.json
 COPY biome.json biome.json
 

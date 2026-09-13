@@ -149,7 +149,7 @@ export default function GuestGalleryPage() {
 					</p>
 					<Link
 						href="/"
-						className="inline-block px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-semibold hover:bg-slate-800 transition"
+						className="inline-block px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-semibold hover:bg-slate-800 transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 					>
 						Strona główna
 					</Link>
@@ -167,7 +167,7 @@ export default function GuestGalleryPage() {
 			<header className="relative pt-10 pb-8 px-4 text-center overflow-hidden border-b border-amber-100/70 bg-gradient-to-b from-amber-50/40 via-white/80 to-[#FAF8F5]">
 				<div className="max-w-xl mx-auto relative z-10">
 					<div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100/70 text-amber-800 text-xs font-semibold uppercase tracking-wider mb-3">
-						<Sparkles className="w-3.5 h-3.5" />
+						<Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
 						Wspomnienia z Wesela
 					</div>
 
@@ -181,21 +181,32 @@ export default function GuestGalleryPage() {
 
 					{/* Status na żywo i statystyki */}
 					<div className="flex flex-wrap items-center justify-center gap-3 text-xs text-slate-600">
-						<div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white shadow-xs border border-slate-200/80">
+						<div
+							role="status"
+							aria-live="polite"
+							className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white shadow-xs border border-slate-200/80"
+						>
 							<span
 								className={`w-2 h-2 rounded-full ${isLiveConnected ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`}
+								aria-hidden="true"
 							/>
 							<span>{isLiveConnected ? "Na żywo" : "Offline"}</span>
 						</div>
 
 						<div className="flex items-center gap-3 px-3 py-1 rounded-full bg-white shadow-xs border border-slate-200/80">
 							<span className="flex items-center gap-1">
-								<ImageIcon className="w-3.5 h-3.5 text-slate-400" />
+								<ImageIcon
+									className="w-3.5 h-3.5 text-slate-400"
+									aria-hidden="true"
+								/>
 								{imagesCount} zdjęć
 							</span>
 							{videosCount > 0 && (
 								<span className="flex items-center gap-1">
-									<Video className="w-3.5 h-3.5 text-slate-400" />
+									<Video
+										className="w-3.5 h-3.5 text-slate-400"
+										aria-hidden="true"
+									/>
 									{videosCount} filmów
 								</span>
 							)}
@@ -215,10 +226,14 @@ export default function GuestGalleryPage() {
 			{/* Pływający Przycisk Dodawania Zdjęć (FAB) */}
 			<div className="fixed bottom-6 inset-x-0 flex justify-center z-40 px-4 pointer-events-none">
 				<button
+					type="button"
 					onClick={() => setIsUploaderOpen(true)}
-					className="pointer-events-auto flex items-center gap-2.5 px-6 py-4 rounded-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white font-semibold shadow-xl shadow-amber-600/30 hover:shadow-2xl hover:scale-105 active:scale-95 transition duration-200 text-sm sm:text-base border border-amber-400/30"
+					aria-haspopup="dialog"
+					aria-expanded={isUploaderOpen}
+					aria-label="Dodaj zdjęcia i filmy do galerii"
+					className="pointer-events-auto flex items-center gap-2.5 px-6 py-4 rounded-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white font-semibold shadow-xl shadow-amber-600/30 hover:shadow-2xl hover:scale-105 active:scale-95 transition duration-200 text-sm sm:text-base border border-amber-400/30 focus-visible:ring-4 focus-visible:ring-amber-500/50 focus-visible:outline-none"
 				>
-					<Plus className="w-5 h-5 stroke-[2.5]" />
+					<Plus className="w-5 h-5 stroke-[2.5]" aria-hidden="true" />
 					<span>Dodaj zdjęcia i filmy</span>
 				</button>
 			</div>

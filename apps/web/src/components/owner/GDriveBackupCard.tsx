@@ -102,13 +102,13 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 							type="button"
 							onClick={onConnect}
 							disabled={!isGDriveConfigured}
-							className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-bold shadow-sm transition ${
+							className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-bold shadow-sm transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none ${
 								isGDriveConfigured
 									? "bg-slate-900 hover:bg-slate-800 text-white"
 									: "bg-slate-200 text-slate-400 cursor-not-allowed"
 							}`}
 						>
-							<Cloud className="w-4 h-4" />
+							<Cloud className="w-4 h-4" aria-hidden="true" />
 							<span>Połącz z Google Drive</span>
 						</button>
 					) : (
@@ -118,10 +118,11 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 									href={`https://drive.google.com/drive/folders/${gdriveFolderId}`}
 									target="_blank"
 									rel="noopener noreferrer"
-									className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition"
+									className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 								>
-									<ArrowUpRight className="w-4 h-4" />
+									<ArrowUpRight className="w-4 h-4" aria-hidden="true" />
 									<span>Otwórz folder na Dysku</span>
+									<span className="sr-only">(otwiera się w nowej karcie)</span>
 								</a>
 							)}
 
@@ -129,7 +130,7 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 								type="button"
 								onClick={onOpenExportModal}
 								disabled={gdriveStatus === "running"}
-								className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition ${
+								className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none ${
 									gdriveStatus === "running"
 										? "bg-slate-200 text-slate-400 cursor-not-allowed"
 										: "bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -137,12 +138,15 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 							>
 								{gdriveStatus === "running" ? (
 									<>
-										<Loader2 className="w-4 h-4 animate-spin" />
+										<Loader2
+											className="w-4 h-4 animate-spin"
+											aria-hidden="true"
+										/>
 										<span>Trwa eksport...</span>
 									</>
 								) : (
 									<>
-										<Play className="w-3.5 h-3.5" />
+										<Play className="w-3.5 h-3.5" aria-hidden="true" />
 										<span>
 											{gdriveStatus === "interrupted"
 												? "Wznów eksport"
@@ -156,9 +160,10 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 								type="button"
 								onClick={onDisconnect}
 								title="Odłącz konto Google"
-								className="p-2.5 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
+								aria-label="Odłącz konto Google Drive od galerii"
+								className="p-2.5 rounded-xl text-slate-600 hover:text-red-600 hover:bg-red-50 transition focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
 							>
-								<Unlink className="w-4 h-4" />
+								<Unlink className="w-4 h-4" aria-hidden="true" />
 							</button>
 						</div>
 					)}
@@ -167,7 +172,10 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 
 			{!isGDriveConfigured && !hasGDrive && (
 				<div className="p-4 bg-amber-50/60 border-t border-amber-200/60 text-xs text-amber-800 flex items-center gap-2">
-					<AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+					<AlertTriangle
+						className="w-4 h-4 text-amber-600 shrink-0"
+						aria-hidden="true"
+					/>
 					<span>
 						Integracja wymaga ustawienia zmiennych <code>GOOGLE_CLIENT_ID</code>{" "}
 						i <code>GOOGLE_CLIENT_SECRET</code> w pliku <code>.env</code>{" "}
@@ -180,10 +188,16 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 			{hasGDrive && (
 				<div className="p-6 sm:p-8 space-y-4">
 					{gdriveStatus === "running" && (
-						<div className="p-5 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-3">
+						<div
+							className="p-5 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-3"
+							aria-live="polite"
+						>
 							<div className="flex items-center justify-between text-xs font-semibold text-amber-900">
 								<span className="flex items-center gap-2">
-									<Loader2 className="w-4 h-4 animate-spin text-amber-700" />
+									<Loader2
+										className="w-4 h-4 animate-spin text-amber-700"
+										aria-hidden="true"
+									/>
 									Trwa przesyłanie plików na Twój Dysk Google...
 								</span>
 								<span>
@@ -193,7 +207,14 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 							</div>
 
 							{/* Pasek postępu */}
-							<div className="w-full h-3 bg-amber-200/70 rounded-full overflow-hidden">
+							<div
+								role="progressbar"
+								aria-valuenow={progressPercent}
+								aria-valuemin={0}
+								aria-valuemax={100}
+								aria-label="Postęp przesyłania plików na Dysk Google"
+								className="w-full h-3 bg-amber-200/70 rounded-full overflow-hidden"
+							>
 								<div
 									className="h-full bg-amber-600 transition-all duration-500 rounded-full"
 									style={{ width: `${progressPercent}%` }}
@@ -221,7 +242,10 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 					{gdriveStatus === "interrupted" && (
 						<div className="p-4 rounded-2xl bg-orange-50 border border-orange-200 flex items-start justify-between gap-4">
 							<div className="flex items-start gap-3">
-								<AlertTriangle className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+								<AlertTriangle
+									className="w-5 h-5 text-orange-600 shrink-0 mt-0.5"
+									aria-hidden="true"
+								/>
 								<div>
 									<h3 className="text-xs font-bold text-orange-900">
 										Transfer został wstrzymany
@@ -237,8 +261,14 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 					)}
 
 					{gdriveStatus === "failed" && (
-						<div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3">
-							<AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+						<div
+							className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3"
+							role="alert"
+						>
+							<AlertCircle
+								className="w-5 h-5 text-red-600 shrink-0 mt-0.5"
+								aria-hidden="true"
+							/>
 							<div>
 								<h3 className="text-xs font-bold text-red-900">
 									Wystąpił problem podczas eksportu
@@ -254,7 +284,10 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 					{gdriveStatus === "completed" && (
 						<div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-4 flex-wrap">
 							<div className="flex items-center gap-3">
-								<CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+								<CheckCircle2
+									className="w-5 h-5 text-emerald-600 shrink-0"
+									aria-hidden="true"
+								/>
 								<div>
 									<h3 className="text-xs font-bold text-emerald-900">
 										Wszystkie pliki zostały pomyślnie przesłane na Dysk Google!
@@ -272,10 +305,11 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 									href={`https://drive.google.com/drive/folders/${gdriveFolderId}`}
 									target="_blank"
 									rel="noopener noreferrer"
-									className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition"
+									className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
 								>
-									<ArrowUpRight className="w-4 h-4" />
+									<ArrowUpRight className="w-4 h-4" aria-hidden="true" />
 									<span>Zobacz na Dysku Google</span>
+									<span className="sr-only">(otwiera się w nowej karcie)</span>
 								</a>
 							)}
 						</div>

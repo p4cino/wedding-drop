@@ -100,25 +100,28 @@ export default function CardCustomizerPage() {
 			<nav className="no-print bg-white border-b border-slate-200/80 px-4 py-3 sticky top-0 z-30 flex items-center justify-between">
 				<Link
 					href={`/g/${slug}`}
-					className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition"
+					className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none rounded-lg p-1"
 				>
-					<ArrowLeft className="w-4 h-4" />
+					<ArrowLeft className="w-4 h-4" aria-hidden="true" />
 					<span>Powrót do galerii</span>
 				</Link>
 				<div className="flex items-center gap-2">
 					<button
+						type="button"
 						onClick={handlePrint}
-						className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+						aria-label="Wydrukuj karteczkę na stolik"
+						className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 					>
-						<Printer className="w-4 h-4" />
+						<Printer className="w-4 h-4" aria-hidden="true" />
 						<span className="hidden sm:inline">Drukuj</span>
 					</button>
 					<a
 						href={`/api/gallery/${slug}/card/pdf?primaryColor=${encodeURIComponent(primaryColor)}&accentColor=${encodeURIComponent(accentColor)}&headline=${encodeURIComponent(headline)}&instructions=${encodeURIComponent(instructions)}`}
 						download
-						className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-amber-600 hover:bg-amber-700 text-white shadow-sm transition"
+						aria-label="Pobierz karteczkę A6 w formacie PDF (300 DPI)"
+						className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-amber-600 hover:bg-amber-700 text-white shadow-sm transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 					>
-						<Download className="w-4 h-4" />
+						<Download className="w-4 h-4" aria-hidden="true" />
 						<span>Pobierz PDF (300 DPI)</span>
 					</a>
 				</div>
@@ -129,7 +132,7 @@ export default function CardCustomizerPage() {
 				<div className="no-print lg:col-span-5 space-y-6 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
 					<div>
 						<div className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">
-							<Sparkles className="w-3.5 h-3.5" />
+							<Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
 							Projektant Karteczki
 						</div>
 						<h2 className="font-serif-luxury text-2xl font-bold text-slate-900">
@@ -143,10 +146,17 @@ export default function CardCustomizerPage() {
 
 					{/* Palety kolorów */}
 					<div>
-						<label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+						<div
+							id="color-palette-label"
+							className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2"
+						>
 							Motyw kolorystyczny
-						</label>
-						<div className="grid grid-cols-2 gap-2">
+						</div>
+						<div
+							role="group"
+							aria-labelledby="color-palette-label"
+							className="grid grid-cols-2 gap-2"
+						>
 							{PRESET_PALETTES.map((palette) => {
 								const isActive =
 									primaryColor === palette.primary &&
@@ -154,11 +164,14 @@ export default function CardCustomizerPage() {
 								return (
 									<button
 										key={palette.name}
+										type="button"
+										aria-pressed={isActive}
+										aria-label={`Wybierz motyw: ${palette.name}`}
 										onClick={() => {
 											setPrimaryColor(palette.primary);
 											setAccentColor(palette.accent);
 										}}
-										className={`flex items-center gap-2 p-2 rounded-xl border text-xs font-medium transition text-left ${
+										className={`flex items-center gap-2 p-2 rounded-xl border text-xs font-medium transition text-left focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none ${
 											isActive
 												? "border-amber-600 bg-amber-50/50"
 												: "border-slate-200 hover:border-slate-300"
@@ -178,7 +191,10 @@ export default function CardCustomizerPage() {
 											{palette.name}
 										</span>
 										{isActive && (
-											<Check className="w-3.5 h-3.5 text-amber-600 ml-auto shrink-0" />
+											<Check
+												className="w-3.5 h-3.5 text-amber-600 ml-auto shrink-0"
+												aria-hidden="true"
+											/>
 										)}
 									</button>
 								);
@@ -189,40 +205,52 @@ export default function CardCustomizerPage() {
 					{/* Własne kolory HEX */}
 					<div className="grid grid-cols-2 gap-3 pt-1">
 						<div>
-							<label className="block text-[11px] font-medium text-slate-500 mb-1">
+							<label
+								htmlFor="primary-color-text"
+								className="block text-[11px] font-medium text-slate-600 mb-1"
+							>
 								Kolor tekstu i QR
 							</label>
 							<div className="flex items-center gap-2">
 								<input
 									type="color"
+									aria-label="Wybierz kolor tekstu i QR z próbnika"
 									value={primaryColor}
 									onChange={(e) => setPrimaryColor(e.target.value)}
-									className="w-8 h-8 rounded-lg cursor-pointer border border-slate-200 p-0.5"
+									className="w-8 h-8 rounded-lg cursor-pointer border border-slate-200 p-0.5 focus-visible:ring-2 focus-visible:ring-amber-500"
 								/>
 								<input
+									id="primary-color-text"
 									type="text"
+									aria-label="Wpisz kod HEX koloru tekstu i QR"
 									value={primaryColor}
 									onChange={(e) => setPrimaryColor(e.target.value)}
-									className="w-full px-2 py-1 text-xs border rounded-lg uppercase"
+									className="w-full px-2 py-1 text-xs border rounded-lg uppercase focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 								/>
 							</div>
 						</div>
 						<div>
-							<label className="block text-[11px] font-medium text-slate-500 mb-1">
+							<label
+								htmlFor="accent-color-text"
+								className="block text-[11px] font-medium text-slate-600 mb-1"
+							>
 								Kolor złotej ramki
 							</label>
 							<div className="flex items-center gap-2">
 								<input
 									type="color"
+									aria-label="Wybierz kolor złotej ramki z próbnika"
 									value={accentColor}
 									onChange={(e) => setAccentColor(e.target.value)}
-									className="w-8 h-8 rounded-lg cursor-pointer border border-slate-200 p-0.5"
+									className="w-8 h-8 rounded-lg cursor-pointer border border-slate-200 p-0.5 focus-visible:ring-2 focus-visible:ring-amber-500"
 								/>
 								<input
+									id="accent-color-text"
 									type="text"
+									aria-label="Wpisz kod HEX koloru złotej ramki"
 									value={accentColor}
 									onChange={(e) => setAccentColor(e.target.value)}
-									className="w-full px-2 py-1 text-xs border rounded-lg uppercase"
+									className="w-full px-2 py-1 text-xs border rounded-lg uppercase focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 								/>
 							</div>
 						</div>
@@ -231,26 +259,34 @@ export default function CardCustomizerPage() {
 					{/* Teksty */}
 					<div className="space-y-3 pt-2">
 						<div>
-							<label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+							<label
+								htmlFor="headline-input"
+								className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1"
+							>
 								Nagłówek
 							</label>
 							<input
+								id="headline-input"
 								type="text"
 								value={headline}
 								onChange={(e) => setHeadline(e.target.value)}
-								className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+								className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500"
 							/>
 						</div>
 
 						<div>
-							<label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+							<label
+								htmlFor="instructions-input"
+								className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1"
+							>
 								Instrukcja dla gości
 							</label>
 							<textarea
+								id="instructions-input"
 								rows={3}
 								value={instructions}
 								onChange={(e) => setInstructions(e.target.value)}
-								className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+								className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500"
 							/>
 						</div>
 					</div>
@@ -302,7 +338,7 @@ export default function CardCustomizerPage() {
 								{qrDataUrl ? (
 									<img
 										src={qrDataUrl}
-										alt="Kod QR Wesela"
+										alt={`Kod QR do galerii weselnej: ${coupleNames}`}
 										className="w-36 h-36 sm:w-40 sm:h-40 object-contain"
 									/>
 								) : (

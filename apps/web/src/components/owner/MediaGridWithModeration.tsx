@@ -36,12 +36,17 @@ export const MediaGridWithModeration: React.FC<
 		<div className="space-y-4">
 			{/* Pasek filtrowania i moderacji */}
 			<div className="bg-white p-4 rounded-2xl border border-slate-200/80 flex flex-wrap items-center justify-between gap-4">
-				<div className="flex items-center gap-2 text-xs font-medium">
-					<span className="text-slate-400 mr-1">Filtruj:</span>
+				<div
+					role="group"
+					aria-label="Filtrowanie multimediów"
+					className="flex items-center gap-2 text-xs font-medium"
+				>
+					<span className="text-slate-600 mr-1 font-semibold">Filtruj:</span>
 					<button
 						type="button"
 						onClick={() => setFilter("all")}
-						className={`px-3 py-1.5 rounded-xl transition ${
+						aria-pressed={filter === "all"}
+						className={`px-3 py-1.5 rounded-xl transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none ${
 							filter === "all"
 								? "bg-slate-900 text-white"
 								: "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -52,7 +57,8 @@ export const MediaGridWithModeration: React.FC<
 					<button
 						type="button"
 						onClick={() => setFilter("ready")}
-						className={`px-3 py-1.5 rounded-xl transition ${
+						aria-pressed={filter === "ready"}
+						className={`px-3 py-1.5 rounded-xl transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none ${
 							filter === "ready"
 								? "bg-slate-900 text-white"
 								: "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -63,7 +69,8 @@ export const MediaGridWithModeration: React.FC<
 					<button
 						type="button"
 						onClick={() => setFilter("hidden")}
-						className={`px-3 py-1.5 rounded-xl transition ${
+						aria-pressed={filter === "hidden"}
+						className={`px-3 py-1.5 rounded-xl transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none ${
 							filter === "hidden"
 								? "bg-slate-900 text-white"
 								: "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -73,7 +80,7 @@ export const MediaGridWithModeration: React.FC<
 					</button>
 				</div>
 
-				<p className="text-xs text-slate-400">
+				<p className="text-xs text-slate-500">
 					Kliknij ikonę oka, aby ukryć zdjęcie przed gośćmi (będzie widoczne
 					tylko dla Was w ZIP i na Dysku Google).
 				</p>
@@ -93,7 +100,7 @@ export const MediaGridWithModeration: React.FC<
 						<div className="aspect-square relative overflow-hidden bg-slate-100">
 							<img
 								src={item.thumbUrl}
-								alt=""
+								alt={item.originalFileName}
 								className="w-full h-full object-cover"
 							/>
 							{item.status === "hidden" && (
@@ -118,16 +125,21 @@ export const MediaGridWithModeration: React.FC<
 											? "Ukryj przed gośćmi"
 											: "Pokaż w galerii"
 									}
-									className={`p-1.5 rounded-lg transition ${
+									aria-label={
 										item.status === "ready"
-											? "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+											? `Ukryj plik ${item.originalFileName} przed gośćmi`
+											: `Pokaż plik ${item.originalFileName} w galerii`
+									}
+									className={`p-1.5 rounded-lg transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none ${
+										item.status === "ready"
+											? "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
 											: "text-amber-600 bg-amber-50 hover:bg-amber-100"
 									}`}
 								>
 									{item.status === "ready" ? (
-										<Eye className="w-3.5 h-3.5" />
+										<Eye className="w-3.5 h-3.5" aria-hidden="true" />
 									) : (
-										<EyeOff className="w-3.5 h-3.5" />
+										<EyeOff className="w-3.5 h-3.5" aria-hidden="true" />
 									)}
 								</button>
 
@@ -135,9 +147,10 @@ export const MediaGridWithModeration: React.FC<
 									type="button"
 									onClick={() => onDeleteMedia(item.id)}
 									title="Usuń bezpowrotnie"
-									className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
+									aria-label={`Usuń bezpowrotnie plik ${item.originalFileName}`}
+									className="p-1.5 rounded-lg text-slate-600 hover:text-red-600 hover:bg-red-50 transition focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
 								>
-									<Trash2 className="w-3.5 h-3.5" />
+									<Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
 								</button>
 							</div>
 						</div>

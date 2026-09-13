@@ -33,7 +33,7 @@ export default function HomePage() {
 			<header className="max-w-6xl mx-auto w-full px-6 py-6 flex items-center justify-between">
 				<div className="flex items-center gap-2">
 					<div className="w-8 h-8 rounded-xl bg-amber-600 flex items-center justify-center text-white shadow-xs">
-						<Heart className="w-4 h-4 fill-current" />
+						<Heart className="w-4 h-4 fill-current" aria-hidden="true" />
 					</div>
 					<span className="font-serif-luxury text-xl font-bold tracking-tight text-slate-900">
 						WeddingDrop
@@ -43,7 +43,7 @@ export default function HomePage() {
 				<div className="flex items-center gap-3">
 					<Link
 						href="/admin"
-						className="text-xs font-semibold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg hover:bg-slate-200/50 transition"
+						className="text-xs font-semibold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg hover:bg-slate-200/50 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 					>
 						Panel Administratora
 					</Link>
@@ -53,7 +53,7 @@ export default function HomePage() {
 			{/* Główna sekcja hero */}
 			<main className="max-w-3xl mx-auto px-6 py-12 text-center my-auto">
 				<div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-100/70 text-amber-800 text-xs font-semibold uppercase tracking-wider mb-6">
-					<Sparkles className="w-3.5 h-3.5" />
+					<Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
 					Samoobsługowa Fotowrzutka Ślubna
 				</div>
 
@@ -68,9 +68,14 @@ export default function HomePage() {
 
 				{/* Formularz wejścia do galerii */}
 				<form onSubmit={handleSearch} className="max-w-md mx-auto mb-12">
-					<div className="flex items-center bg-white p-2 rounded-2xl shadow-xl border border-slate-200/80 focus-within:ring-2 focus-within:ring-amber-500/20 transition">
+					<div className="flex items-center bg-white p-2 rounded-2xl shadow-xl border border-slate-200/80 focus-within:ring-2 focus-within:ring-amber-500/30 transition">
+						<label htmlFor="gallery-slug-input" className="sr-only">
+							Wpisz nazwę galerii weselnej
+						</label>
 						<input
+							id="gallery-slug-input"
 							type="text"
+							aria-label="Wpisz nazwę galerii weselnej"
 							placeholder="Wpisz nazwę galerii (np. kasia-i-tomek)"
 							value={slugInput}
 							onChange={(e) => setSlugInput(e.target.value)}
@@ -78,10 +83,10 @@ export default function HomePage() {
 						/>
 						<button
 							type="submit"
-							className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition flex items-center gap-1.5 shrink-0"
+							className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition flex items-center gap-1.5 shrink-0 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 						>
 							<span>Otwórz</span>
-							<ArrowRight className="w-3.5 h-3.5" />
+							<ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
 						</button>
 					</div>
 				</form>
@@ -89,7 +94,10 @@ export default function HomePage() {
 				{/* Cechy systemu */}
 				<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left pt-6 border-t border-slate-200/60">
 					<div className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl border border-slate-200/60">
-						<QrCode className="w-5 h-5 text-amber-600 mb-2" />
+						<QrCode
+							className="w-5 h-5 text-amber-600 mb-2"
+							aria-hidden="true"
+						/>
 						<h3 className="font-bold text-slate-900 text-sm mb-1">
 							Karteczki A6 z QR
 						</h3>
@@ -100,7 +108,10 @@ export default function HomePage() {
 					</div>
 
 					<div className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl border border-slate-200/60">
-						<Camera className="w-5 h-5 text-amber-600 mb-2" />
+						<Camera
+							className="w-5 h-5 text-amber-600 mb-2"
+							aria-hidden="true"
+						/>
 						<h3 className="font-bold text-slate-900 text-sm mb-1">
 							Wznawialny Upload
 						</h3>
@@ -111,7 +122,10 @@ export default function HomePage() {
 					</div>
 
 					<div className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl border border-slate-200/60">
-						<Download className="w-5 h-5 text-amber-600 mb-2" />
+						<Download
+							className="w-5 h-5 text-amber-600 mb-2"
+							aria-hidden="true"
+						/>
 						<h3 className="font-bold text-slate-900 text-sm mb-1">
 							Pobieranie ZIP w locie
 						</h3>
@@ -124,7 +138,7 @@ export default function HomePage() {
 			</main>
 
 			{/* Stopka */}
-			<footer className="border-t border-slate-200/60 py-6 text-center text-xs text-slate-400">
+			<footer className="border-t border-slate-200/60 py-6 text-center text-xs text-slate-600">
 				<p>
 					WeddingDrop • Self-Hosted Wedding Gallery Platform • Zoptymalizowano
 					pod Intel N100
