@@ -1,6 +1,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { cardSettings, db, galleries, mediaItems } from "@wedding-drop/db";
+import {
+	cardSettings,
+	createGalleryDto,
+	db,
+	galleries,
+	mediaItems,
+} from "@wedding-drop/db";
 import bcrypt from "bcryptjs";
 import { desc, eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
@@ -69,6 +75,19 @@ export async function POST(req: NextRequest) {
 			);
 		}
 
+		const parseResult = createGalleryDto.safeParse(body);
+		if (!parseResult.success) {
+			return NextResponse.json(
+				{
+					error:
+						parseResult.error.issues[0]?.message ||
+						"Nieprawidłowe dane formularza",
+					details: parseResult.error.flatten(),
+				},
+				{ status: 400 },
+			);
+		}
+
 		const {
 			coupleNames,
 			weddingDate,
@@ -77,14 +96,7 @@ export async function POST(req: NextRequest) {
 			customSlug,
 			accessPin,
 			maxStorageGb,
-		} = body;
-
-		if (!coupleNames || !weddingDate || !ownerEmail || !ownerPassword) {
-			return NextResponse.json(
-				{ error: "Wszystkie podstawowe pola są wymagane" },
-				{ status: 400 },
-			);
-		}
+		} = parseResult.data;
 
 		// Bezpieczne generowanie i sanityzacja sluga
 		let slug = customSlug
@@ -126,7 +138,7 @@ export async function POST(req: NextRequest) {
 
 		const ownerPasswordHash = await bcrypt.hash(ownerPassword, 10);
 		const maxStorageBytes = maxStorageGb
-			? parseInt(maxStorageGb, 10) * 1024 * 1024 * 1024
+			? Math.floor(maxStorageGb) * 1024 * 1024 * 1024
 			: 0;
 
 		const [newGallery] = await db

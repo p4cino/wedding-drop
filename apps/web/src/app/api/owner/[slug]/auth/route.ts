@@ -4,6 +4,7 @@ import {
 	galleries,
 	galleryGdriveExports,
 	mediaItems,
+	ownerLoginDto,
 } from "@wedding-drop/db";
 import { isGoogleDriveConfigured } from "@wedding-drop/media";
 import bcrypt from "bcryptjs";
@@ -20,7 +21,17 @@ export async function POST(
 	try {
 		const { slug } = await params;
 		const body = await req.json();
-		const { password } = body;
+		const parseResult = ownerLoginDto.safeParse(body);
+		if (!parseResult.success) {
+			return NextResponse.json(
+				{
+					error: parseResult.error.issues[0]?.message || "Hasło jest wymagane",
+					details: parseResult.error.flatten(),
+				},
+				{ status: 400 },
+			);
+		}
+		const { password } = parseResult.data;
 
 		const galleryResult = await db
 			.select({ gallery: galleries, gdrive: galleryGdriveExports })
