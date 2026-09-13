@@ -1,5 +1,5 @@
+import { compare } from "@node-rs/bcrypt";
 import { db, galleries, mediaItems } from "@wedding-drop/db";
-import bcrypt from "bcryptjs";
 import { and, desc, eq, ne } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { verifyAdminToken, verifyOwnerToken } from "@/lib/auth";
@@ -41,7 +41,7 @@ export async function GET(
 			if (
 				!canViewHidden &&
 				ownerPassword &&
-				(await bcrypt.compare(ownerPassword, gallery.ownerPasswordHash))
+				(await compare(ownerPassword, gallery.ownerPasswordHash))
 			) {
 				canViewHidden = true;
 			}

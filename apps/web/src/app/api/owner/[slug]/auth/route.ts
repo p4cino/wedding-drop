@@ -1,3 +1,4 @@
+import { compare } from "@node-rs/bcrypt";
 import {
 	cardSettings,
 	db,
@@ -7,7 +8,6 @@ import {
 	ownerLoginDto,
 } from "@wedding-drop/db";
 import { isGoogleDriveConfigured } from "@wedding-drop/media";
-import bcrypt from "bcryptjs";
 import { eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { generateOwnerToken } from "@/lib/auth";
@@ -52,7 +52,7 @@ export async function POST(
 
 		const { gallery, gdrive } = galleryResult[0];
 
-		const isValid = await bcrypt.compare(password, gallery.ownerPasswordHash);
+		const isValid = await compare(password, gallery.ownerPasswordHash);
 		if (!isValid) {
 			return NextResponse.json(
 				{ error: "Nieprawidłowe hasło" },

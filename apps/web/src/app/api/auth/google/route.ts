@@ -1,6 +1,6 @@
+import { compare } from "@node-rs/bcrypt";
 import { db, galleries } from "@wedding-drop/db";
 import { getGoogleAuthUrl, isGoogleDriveConfigured } from "@wedding-drop/media";
-import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { verifyOwnerToken } from "@/lib/auth";
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
 			}
 
 			const gallery = galleryResult[0];
-			const isValid = await bcrypt.compare(password, gallery.ownerPasswordHash);
+			const isValid = await compare(password, gallery.ownerPasswordHash);
 			if (!isValid) {
 				return NextResponse.json(
 					{ error: "Nieprawidłowe hasło właściciela galerii." },

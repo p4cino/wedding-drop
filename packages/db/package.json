@@ -28,14 +28,13 @@
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
-		"bcryptjs": "^3.0.3",
+		"@node-rs/bcrypt": "^1.10.9",
 		"drizzle-orm": "^0.45.2",
 		"drizzle-zod": "^0.8.3",
 		"postgres": "^3.4.9",
 		"zod": "^4.6.2"
 	},
 	"devDependencies": {
-		"@types/bcryptjs": "^3.0.0",
 		"@types/node": "^22.20.2",
 		"drizzle-kit": "^0.31.10",
 		"typescript": "^7.0.2",

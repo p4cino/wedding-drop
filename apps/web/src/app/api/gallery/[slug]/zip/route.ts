@@ -1,8 +1,8 @@
 import path from "node:path";
 import { Readable } from "node:stream";
+import { compare } from "@node-rs/bcrypt";
 import { db, galleries, mediaItems } from "@wedding-drop/db";
 import { createGalleryZipStream } from "@wedding-drop/media";
-import bcrypt from "bcryptjs";
 import { and, eq, ne } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 
@@ -34,10 +34,7 @@ export async function GET(
 		let isOwner = false;
 
 		if (providedPassword) {
-			isOwner = await bcrypt.compare(
-				providedPassword,
-				gallery.ownerPasswordHash,
-			);
+			isOwner = await compare(providedPassword, gallery.ownerPasswordHash);
 		}
 
 		// Jeśli to nie jest właściciel, sprawdzamy uprawnienia gościa

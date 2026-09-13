@@ -25,10 +25,8 @@ vi.mock("@wedding-drop/media", () => ({
 	}),
 }));
 
-vi.mock("bcryptjs", () => ({
-	default: {
-		compare: vi.fn((pwd, _hash) => Promise.resolve(pwd === "correct_password")),
-	},
+vi.mock("@node-rs/bcrypt", () => ({
+	compare: vi.fn((pwd, _hash) => Promise.resolve(pwd === "correct_password")),
 }));
 
 vi.mock("@wedding-drop/db", () => {
