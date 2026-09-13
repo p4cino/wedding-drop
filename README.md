@@ -51,9 +51,10 @@ Szybki podgląd wszystkich ślubów, zarządzanie przestrzenią dyskową oraz b�
 
 ## 🌟 Główne Funkcje
 
-1. **Dla Gości (100% Mobile First)**:
+1. **Dla Gości (100% Mobile First & PWA)**:
    - Dostęp bezpośrednio po zeskanowaniu kodu QR ze stolika weselnego.
    - Brak logowania, rejestracji i instalowania aplikacji ze sklepów.
+   - **Progressive Web App (PWA)**: Możliwość instalacji na ekranie głównym (dodaj do ekranu głównego) oraz strona awaryjna (Offline Fallback) informująca o braku sieci.
    - Wrzucanie zdjęć i filmów prosto z rolki aparatu.
    - Opcjonalny podpis ("np. Wujek Janusz i Ciocia Halinka").
    - **Wznawialny upload (TUS Protocol 1.0.0)**: Jeśli na sali weselnej na chwilę zerwie się zasięg Wi-Fi lub LTE, upload wznowi się automatycznie bez utraty przesłanych danych.

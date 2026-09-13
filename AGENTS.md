@@ -86,3 +86,9 @@ This workspace provides specialized skills and tools in `.agents/`:
   - `.agents/scripts/ops-helper.ts`: Quick operations (backup, restore, status) via `npx tsx`.
   - `.agents/scripts/test-runner.ts`: Test orchestration via `npx tsx` / `pnpm`.
   - `.agents/scripts/hook-runner.ts`: Validation hook runner for `hooks.json`.
+
+---
+
+## 7. Documentation Strictness
+
+- **Always Update Docs**: Every time you add a new feature, capability, or architectural component, you MUST update the `README.md` and any relevant documentation files to reflect these changes. Never implement a feature silently without documenting it for the end users and administrators.

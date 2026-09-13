@@ -10,11 +10,20 @@ export const metadata: Metadata = {
 		follow: false,
 		nocache: true,
 	},
+	appleWebApp: {
+		capable: true,
+		title: "WeddingDrop",
+		statusBarStyle: "default",
+	},
+	formatDetection: {
+		telephone: false,
+	},
 };
 
 export const viewport: Viewport = {
 	width: "device-width",
 	initialScale: 1,
+	themeColor: "#FAF8F5",
 };
 
 export default function RootLayout({
