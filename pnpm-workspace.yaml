@@ -16,3 +16,8 @@ minimumReleaseAgeExclude:
   - '@next/swc-win32-arm64-msvc@16.3.5'
   - '@next/swc-win32-x64-msvc@16.3.5'
   - next@16.3.5
+
+overrides:
+  browserslist@<=4.28.6: ^4.28.7
+  esbuild@<=0.24.2: ^0.25.0
+  esbuild@>=0.27.3 <0.28.1: ^0.28.1
