@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface GalleryRow {
 	id: string;
@@ -48,6 +48,19 @@ export default function AdminDashboardPage() {
 	const [ownerPassword, setOwnerPassword] = useState("");
 	const [customSlug, setCustomSlug] = useState("");
 	const [createdGallery, setCreatedGallery] = useState<GalleryRow | null>(null);
+
+	// Obsługa klawisza Escape dla modala
+	useEffect(() => {
+		if (!isModalOpen) return;
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (e.key === "Escape") {
+				e.preventDefault();
+				setIsModalOpen(false);
+			}
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [isModalOpen]);
 
 	const handleLogin = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -175,7 +188,7 @@ export default function AdminDashboardPage() {
 			<div className="min-h-screen flex items-center justify-center bg-[#FAF8F5] p-4">
 				<div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-200/80">
 					<div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white mx-auto mb-4">
-						<ShieldCheck className="w-6 h-6" />
+						<ShieldCheck className="w-6 h-6" aria-hidden="true" />
 					</div>
 					<h2 className="font-serif-luxury text-2xl font-bold text-center text-slate-900 mb-1">
 						Panel Administratora
@@ -186,39 +199,56 @@ export default function AdminDashboardPage() {
 
 					<form onSubmit={handleLogin} className="space-y-4">
 						{error && (
-							<div className="p-3 text-xs bg-red-50 text-red-700 rounded-xl border border-red-200">
+							<div
+								id="admin-login-error"
+								role="alert"
+								aria-live="assertive"
+								className="p-3 text-xs bg-red-50 text-red-700 rounded-xl border border-red-200"
+							>
 								{error}
 							</div>
 						)}
 						<div>
-							<label className="block text-xs font-semibold text-slate-700 mb-1">
+							<label
+								htmlFor="admin-username-input"
+								className="block text-xs font-semibold text-slate-700 mb-1"
+							>
 								Login
 							</label>
 							<input
+								id="admin-username-input"
 								type="text"
 								required
+								aria-invalid={Boolean(error)}
+								aria-describedby={error ? "admin-login-error" : undefined}
 								value={username}
 								onChange={(e) => setUsername(e.target.value)}
-								className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+								className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900/30 focus-visible:ring-2 focus-visible:ring-slate-900"
 							/>
 						</div>
 						<div>
-							<label className="block text-xs font-semibold text-slate-700 mb-1">
+							<label
+								htmlFor="admin-password-input"
+								className="block text-xs font-semibold text-slate-700 mb-1"
+							>
 								Hasło
 							</label>
 							<input
+								id="admin-password-input"
 								type="password"
 								required
+								aria-invalid={Boolean(error)}
+								aria-describedby={error ? "admin-login-error" : undefined}
 								value={password}
 								onChange={(e) => setPassword(e.target.value)}
-								className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+								className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900/30 focus-visible:ring-2 focus-visible:ring-slate-900"
 							/>
 						</div>
 
 						<button
 							type="submit"
 							disabled={loading}
-							className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition shadow-sm"
+							className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition shadow-sm focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 						>
 							{loading ? "Logowanie..." : "Zaloguj się"}
 						</button>
@@ -244,26 +274,29 @@ export default function AdminDashboardPage() {
 			<header className="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-30 flex items-center justify-between">
 				<div className="flex items-center gap-3">
 					<div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-white">
-						<ShieldCheck className="w-5 h-5" />
+						<ShieldCheck className="w-5 h-5" aria-hidden="true" />
 					</div>
 					<div>
 						<h1 className="font-bold text-slate-900 text-base">
 							Zarządzanie WeddingDrop
 						</h1>
-						<p className="text-xs text-slate-400">
+						<p className="text-xs text-slate-500">
 							Panel Administratora Systemu
 						</p>
 					</div>
 				</div>
 
 				<button
+					type="button"
+					aria-haspopup="dialog"
+					aria-expanded={isModalOpen}
 					onClick={() => {
 						setCreatedGallery(null);
 						setIsModalOpen(true);
 					}}
-					className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-sm transition"
+					className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-sm transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 				>
-					<Plus className="w-4 h-4" />
+					<Plus className="w-4 h-4" aria-hidden="true" />
 					<span>Nowe wesele</span>
 				</button>
 			</header>
@@ -272,8 +305,8 @@ export default function AdminDashboardPage() {
 				{/* Statystyki globalne */}
 				<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 					<div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-						<div className="flex items-center gap-2 text-slate-400 text-xs font-medium mb-1">
-							<Users className="w-4 h-4 text-amber-600" />
+						<div className="flex items-center gap-2 text-slate-600 text-xs font-medium mb-1">
+							<Users className="w-4 h-4 text-amber-600" aria-hidden="true" />
 							<span>Wszystkie wesela</span>
 						</div>
 						<p className="text-3xl font-bold text-slate-900">
@@ -282,8 +315,8 @@ export default function AdminDashboardPage() {
 					</div>
 
 					<div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-						<div className="flex items-center gap-2 text-slate-400 text-xs font-medium mb-1">
-							<Calendar className="w-4 h-4 text-amber-600" />
+						<div className="flex items-center gap-2 text-slate-600 text-xs font-medium mb-1">
+							<Calendar className="w-4 h-4 text-amber-600" aria-hidden="true" />
 							<span>Zebrane zdjęcia i filmy</span>
 						</div>
 						<p className="text-3xl font-bold text-slate-900">
@@ -292,8 +325,11 @@ export default function AdminDashboardPage() {
 					</div>
 
 					<div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-						<div className="flex items-center gap-2 text-slate-400 text-xs font-medium mb-1">
-							<HardDrive className="w-4 h-4 text-amber-600" />
+						<div className="flex items-center gap-2 text-slate-600 text-xs font-medium mb-1">
+							<HardDrive
+								className="w-4 h-4 text-amber-600"
+								aria-hidden="true"
+							/>
 							<span>Łączne zużycie dysku</span>
 						</div>
 						<p className="text-3xl font-bold text-slate-900">
@@ -308,22 +344,39 @@ export default function AdminDashboardPage() {
 						<h3 className="font-bold text-slate-800 text-sm">
 							Aktywne Galerie Weselne
 						</h3>
-						<span className="text-xs text-slate-400">
+						<span className="text-xs text-slate-500">
 							{galleries.length} rekordów
 						</span>
 					</div>
 
 					<div className="overflow-x-auto">
-						<table className="w-full text-left text-xs">
-							<thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
+						<table
+							className="w-full text-left text-xs"
+							aria-label="Aktywne Galerie Weselne"
+						>
+							<thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-100">
 								<tr>
-									<th className="px-6 py-3">Para Młoda</th>
-									<th className="px-6 py-3">Data</th>
-									<th className="px-6 py-3">Slug (URL)</th>
-									<th className="px-6 py-3">E-mail właściciela</th>
-									<th className="px-6 py-3">Pliki</th>
-									<th className="px-6 py-3">Rozmiar</th>
-									<th className="px-6 py-3 text-right">Akcje</th>
+									<th scope="col" className="px-6 py-3">
+										Para Młoda
+									</th>
+									<th scope="col" className="px-6 py-3">
+										Data
+									</th>
+									<th scope="col" className="px-6 py-3">
+										Slug (URL)
+									</th>
+									<th scope="col" className="px-6 py-3">
+										E-mail właściciela
+									</th>
+									<th scope="col" className="px-6 py-3">
+										Pliki
+									</th>
+									<th scope="col" className="px-6 py-3">
+										Rozmiar
+									</th>
+									<th scope="col" className="px-6 py-3 text-right">
+										Akcje
+									</th>
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-slate-100">
@@ -343,7 +396,7 @@ export default function AdminDashboardPage() {
 											<td className="px-6 py-3.5 font-mono text-amber-700">
 												{g.slug}
 											</td>
-											<td className="px-6 py-3.5 text-slate-500">
+											<td className="px-6 py-3.5 text-slate-600">
 												{g.ownerEmail}
 											</td>
 											<td className="px-6 py-3.5 font-medium">
@@ -357,32 +410,49 @@ export default function AdminDashboardPage() {
 													href={`/g/${g.slug}`}
 													target="_blank"
 													title="Otwórz widok gościa"
-													className="inline-block p-1.5 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition"
+													aria-label={`Otwórz widok gościa dla galerii ${g.coupleNames} (${g.slug})`}
+													className="inline-block p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 												>
-													<ExternalLink className="w-4 h-4" />
+													<ExternalLink
+														className="w-4 h-4"
+														aria-hidden="true"
+													/>
+													<span className="sr-only">
+														(otwiera się w nowej karcie)
+													</span>
 												</Link>
 												<Link
 													href={`/g/${g.slug}/card`}
 													target="_blank"
 													title="Drukuj karteczkę"
-													className="inline-block p-1.5 rounded-lg text-amber-600 hover:text-amber-800 hover:bg-amber-50 transition"
+													aria-label={`Drukuj karteczkę dla galerii ${g.coupleNames} (${g.slug})`}
+													className="inline-block p-1.5 rounded-lg text-amber-600 hover:text-amber-800 hover:bg-amber-50 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 												>
-													<QrCode className="w-4 h-4" />
+													<QrCode className="w-4 h-4" aria-hidden="true" />
+													<span className="sr-only">
+														(otwiera się w nowej karcie)
+													</span>
 												</Link>
 												<Link
 													href={`/owner/${g.slug}`}
 													target="_blank"
 													title="Panel pary młodej"
-													className="inline-block p-1.5 rounded-lg text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition font-medium"
+													aria-label={`Panel pary młodej dla galerii ${g.coupleNames} (${g.slug})`}
+													className="inline-block p-1.5 rounded-lg text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition font-medium focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
 												>
 													Panel
+													<span className="sr-only">
+														(otwiera się w nowej karcie)
+													</span>
 												</Link>
 												<button
+													type="button"
 													onClick={() => handleDelete(g.id, g.slug)}
 													title="Usuń galerię"
-													className="inline-block p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
+													aria-label={`Usuń galerię ${g.coupleNames} (${g.slug})`}
+													className="inline-block p-1.5 rounded-lg text-slate-600 hover:text-red-600 hover:bg-red-50 transition focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
 												>
-													<Trash2 className="w-4 h-4" />
+													<Trash2 className="w-4 h-4" aria-hidden="true" />
 												</button>
 											</td>
 										</tr>
@@ -396,16 +466,27 @@ export default function AdminDashboardPage() {
 
 			{/* Modal tworzenia nowej galerii */}
 			{isModalOpen && (
-				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+				<div
+					role="dialog"
+					aria-modal="true"
+					aria-labelledby="admin-create-wedding-title"
+					className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+				>
 					<div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-6 relative">
 						<button
+							type="button"
 							onClick={() => setIsModalOpen(false)}
-							className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-600 rounded-full"
+							aria-label="Zamknij okno tworzenia wesela"
+							title="Zamknij okno tworzenia wesela"
+							className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-600 rounded-full focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 						>
-							<X className="w-5 h-5" />
+							<X className="w-5 h-5" aria-hidden="true" />
 						</button>
 
-						<h3 className="font-serif-luxury text-xl font-bold text-slate-900 mb-1">
+						<h3
+							id="admin-create-wedding-title"
+							className="font-serif-luxury text-xl font-bold text-slate-900 mb-1"
+						>
 							Nowa Galeria Weselna
 						</h3>
 						<p className="text-xs text-slate-500 mb-5">
@@ -417,8 +498,8 @@ export default function AdminDashboardPage() {
 							<div className="space-y-4">
 								<div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 space-y-2">
 									<div className="flex items-center gap-1.5 font-bold">
-										<Check className="w-4 h-4" /> Galeria została pomyślnie
-										utworzona!
+										<Check className="w-4 h-4" aria-hidden="true" /> Galeria
+										została pomyślnie utworzona!
 									</div>
 									<p>
 										<strong>Para:</strong> {createdGallery.coupleNames}
@@ -432,34 +513,53 @@ export default function AdminDashboardPage() {
 									<Link
 										href={`/g/${createdGallery.slug}`}
 										target="_blank"
-										className="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold"
+										className="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 									>
 										<span>Otwórz galerię gościa</span>
-										<ExternalLink className="w-4 h-4 text-slate-400" />
+										<ExternalLink
+											className="w-4 h-4 text-slate-400"
+											aria-hidden="true"
+										/>
+										<span className="sr-only">
+											(otwiera się w nowej karcie)
+										</span>
 									</Link>
 
 									<Link
 										href={`/g/${createdGallery.slug}/card`}
 										target="_blank"
-										className="flex items-center justify-between p-3 rounded-xl border border-amber-200 bg-amber-50/50 hover:bg-amber-100/50 text-xs font-semibold text-amber-900"
+										className="flex items-center justify-between p-3 rounded-xl border border-amber-200 bg-amber-50/50 hover:bg-amber-100/50 text-xs font-semibold text-amber-900 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 									>
 										<span>Zobacz i pobierz karteczkę A6 do druku</span>
-										<QrCode className="w-4 h-4 text-amber-700" />
+										<QrCode
+											className="w-4 h-4 text-amber-700"
+											aria-hidden="true"
+										/>
+										<span className="sr-only">
+											(otwiera się w nowej karcie)
+										</span>
 									</Link>
 
 									<Link
 										href={`/owner/${createdGallery.slug}`}
 										target="_blank"
-										className="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold"
+										className="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 									>
 										<span>Panel zarządzania pary młodej</span>
-										<ExternalLink className="w-4 h-4 text-slate-400" />
+										<ExternalLink
+											className="w-4 h-4 text-slate-400"
+											aria-hidden="true"
+										/>
+										<span className="sr-only">
+											(otwiera się w nowej karcie)
+										</span>
 									</Link>
 								</div>
 
 								<button
+									type="button"
 									onClick={() => setIsModalOpen(false)}
-									className="w-full mt-4 py-3 bg-slate-900 text-white rounded-xl text-xs font-semibold"
+									className="w-full mt-4 py-3 bg-slate-900 text-white rounded-xl text-xs font-semibold focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 								>
 									Zamknij
 								</button>
@@ -467,78 +567,98 @@ export default function AdminDashboardPage() {
 						) : (
 							<form onSubmit={handleCreate} className="space-y-3 text-xs">
 								<div>
-									<label className="block font-semibold text-slate-700 mb-1">
+									<label
+										htmlFor="admin-couple-names"
+										className="block font-semibold text-slate-700 mb-1"
+									>
 										Imiona Pary Młodej *
 									</label>
 									<input
+										id="admin-couple-names"
 										type="text"
 										required
 										placeholder="np. Kasia & Tomek"
 										value={coupleNames}
 										onChange={(e) => setCoupleNames(e.target.value)}
-										className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl"
+										className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500"
 									/>
 								</div>
 
 								<div className="grid grid-cols-2 gap-3">
 									<div>
-										<label className="block font-semibold text-slate-700 mb-1">
+										<label
+											htmlFor="admin-wedding-date"
+											className="block font-semibold text-slate-700 mb-1"
+										>
 											Data Ślubu *
 										</label>
 										<input
+											id="admin-wedding-date"
 											type="date"
 											required
 											value={weddingDate}
 											onChange={(e) => setWeddingDate(e.target.value)}
-											className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl"
+											className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500"
 										/>
 									</div>
 
 									<div>
-										<label className="block font-semibold text-slate-700 mb-1">
+										<label
+											htmlFor="admin-custom-slug"
+											className="block font-semibold text-slate-700 mb-1"
+										>
 											Własny Slug (opcjonalny)
 										</label>
 										<input
+											id="admin-custom-slug"
 											type="text"
 											placeholder="np. kasia-i-tomek"
 											value={customSlug}
 											onChange={(e) => setCustomSlug(e.target.value)}
-											className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl"
+											className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500"
 										/>
 									</div>
 								</div>
 
 								<div>
-									<label className="block font-semibold text-slate-700 mb-1">
+									<label
+										htmlFor="admin-owner-email"
+										className="block font-semibold text-slate-700 mb-1"
+									>
 										E-mail Pary Młodej *
 									</label>
 									<input
+										id="admin-owner-email"
 										type="email"
 										required
 										placeholder="kontakt@kasiaitomek.pl"
 										value={ownerEmail}
 										onChange={(e) => setOwnerEmail(e.target.value)}
-										className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl"
+										className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500"
 									/>
 								</div>
 
 								<div>
-									<label className="block font-semibold text-slate-700 mb-1">
+									<label
+										htmlFor="admin-owner-password"
+										className="block font-semibold text-slate-700 mb-1"
+									>
 										Hasło dostępu dla Pary Młodej *
 									</label>
 									<input
+										id="admin-owner-password"
 										type="password"
 										required
 										placeholder="Hasło do moderacji i pobierania ZIP"
 										value={ownerPassword}
 										onChange={(e) => setOwnerPassword(e.target.value)}
-										className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl"
+										className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500"
 									/>
 								</div>
 
 								<button
 									type="submit"
-									className="w-full mt-4 py-3 bg-gradient-to-r from-amber-600 to-amber-500 text-white rounded-xl font-semibold shadow-md"
+									className="w-full mt-4 py-3 bg-gradient-to-r from-amber-600 to-amber-500 text-white rounded-xl font-semibold shadow-md focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 								>
 									Utwórz wesele
 								</button>

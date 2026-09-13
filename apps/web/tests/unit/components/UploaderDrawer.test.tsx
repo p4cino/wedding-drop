@@ -175,4 +175,43 @@ describe("UploaderDrawer Component", () => {
 			expect(clickSpy).toHaveBeenCalled();
 		}
 	});
+
+	it("powinien zamykać szufladę po naciśnięciu Escape gdy nie trwa upload", () => {
+		const onClose = vi.fn();
+		render(
+			<UploaderDrawer
+				gallerySlug="kasia-i-tomek"
+				isOpen={true}
+				onClose={onClose}
+			/>,
+		);
+
+		fireEvent.keyDown(window, { key: "Escape" });
+		expect(onClose).toHaveBeenCalledTimes(1);
+	});
+
+	it("nie powinien zamykać szuflady po naciśnięciu Escape gdy trwa upload", () => {
+		const onClose = vi.fn();
+		const { container } = render(
+			<UploaderDrawer
+				gallerySlug="kasia-i-tomek"
+				isOpen={true}
+				onClose={onClose}
+			/>,
+		);
+
+		const file = new File(["video"], "test.mp4", { type: "video/mp4" });
+		const fileInput = container.querySelector(
+			'input[type="file"]',
+		) as HTMLInputElement;
+		fireEvent.change(fileInput, { target: { files: [file] } });
+
+		const uploadBtn = screen.getByRole("button", {
+			name: /Wyślij do galerii/i,
+		});
+		fireEvent.click(uploadBtn);
+
+		fireEvent.keyDown(window, { key: "Escape" });
+		expect(onClose).not.toHaveBeenCalled();
+	});
 });

@@ -10,7 +10,7 @@ import {
 	X,
 } from "lucide-react";
 import type React from "react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as tus from "tus-js-client";
 
 interface UploaderDrawerProps {
@@ -39,6 +39,19 @@ export default function UploaderDrawer({
 	const [files, setFiles] = useState<UploadingFile[]>([]);
 	const [isUploading, setIsUploading] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	// Obsługa klawisza Escape
+	useEffect(() => {
+		if (!isOpen) return;
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (e.key === "Escape" && !isUploading) {
+				e.preventDefault();
+				onClose();
+			}
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [isOpen, isUploading, onClose]);
 
 	if (!isOpen) return null;
 
@@ -140,24 +153,36 @@ export default function UploaderDrawer({
 		files.length > 0 && files.every((f) => f.status === "completed");
 
 	return (
-		<div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-200">
+		<div
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="uploader-drawer-title"
+			aria-describedby="uploader-drawer-desc"
+			className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-200"
+		>
 			<div className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
 				{/* Nagłówek Drawer */}
 				<div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-[#FAF8F5]">
 					<div>
-						<h3 className="font-serif-luxury text-xl font-bold text-slate-900">
+						<h3
+							id="uploader-drawer-title"
+							className="font-serif-luxury text-xl font-bold text-slate-900"
+						>
 							Dodaj zdjęcia i filmy
 						</h3>
-						<p className="text-xs text-slate-500">
+						<p id="uploader-drawer-desc" className="text-xs text-slate-500">
 							Bez logowania • Zostaną zapisane w galerii
 						</p>
 					</div>
 					<button
+						type="button"
 						onClick={onClose}
 						disabled={isUploading}
-						className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200/50 transition"
+						aria-label="Zamknij okno przesyłania"
+						title="Zamknij okno przesyłania"
+						className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200/50 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 					>
-						<X className="w-5 h-5" />
+						<X className="w-5 h-5" aria-hidden="true" />
 					</button>
 				</div>
 
@@ -165,10 +190,14 @@ export default function UploaderDrawer({
 				<div className="p-6 overflow-y-auto space-y-5 flex-1">
 					{/* Podpis gościa */}
 					<div>
-						<label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+						<label
+							htmlFor="uploader-name-input"
+							className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5"
+						>
 							Twój podpis (opcjonalnie)
 						</label>
 						<input
+							id="uploader-name-input"
 							type="text"
 							placeholder="np. Ciocia Kasia i Wujek Michał"
 							value={uploaderName}
@@ -179,9 +208,12 @@ export default function UploaderDrawer({
 					</div>
 
 					{/* Strefa wyboru plików */}
-					<div
-						onClick={() => !isUploading && fileInputRef.current?.click()}
-						className="border-2 border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/40 rounded-2xl p-6 text-center cursor-pointer transition group"
+					<button
+						type="button"
+						disabled={isUploading}
+						onClick={() => fileInputRef.current?.click()}
+						aria-label="Kliknij, aby wybrać zdjęcia lub filmy z galerii lub aparatu"
+						className="w-full border-2 border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/40 rounded-2xl p-6 text-center cursor-pointer transition group focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						<input
 							ref={fileInputRef}
@@ -192,7 +224,7 @@ export default function UploaderDrawer({
 							className="hidden"
 						/>
 						<div className="w-12 h-12 mx-auto mb-3 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 group-hover:scale-110 transition">
-							<Upload className="w-6 h-6" />
+							<Upload className="w-6 h-6" aria-hidden="true" />
 						</div>
 						<p className="text-sm font-semibold text-slate-800">
 							Kliknij, aby wybrać z galerii lub aparatu
@@ -200,12 +232,15 @@ export default function UploaderDrawer({
 						<p className="text-xs text-slate-500 mt-1">
 							Obsługa zdjęć JPEG, PNG, HEIC oraz filmów MP4/MOV
 						</p>
-					</div>
+					</button>
 
 					{/* Lista wybranych plików */}
 					{files.length > 0 && (
 						<div className="space-y-2.5">
-							<div className="flex justify-between items-center text-xs text-slate-500 px-1">
+							<div
+								className="flex justify-between items-center text-xs text-slate-500 px-1"
+								aria-live="polite"
+							>
 								<span>Wybrano: {files.length} plików</span>
 								{allCompleted && (
 									<span className="text-emerald-600 font-semibold">
@@ -224,9 +259,9 @@ export default function UploaderDrawer({
 										>
 											<div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center text-slate-600 shrink-0">
 												{isVid ? (
-													<Video className="w-4 h-4" />
+													<Video className="w-4 h-4" aria-hidden="true" />
 												) : (
-													<ImageIcon className="w-4 h-4" />
+													<ImageIcon className="w-4 h-4" aria-hidden="true" />
 												)}
 											</div>
 
@@ -241,7 +276,14 @@ export default function UploaderDrawer({
 												</div>
 
 												{/* Pasek postępu */}
-												<div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+												<div
+													role="progressbar"
+													aria-valuenow={item.progress}
+													aria-valuemin={0}
+													aria-valuemax={100}
+													aria-label={`Postęp wysyłania: ${item.file.name}`}
+													className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden"
+												>
 													<div
 														className={`h-full transition-all duration-300 ${
 															item.status === "completed"
@@ -257,23 +299,35 @@ export default function UploaderDrawer({
 
 											<div className="shrink-0">
 												{item.status === "completed" && (
-													<CheckCircle2 className="w-5 h-5 text-emerald-500" />
+													<CheckCircle2
+														className="w-5 h-5 text-emerald-500"
+														aria-hidden="true"
+													/>
 												)}
 												{item.status === "error" && (
-													<AlertCircle className="w-5 h-5 text-red-500" />
+													<AlertCircle
+														className="w-5 h-5 text-red-500"
+														aria-hidden="true"
+													/>
 												)}
 												{item.status === "uploading" && (
-													<Loader2 className="w-4 h-4 animate-spin text-amber-600" />
+													<Loader2
+														className="w-4 h-4 animate-spin text-amber-600"
+														aria-hidden="true"
+													/>
 												)}
 												{item.status === "pending" && !isUploading && (
 													<button
+														type="button"
 														onClick={(e) => {
 															e.stopPropagation();
 															removeFile(item.id);
 														}}
-														className="p-1 hover:text-red-500 text-slate-400"
+														aria-label={`Usuń plik ${item.file.name}`}
+														title={`Usuń plik ${item.file.name}`}
+														className="p-1 hover:text-red-500 text-slate-400 focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:outline-none rounded-md"
 													>
-														<X className="w-4 h-4" />
+														<X className="w-4 h-4" aria-hidden="true" />
 													</button>
 												)}
 											</div>
@@ -289,26 +343,31 @@ export default function UploaderDrawer({
 				<div className="p-4 bg-white border-t border-slate-100 flex gap-3">
 					{allCompleted ? (
 						<button
+							type="button"
 							onClick={onClose}
-							className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-semibold shadow-lg shadow-emerald-600/20 transition flex items-center justify-center gap-2"
+							className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-semibold shadow-lg shadow-emerald-600/20 transition flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
 						>
-							<CheckCircle2 className="w-5 h-5" />
+							<CheckCircle2 className="w-5 h-5" aria-hidden="true" />
 							Gotowe, wróć do galerii
 						</button>
 					) : (
 						<button
+							type="button"
 							onClick={startUpload}
 							disabled={files.length === 0 || isUploading}
-							className="w-full py-3.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white rounded-2xl font-semibold shadow-lg shadow-amber-600/25 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+							className="w-full py-3.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white rounded-2xl font-semibold shadow-lg shadow-amber-600/25 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 						>
 							{isUploading ? (
 								<>
-									<Loader2 className="w-5 h-5 animate-spin" />
+									<Loader2
+										className="w-5 h-5 animate-spin"
+										aria-hidden="true"
+									/>
 									Wysyłanie plików...
 								</>
 							) : (
 								<>
-									<Upload className="w-5 h-5" />
+									<Upload className="w-5 h-5" aria-hidden="true" />
 									Wyślij do galerii ({files.length})
 								</>
 							)}

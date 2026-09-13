@@ -53,6 +53,9 @@ describe("MediaGridWithModeration Component", () => {
 		expect(screen.getByText(/Ukryte \(1\)/)).toBeInTheDocument();
 
 		// Kliknięcie filtrów
+		fireEvent.click(screen.getByText(/Wszystkie \(2\)/));
+		expect(setFilterMock).toHaveBeenCalledWith("all");
+
 		fireEvent.click(screen.getByText(/Widoczne \(1\)/));
 		expect(setFilterMock).toHaveBeenCalledWith("ready");
 
