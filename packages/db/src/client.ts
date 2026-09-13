@@ -25,6 +25,8 @@ function getMigrationsFolder(): string {
 	const candidates = [
 		path.resolve(currentDir, "../migrations"),
 		path.resolve(currentDir, "../../packages/db/migrations"),
+		path.resolve(currentDir, "../../../packages/db/migrations"),
+		path.resolve(process.cwd(), "../../packages/db/migrations"),
 		path.resolve(process.cwd(), "packages/db/migrations"),
 		path.resolve(process.cwd(), "migrations"),
 	];
