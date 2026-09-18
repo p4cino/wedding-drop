@@ -123,12 +123,14 @@ Jeśli nie chcesz budować obrazu lokalnie (np. na NAS-ie ZimaOS/CasaOS), aplika
 2. Wklej zawartość pliku [`docker-compose.prod.yml`](docker-compose.prod.yml) z tego repozytorium.
 3. **Przed kliknięciem Submit** podmień w wklejonym tekście:
    - `ADMIN_PASSWORD` (hasło do panelu `/admin`, wystawionego publicznie) — **wymagane**.
-   - `APP_DOMAIN` (w serwisach `web` i `caddy`), jeśli galeria ma być dostępna spod własnej domeny/adresu NAS-a, a nie tylko `localhost`.
-4. Kliknij **Submit**, a następnie **Install**.
+   - Porty serwisu `caddy` (domyślnie `8080`/`8443`) — sprawdź w formularzu ZimaOS, czy nie są już zajęte (bardzo częste na NAS-ach z innymi appkami — Nginx Proxy Manager, dashboard ZimaOS itp. też lubią te numery); jeśli tak, zmień na jakikolwiek wolny port.
+   - `APP_DOMAIN` w serwisie `web`, jeśli chcesz, by generowane linki/kody QR wskazywały realny adres NAS-a, a nie `localhost`.
+4. **Ustaw Primary Service na `caddy`**, nie `web` — `web` nie ma żadnego portu wystawionego na zewnątrz i jest dostępny tylko przez `caddy` (patrz architektura w [DOCUMENTATION.md](DOCUMENTATION.md#11-publikacja-obrazu-docker-ghcr-i-instalacja-na-zimaoscasaos)).
+5. Kliknij **Submit**, a następnie **Install**.
 
 Ten plik compose nie buduje niczego lokalnie i nie odwołuje się do żadnych plików z dysku — Caddy ściąga swój `Caddyfile` zdalnie z tego repozytorium przy starcie, więc cały stack da się wkleić jako czysty tekst YAML.
 
-> **Porty 80/443 zajęte przez ZimaOS?** To częsty przypadek — ZimaOS/CasaOS zwykle sam zajmuje 80/443 własnym dashboardem, co przy imporcie z domyślnymi portami zgłasza błąd „there are ports in use”. `docker-compose.prod.yml` domyślnie mapuje Caddy na porty **8080/8443**, więc galeria będzie dostępna pod `http://<ip-nas>:8080`. Jeśli zmienisz porty lub adres, zaktualizuj też `APP_DOMAIN` w serwisie `web` (np. `http://192.168.1.50:8080`), żeby generowane linki/kody QR wskazywały właściwy adres.
+> **Coś nie działa po instalacji?** Zobacz sekcję rozwiązywania problemów w [DOCUMENTATION.md](DOCUMENTATION.md#11-publikacja-obrazu-docker-ghcr-i-instalacja-na-zimaoscasaos) — konkretne komendy do zdiagnozowania konfliktu portów, crashującego Caddy albo białej strony.
 
 ### Uruchomienie tego samego pliku przez SSH / CLI (dowolny host z Dockerem):
 ```bash

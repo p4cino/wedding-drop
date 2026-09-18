@@ -340,9 +340,41 @@ Serwisy `postgres` (`postgres:16-alpine`) i `caddy` (`caddy:2-alpine`) korzystaj
 ### Plik `docker-compose.prod.yml`
 W odróżnieniu od `docker-compose.yml` (który buduje `web` lokalnie z Dockerfile), ten plik tylko pobiera gotowe obrazy i nie ma żadnych bind mountów do plików z repo — jest w pełni samodzielny, dzięki czemu da się go wkleić jako czysty tekst w importerze compose ZimaOS/CasaOS (zweryfikowano w oficjalnym repo manifestów `IceWhaleTech/CasaOS-AppStore` oraz docs.zimaspace.com, że ten import jest tekstowy i nie obsługuje dołączania osobnych plików konfiguracyjnych).
 
-**Mechanizm zdalnego Caddyfile**: serwis `caddy` używa standardowego obrazu `caddy:2-alpine`, ale nadpisuje `command`, żeby uruchomić się z konfiguracją ściągniętą z `raw.githubusercontent.com` (`caddy run --config https://raw.githubusercontent.com/p4cino/wedding-drop/<tag>/Caddyfile --adapter caddyfile`) zamiast z pliku zamontowanego z dysku. Rozwiązanie to celowo zastępuje bind mount `./Caddyfile:/etc/caddy/Caddyfile` z `docker-compose.yml`, ponieważ import compose w ZimaOS nie daje możliwości dołączenia pliku `Caddyfile` razem z wklejanym YAML-em, a żadna realna aplikacja w sklepie CasaOS/ZimaOS nie wpieka gotowego pliku konfiguracyjnego do własnego obrazu (aplikacje wymagające configu, np. NginxProxyManager, generują go samodzielnie przy pierwszym starcie — co nie jest możliwe dla naszych, z góry zdefiniowanych, reguł reverse proxy). URL jest przypięty do konkretnego tagu wydania (nie do `main`), żeby konfiguracja Caddy nie zmieniała się nieoczekiwanie przy restarcie kontenera. Caddy odpytuje ten URL przy każdym starcie/restarcie, więc kontener wymaga dostępu do internetu przy uruchomieniu (na NAS-ie jest to i tak wymagane do `docker pull`/OAuth).
+**Mechanizm zdalnego Caddyfile**: serwis `caddy` używa standardowego obrazu `caddy:2-alpine`, ale nadpisuje `command`, żeby najpierw ściągnąć `Caddyfile` z `raw.githubusercontent.com`, a potem odpalić Caddy na tej lokalnej kopii:
+```yaml
+command:
+  [
+    "sh",
+    "-c",
+    "wget -qO /etc/caddy/Caddyfile https://raw.githubusercontent.com/p4cino/wedding-drop/<tag>/Caddyfile && caddy run --config /etc/caddy/Caddyfile --adapter caddyfile",
+  ]
+```
+**Ważne**: `caddy run --config <url>` **nie** ściąga configu zdalnie samodzielnie — potwierdzone w praktyce jako crash-loop kontenera z błędem `open https://...: no such file or directory` (Caddy próbuje `os.Open()` na URL-u jak na lokalnej ścieżce). Stąd wrapper `wget` przed uruchomieniem `caddy run`. To zastępuje bind mount `./Caddyfile:/etc/caddy/Caddyfile` z `docker-compose.yml`, którego import ZimaOS (tekst-only, patrz niżej) nie obsługuje. URL jest przypięty do konkretnego tagu wydania (nie do `main`), żeby konfiguracja nie zmieniała się nieoczekiwanie przy restarcie; kontener wymaga dostępu do internetu przy każdym starcie/restarcie.
 
 ### Instalacja na ZimaOS
 Zweryfikowana ścieżka w interfejsie ZimaOS (App Center → **"Install a Customized App"** → Import → zakładka **Docker Compose** → wklejenie YAML → Submit → Install) nie wymaga bloku `x-casaos` — jest to standardowy Docker Compose v2 pod maską; blok `x-casaos` jest potrzebny tylko przy zgłaszaniu aplikacji do publicznego App Store (poza zakresem tego projektu). Plik `docker-compose.prod.yml` unika też składni właściwej tylko dla Docker Swarm (np. blok `deploy.resources.limits`), która potwierdzono jako powodującą błędy importu w CasaOS/ZimaOS — ewentualne limity CPU/RAM dla kontenerów N100 można ustawić już po instalacji z poziomu UI ZimaOS.
 
-**Konflikt portów 80/443 (potwierdzone empirycznie)**: import z domyślnymi `80:80`/`443:443` dla serwisu `caddy` kończy się błędem walidacji „there are ports in use” w formularzu ZimaOS, ponieważ ZimaOS/CasaOS domyślnie zajmuje te porty własnym dashboardem. `docker-compose.prod.yml` mapuje je zamiast tego na `8080:80`/`8443:443` po stronie hosta (kontener wewnątrz wciąż nasłuchuje na 80/443, zmienia się tylko widoczny port). Ponieważ Caddyfile ma site address bez portu (`{$APP_DOMAIN:localhost}`), samo przemapowanie portu hosta nie wystarcza — Caddy nadal próbowałby automatycznego HTTPS/przekierowań licząc na standardowe 80/443. Dlatego `APP_DOMAIN` serwisu `caddy` w tym pliku ma jawny prefiks `http://` (`http://localhost`), co w Caddy jednoznacznie wyłącza automatyczne HTTPS i sprowadza konfigurację do czystego HTTP na porcie 80 wewnątrz kontenera — zgodnego z mapowaniem `8080:80`. Kto wolałby standardowe 80/443 z automatycznym Let's Encrypt, musi najpierw zwolnić te porty w ustawieniach systemowych ZimaOS.
+**Primary Service musi być `caddy`, nie `web`**: `web` nie publikuje żadnego portu (dostępny tylko wewnątrz `wedding_net`) — to `caddy` jest jedynym zamierzonym punktem wejścia (serwuje `/media-file/*`, dodaje nagłówki bezpieczeństwa/`noindex`, patrz architektura wyżej). Ustawienie `web` jako Primary Service prowadzi ZimaOS do próby wystawienia portu 3000 wprost na hosta, co całkowicie omija Caddy.
+
+**Konflikt portów 80/443/8080/8443 (potwierdzone empirycznie, wielokrotnie na tym samym NAS-ie)**: import z portami zajętymi przez inne działające kontenery (dashboard ZimaOS, Nginx Proxy Manager, i wiele innych self-hosted appek notorycznie siedzących na tych samych "popularnych" portach) kończy się błędem walidacji „there are ports in use” w formularzu ZimaOS. Nie da się zahardkodować portów gwarantowanie wolnych dla każdego NAS-a — trzeba sprawdzić, co jest już zajęte (`sudo docker ps -a --format 'table {{.Names}}\t{{.Ports}}'` i/lub `sudo ss -tlnp`) i wpisać w formularzu ZimaOS jakikolwiek wolny numer dla obu portów `caddy` (host-side; kontener wewnątrz zawsze nasłuchuje na 80/443).
+
+**Dopasowanie Host header w Caddyfile (potwierdzone empirycznie)**: samo przemapowanie portu hosta nie wystarcza. Caddyfile `{$APP_DOMAIN:localhost} { ... }` tworzy site block dopasowywany **po nagłówku `Host`** requestu. Gdy dostęp idzie przez zmapowany port (np. `http://192.168.1.107:2137`), przeglądarka wysyła `Host: 192.168.1.107:2137` — to nie jest `localhost`, więc site block się nie dopasowuje, a Caddy zwraca domyślną, puste odpowiedź `200 OK` / `Content-Length: 0` (bez żadnych naszych nagłówków) — objawia się jako biała strona. Ustawienie `APP_DOMAIN` samego serwisu `caddy` na `":80"` (tylko port, bez hosta) naprawia to: taki adres dopasowuje **każdy** Host header na porcie 80 wewnątrz kontenera, niezależnie od tego, na jaki port hosta go zmapowano, i jednocześnie wyłącza automatyczne HTTPS (nie ma domeny, dla której Caddy mógłby próbować zdobyć certyfikat). Kto ma realną domenę i wolne 80/443, może ustawić `APP_DOMAIN` na tę domenę (np. `mojawesele.pl`) dla automatycznego Let's Encrypt.
+
+### Rozwiązywanie problemów (SSH)
+Diagnostyka krok po kroku, gdy appka nie odpowiada poprawnie po instalacji:
+```bash
+# 1. Status wszystkich kontenerow - szukaj Restarting/Exited
+sudo docker ps -a --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
+
+# 2. Logi konkretnego kontenera ktory nie jest "Up"
+sudo docker logs wedding_caddy --tail 100
+sudo docker logs wedding_web --tail 100
+sudo docker logs wedding_postgres --tail 100
+
+# 3. Realna odpowiedz HTTP (status, naglowki, body) - odrozni blad 500/404
+#    od "caddy odpowiada 200 ale nie tym co powinien" (patrz wyzej)
+curl -sv http://<ip-nas>:<port>/ 2>&1 | head -40
+
+# 4. Lista zajetych portow na calym NAS-ie, przy konflikcie
+sudo ss -tlnp
+```
