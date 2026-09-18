@@ -20,6 +20,13 @@
 # 4. Jesli zmieniasz porty/adres, zaktualizuj APP_DOMAIN w serwisie "web" na realny
 #    adres NAS-a wraz z portem (np. http://192.168.1.50:8080), inaczej generowane
 #    linki/QR kody beda wskazywac na "http://localhost".
+# 5. APP_DOMAIN serwisu "caddy" jest domyslnie ":80" (tylko port, bez hosta) - dopasowuje
+#    KAZDY Host header. To wazne przy dostepie po IP:port zmapowanym na inny port hosta
+#    (np. http://192.168.1.50:8080) - request przychodzi do Caddy z naglowkiem
+#    "Host: 192.168.1.50:8080", a Caddyfile z adresem site np. "http://localhost" by go
+#    zignorowal (dopasowanie po Host header) i zwrocil pusta odpowiedz 200. Jesli masz
+#    realna domene i wolne 80/443, mozesz ustawic APP_DOMAIN na te domene (np. mojawesele.pl)
+#    dla automatycznego Let's Encrypt.
 services:
   postgres:
     image: postgres:16-alpine
@@ -81,9 +88,10 @@ services:
       - "8080:80"
       - "8443:443"
     environment:
-      # Prefiks "http://" wylacza automatyczne HTTPS/Let's Encrypt Caddy - wymagane,
-      # bo port 443 nie jest tu publicznie widoczny jako 443 (patrz komentarz wyzej).
-      APP_DOMAIN: http://localhost
+      # ":80" = adres tylko-port, dopasowuje kazdy Host header i wylacza auto-HTTPS
+      # (patrz komentarz #5 na gorze pliku). Podmien na realna domene, jesli masz
+      # wolne 80/443 i chcesz automatyczny certyfikat Let's Encrypt.
+      APP_DOMAIN: ":80"
     volumes:
       - caddy_data:/data
       - caddy_config:/config
