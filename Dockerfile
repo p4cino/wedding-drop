@@ -43,14 +43,11 @@ RUN npm pkg delete scripts.prepare && pnpm install --prod --frozen-lockfile
 
 # 4. Etap produkcyjny (Minimalny Runner zoptymalizowany pod Intel N100)
 FROM node:24-alpine AS runner
+# ffmpeg z apk (nie statyczny binarny z johnvansickle.com) - ten host throttluje/blokuje
+# zapytania z adresow IP hostowanych runnerow CI (w tym GitHub Actions), co powodowalo
+# "tar: short read" przy kazdym buildzie w CI.
 RUN apk update && apk upgrade --no-cache && \
-    apk add --no-cache libc6-compat
-
-# Pobranie statycznie skompilowanego FFmpeg
-RUN wget -qO- https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz | tar Jx && \
-    cp ffmpeg-*-static/ffmpeg /usr/local/bin/ && \
-    cp ffmpeg-*-static/ffprobe /usr/local/bin/ && \
-    rm -rf ffmpeg-*
+    apk add --no-cache libc6-compat ffmpeg
 WORKDIR /app
 
 ENV NODE_ENV=production
