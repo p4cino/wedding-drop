@@ -1,0 +1,95 @@
+# docker-compose.prod.yml
+#
+# Samodzielny stack do wklejenia w ZimaOS: App Center -> "Install a Customized App"
+# -> Import -> zakladka "Docker Compose" -> wklej ta zawartosc -> Submit -> Install.
+#
+# W odroznieniu od docker-compose.yml (ktory buduje obraz web lokalnie), ten plik
+# tylko pobiera gotowe obrazy - nie wymaga dostepu do repo na dysku NAS.
+#
+# WAZNE - przed instalacja w ZimaOS:
+# 1. ADMIN_PASSWORD jest dostepny publicznie przez /admin - koniecznie ustaw wlasne haslo.
+# 2. POSTGRES_PASSWORD nie jest wystawiony na zewnatrz (siec wewnetrzna wedding_net),
+#    domyslna wartosc jest bezpieczna do startu, ale musi byc identyczna w obu miejscach
+#    (POSTGRES_PASSWORD i DATABASE_URL).
+# 3. APP_DOMAIN ustaw na publiczny adres/domene NAS-a, jesli galeria ma byc dostepna
+#    spoza sieci lokalnej (Caddy automatycznie wystawi certyfikat Let's Encrypt).
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: wedding_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wedding
+      POSTGRES_PASSWORD: wedding_secret
+      POSTGRES_DB: wedding_drop
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wedding -d wedding_drop"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - wedding_net
+
+  web:
+    image: ghcr.io/p4cino/wedding-drop:latest
+    container_name: wedding_web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgres://wedding:wedding_secret@postgres:5432/wedding_drop
+      DATA_DIR: /app/data
+      APP_DOMAIN: http://localhost
+      ADMIN_PASSWORD: ZMIEN_MNIE_haslo_admina
+      GOOGLE_CLIENT_ID: ""
+      GOOGLE_CLIENT_SECRET: ""
+      GOOGLE_REDIRECT_URI: ""
+    volumes:
+      - app_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - wedding_net
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: wedding_caddy
+    restart: unless-stopped
+    # Caddyfile jest wpiety w repo (nie w tym pliku compose, ktory jest wklejany
+    # bez dostepu do plikow na dysku) - Caddy sciaga go zdalnie przy starcie.
+    command:
+      [
+        "caddy",
+        "run",
+        "--config",
+        "https://raw.githubusercontent.com/p4cino/wedding-drop/v1.0.0/Caddyfile",
+        "--adapter",
+        "caddyfile",
+      ]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      APP_DOMAIN: localhost
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+      - app_data:/app/data:ro
+    depends_on:
+      - web
+    networks:
+      - wedding_net
+
+volumes:
+  postgres_data:
+  app_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  wedding_net:
+    driver: bridge

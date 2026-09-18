@@ -114,6 +114,31 @@ Docker pobierze obrazy, zbuduje aplikację i uruchomi 3 kontenery:
 
 ---
 
+## 🐳 Instalacja z Gotowego Obrazu (ZimaOS / inny NAS z CasaOS)
+
+Jeśli nie chcesz budować obrazu lokalnie (np. na NAS-ie ZimaOS/CasaOS), aplikacja `web` jest automatycznie budowana i publikowana przez GitHub Actions do GitHub Container Registry pod adresem `ghcr.io/p4cino/wedding-drop` (obraz `linux/amd64`, zgodny z Intel N100/ZimaBoard). Serwis `postgres` i `caddy` korzystają ze standardowych publicznych obrazów, więc do uruchomienia potrzebny jest tylko ten jeden gotowy obraz.
+
+### Instalacja na ZimaOS:
+1. W panelu ZimaOS przejdź do **App Center** → **"Install a Customized App"** → **Import** → zakładka **Docker Compose**.
+2. Wklej zawartość pliku [`docker-compose.prod.yml`](docker-compose.prod.yml) z tego repozytorium.
+3. **Przed kliknięciem Submit** podmień w wklejonym tekście:
+   - `ADMIN_PASSWORD` (hasło do panelu `/admin`, wystawionego publicznie) — **wymagane**.
+   - `APP_DOMAIN` (w serwisach `web` i `caddy`), jeśli galeria ma być dostępna spod własnej domeny/adresu NAS-a, a nie tylko `localhost`.
+4. Kliknij **Submit**, a następnie **Install**.
+
+Ten plik compose nie buduje niczego lokalnie i nie odwołuje się do żadnych plików z dysku — Caddy ściąga swój `Caddyfile` zdalnie z tego repozytorium przy starcie, więc cały stack da się wkleić jako czysty tekst YAML.
+
+### Uruchomienie tego samego pliku przez SSH / CLI (dowolny host z Dockerem):
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
+### Aktualizacje:
+- Tag `:latest` śledzi najnowszy commit na `main`.
+- Wersje oznaczone tagiem (np. `v1.0.0`) są stabilne i nie zmieniają się — podmień tag w `docker-compose.prod.yml` (`image: ghcr.io/p4cino/wedding-drop:vX.Y.Z`), jeśli wolisz przypiętą wersję.
+
+---
+
 ## ⚙️ Konfiguracja Domeny i Automatycznego Certyfikatu SSL (HTTPS)
 
 Aby aplikacja działała na Twojej publicznej domenie z darmowym certyfikatem Let's Encrypt:

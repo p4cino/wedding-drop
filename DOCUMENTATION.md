@@ -320,3 +320,27 @@ Aby Para Młoda mogła podłączyć swój Dysk Google i wykonać eksport:
      GOOGLE_CLIENT_ID=twoj_klient_id.apps.googleusercontent.com
      GOOGLE_CLIENT_SECRET=twoj_klient_secret
      ```
+
+---
+
+## 11. Publikacja Obrazu Docker (GHCR) i Instalacja na ZimaOS/CasaOS
+
+### Workflow CI/CD (`.github/workflows/docker-publish.yml`)
+Przy każdym pushu na `main` oraz przy tagu `v*.*.*` GitHub Actions buduje obraz `web` (`Dockerfile` w katalogu głównym, wyłącznie `linux/amd64` — celowo bez multi-arch, ponieważ docelowy sprzęt N100/ZimaBoard jest x86-64-only, a `Dockerfile` i tak zawiera statycznie skompilowany FFmpeg tylko dla amd64) i publikuje go do GitHub Container Registry:
+- `ghcr.io/p4cino/wedding-drop:latest` — najnowszy build z `main`.
+- `ghcr.io/p4cino/wedding-drop:vX.Y.Z` — build z tagu wydania (semver).
+- `ghcr.io/p4cino/wedding-drop:sha-<short>` — build przypięty do konkretnego commitu.
+
+Serwisy `postgres` (`postgres:16-alpine`) i `caddy` (`caddy:2-alpine`) korzystają ze standardowych obrazów publicznych — nie są publikowane w GHCR, bo nie wymagają żadnych modyfikacji.
+
+**Jednorazowa konfiguracja repozytorium (ręczna, nie da się jej wykonać z kodu):**
+- Settings → Actions → General → Workflow permissions → **"Read and write permissions"** (inaczej `GITHUB_TOKEN` nie ma prawa publikować pakietów).
+- Po pierwszym udanym uruchomieniu workflow: profil GitHub → Packages → `wedding-drop` → Package settings → Change visibility → **Public** (żeby `docker pull` na ZimaOS działał bez logowania do rejestru).
+
+### Plik `docker-compose.prod.yml`
+W odróżnieniu od `docker-compose.yml` (który buduje `web` lokalnie z Dockerfile), ten plik tylko pobiera gotowe obrazy i nie ma żadnych bind mountów do plików z repo — jest w pełni samodzielny, dzięki czemu da się go wkleić jako czysty tekst w importerze compose ZimaOS/CasaOS (zweryfikowano w oficjalnym repo manifestów `IceWhaleTech/CasaOS-AppStore` oraz docs.zimaspace.com, że ten import jest tekstowy i nie obsługuje dołączania osobnych plików konfiguracyjnych).
+
+**Mechanizm zdalnego Caddyfile**: serwis `caddy` używa standardowego obrazu `caddy:2-alpine`, ale nadpisuje `command`, żeby uruchomić się z konfiguracją ściągniętą z `raw.githubusercontent.com` (`caddy run --config https://raw.githubusercontent.com/p4cino/wedding-drop/<tag>/Caddyfile --adapter caddyfile`) zamiast z pliku zamontowanego z dysku. Rozwiązanie to celowo zastępuje bind mount `./Caddyfile:/etc/caddy/Caddyfile` z `docker-compose.yml`, ponieważ import compose w ZimaOS nie daje możliwości dołączenia pliku `Caddyfile` razem z wklejanym YAML-em, a żadna realna aplikacja w sklepie CasaOS/ZimaOS nie wpieka gotowego pliku konfiguracyjnego do własnego obrazu (aplikacje wymagające configu, np. NginxProxyManager, generują go samodzielnie przy pierwszym starcie — co nie jest możliwe dla naszych, z góry zdefiniowanych, reguł reverse proxy). URL jest przypięty do konkretnego tagu wydania (nie do `main`), żeby konfiguracja Caddy nie zmieniała się nieoczekiwanie przy restarcie kontenera. Caddy odpytuje ten URL przy każdym starcie/restarcie, więc kontener wymaga dostępu do internetu przy uruchomieniu (na NAS-ie jest to i tak wymagane do `docker pull`/OAuth).
+
+### Instalacja na ZimaOS
+Zweryfikowana ścieżka w interfejsie ZimaOS (App Center → **"Install a Customized App"** → Import → zakładka **Docker Compose** → wklejenie YAML → Submit → Install) nie wymaga bloku `x-casaos` — jest to standardowy Docker Compose v2 pod maską; blok `x-casaos` jest potrzebny tylko przy zgłaszaniu aplikacji do publicznego App Store (poza zakresem tego projektu). Plik `docker-compose.prod.yml` unika też składni właściwej tylko dla Docker Swarm (np. blok `deploy.resources.limits`), która potwierdzono jako powodującą błędy importu w CasaOS/ZimaOS — ewentualne limity CPU/RAM dla kontenerów N100 można ustawić już po instalacji z poziomu UI ZimaOS.
