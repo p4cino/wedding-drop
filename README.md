@@ -128,6 +128,8 @@ Jeśli nie chcesz budować obrazu lokalnie (np. na NAS-ie ZimaOS/CasaOS), aplika
 
 Ten plik compose nie buduje niczego lokalnie i nie odwołuje się do żadnych plików z dysku — Caddy ściąga swój `Caddyfile` zdalnie z tego repozytorium przy starcie, więc cały stack da się wkleić jako czysty tekst YAML.
 
+> **Porty 80/443 zajęte przez ZimaOS?** To częsty przypadek — ZimaOS/CasaOS zwykle sam zajmuje 80/443 własnym dashboardem, co przy imporcie z domyślnymi portami zgłasza błąd „there are ports in use”. `docker-compose.prod.yml` domyślnie mapuje Caddy na porty **8080/8443**, więc galeria będzie dostępna pod `http://<ip-nas>:8080`. Jeśli zmienisz porty lub adres, zaktualizuj też `APP_DOMAIN` w serwisie `web` (np. `http://192.168.1.50:8080`), żeby generowane linki/kody QR wskazywały właściwy adres.
+
 ### Uruchomienie tego samego pliku przez SSH / CLI (dowolny host z Dockerem):
 ```bash
 docker compose -f docker-compose.prod.yml up -d

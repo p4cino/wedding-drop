@@ -11,8 +11,15 @@
 # 2. POSTGRES_PASSWORD nie jest wystawiony na zewnatrz (siec wewnetrzna wedding_net),
 #    domyslna wartosc jest bezpieczna do startu, ale musi byc identyczna w obu miejscach
 #    (POSTGRES_PASSWORD i DATABASE_URL).
-# 3. APP_DOMAIN ustaw na publiczny adres/domene NAS-a, jesli galeria ma byc dostepna
-#    spoza sieci lokalnej (Caddy automatycznie wystawi certyfikat Let's Encrypt).
+# 3. Porty Caddy sa domyslnie zmapowane na 8080/8443 (nie 80/443), bo ZimaOS/CasaOS
+#    zwykle zajmuje 80/443 wlasnym dashboardem - stad "there are ports in use" przy
+#    imporcie z domyslnymi 80/443. Aplikacja bedzie dostepna pod http://<ip-nas>:8080.
+#    Jesli wolisz standardowe 80/443 i realna domene z automatycznym Let's Encrypt,
+#    najpierw zwolnij te porty w ustawieniach systemowych ZimaOS, zmien mapowanie
+#    ponizej na "80:80"/"443:443" i usun "http://" z APP_DOMAIN serwisu caddy.
+# 4. Jesli zmieniasz porty/adres, zaktualizuj APP_DOMAIN w serwisie "web" na realny
+#    adres NAS-a wraz z portem (np. http://192.168.1.50:8080), inaczej generowane
+#    linki/QR kody beda wskazywac na "http://localhost".
 services:
   postgres:
     image: postgres:16-alpine
@@ -71,10 +78,12 @@ services:
         "caddyfile",
       ]
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:80"
+      - "8443:443"
     environment:
-      APP_DOMAIN: localhost
+      # Prefiks "http://" wylacza automatyczne HTTPS/Let's Encrypt Caddy - wymagane,
+      # bo port 443 nie jest tu publicznie widoczny jako 443 (patrz komentarz wyzej).
+      APP_DOMAIN: http://localhost
     volumes:
       - caddy_data:/data
       - caddy_config:/config
