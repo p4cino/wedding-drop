@@ -1,5 +1,5 @@
 # 1. Etap przycinania monorepo (Turborepo Pruner)
-FROM node:24-alpine AS pruner
+FROM node:25-alpine AS pruner
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 RUN npm install -g turbo
@@ -7,7 +7,7 @@ COPY . .
 RUN turbo prune @wedding-drop/web --docker
 
 # 2. Etap instalacji WSZYSTKICH zależności i budowy aplikacji
-FROM node:24-alpine AS builder
+FROM node:25-alpine AS builder
 RUN apk add --no-cache libc6-compat python3 make g++ ffmpeg
 WORKDIR /app
 
@@ -33,7 +33,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm --filter @wedding-drop/web build
 
 # 3. Etap instalacji TYLKO zależności produkcyjnych
-FROM node:24-alpine AS prod-deps
+FROM node:25-alpine AS prod-deps
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY --from=pruner /app/out/json/ .
@@ -42,7 +42,7 @@ COPY pnpm-workspace.yaml ./pnpm-workspace.yaml
 RUN npm pkg delete scripts.prepare && pnpm install --prod --frozen-lockfile
 
 # 4. Etap produkcyjny (Minimalny Runner zoptymalizowany pod Intel N100)
-FROM node:24-alpine AS runner
+FROM node:25-alpine AS runner
 # ffmpeg z apk (nie statyczny binarny z johnvansickle.com) - ten host throttluje/blokuje
 # zapytania z adresow IP hostowanych runnerow CI (w tym GitHub Actions), co powodowalo
 # "tar: short read" przy kazdym buildzie w CI.
