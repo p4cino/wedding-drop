@@ -8,9 +8,7 @@ import MediaGrid from "@/components/MediaGrid";
 describe("MediaGrid Component", () => {
 	it("powinien wyświetlać komunikat o pustej galerii, gdy brak elementów", () => {
 		render(<MediaGrid items={[]} onItemClick={vi.fn()} />);
-		expect(
-			screen.getByText(/Galeria czeka na pierwsze zdjęcia!/i),
-		).toBeInTheDocument();
+		expect(screen.getByText("noPhotos")).toBeInTheDocument();
 	});
 
 	it("powinien renderować listę miniatur zdjęć i filmów oraz obsługiwać kliknięcie", () => {
@@ -41,7 +39,7 @@ describe("MediaGrid Component", () => {
 		render(<MediaGrid items={mockItems} onItemClick={onItemClick} />);
 
 		expect(screen.getByText("Wujek Staszek")).toBeInTheDocument();
-		expect(screen.getByText("Gość")).toBeInTheDocument();
+		expect(screen.getByText("defaultUploaderName")).toBeInTheDocument();
 
 		// Kliknięcie w pierwsze zdjęcie
 		const images = screen.getAllByRole("img");

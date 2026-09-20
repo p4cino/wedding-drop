@@ -10,6 +10,7 @@ import {
 	Play,
 	Unlink,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type React from "react";
 
 export interface GDriveProgressData {
@@ -63,6 +64,7 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 	const totalProgMB = gdriveProgress?.totalBytes
 		? (gdriveProgress.totalBytes / (1024 * 1024)).toFixed(1)
 		: "0";
+	const t = useTranslations("OwnerPanel");
 
 	return (
 		<div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
@@ -74,24 +76,22 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 					<div>
 						<div className="flex items-center gap-2 mb-1 flex-wrap">
 							<h2 className="text-lg font-bold text-slate-900 font-serif-luxury">
-								Kopia w chmurze Google Drive
+								{t("gdriveCardTitle")}
 							</h2>
 							{hasGDrive ? (
 								<span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">
 									<CheckCircle2 className="w-3 h-3" />
-									Połączono ({gdriveEmail || "Konto Google"})
+									{t("connected", {
+										email: gdriveEmail || t("defaultAccount"),
+									})}
 								</span>
 							) : (
 								<span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600">
-									Niepodłączono
+									{t("notConnected")}
 								</span>
 							)}
 						</div>
-						<p className="text-xs text-slate-500 max-w-xl">
-							Prześlij wszystkie zdjęcia i filmy z wesela w 100% oryginalnej
-							rozdzielczości bezpośrednio na swój prywatny Dysk Google w
-							uporządkowanych folderach.
-						</p>
+						<p className="text-xs text-slate-500 max-w-xl">{t("gdriveDesc")}</p>
 					</div>
 				</div>
 
@@ -109,7 +109,7 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 							}`}
 						>
 							<Cloud className="w-4 h-4" aria-hidden="true" />
-							<span>Połącz z Google Drive</span>
+							<span>{t("connectBtn")}</span>
 						</button>
 					) : (
 						<div className="flex items-center gap-2 flex-wrap">
@@ -121,7 +121,7 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 									className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 								>
 									<ArrowUpRight className="w-4 h-4" aria-hidden="true" />
-									<span>Otwórz folder na Dysku</span>
+									<span>{t("openFolder")}</span>
 									<span className="sr-only">(otwiera się w nowej karcie)</span>
 								</a>
 							)}
@@ -142,15 +142,15 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 											className="w-4 h-4 animate-spin"
 											aria-hidden="true"
 										/>
-										<span>Trwa eksport...</span>
+										<span>{t("exporting")}</span>
 									</>
 								) : (
 									<>
 										<Play className="w-3.5 h-3.5" aria-hidden="true" />
 										<span>
 											{gdriveStatus === "interrupted"
-												? "Wznów eksport"
-												: "Eksportuj na Dysk Google"}
+												? t("resumeExport")
+												: t("startExportBtn")}
 										</span>
 									</>
 								)}
@@ -159,8 +159,8 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 							<button
 								type="button"
 								onClick={onDisconnect}
-								title="Odłącz konto Google"
-								aria-label="Odłącz konto Google Drive od galerii"
+								title={t("disconnectBtn")}
+								aria-label={t("disconnectBtn")}
 								className="p-2.5 rounded-xl text-slate-600 hover:text-red-600 hover:bg-red-50 transition focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
 							>
 								<Unlink className="w-4 h-4" aria-hidden="true" />
@@ -176,11 +176,7 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 						className="w-4 h-4 text-amber-600 shrink-0"
 						aria-hidden="true"
 					/>
-					<span>
-						Integracja wymaga ustawienia zmiennych <code>GOOGLE_CLIENT_ID</code>{" "}
-						i <code>GOOGLE_CLIENT_SECRET</code> w pliku <code>.env</code>{" "}
-						serwera.
-					</span>
+					<span>{t("envWarning")}</span>
 				</div>
 			)}
 
@@ -198,11 +194,14 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 										className="w-4 h-4 animate-spin text-amber-700"
 										aria-hidden="true"
 									/>
-									Trwa przesyłanie plików na Twój Dysk Google...
+									{t("exportProgressTitle")}
 								</span>
 								<span>
-									{gdriveProgress?.processedFiles || 0} /{" "}
-									{gdriveProgress?.totalFiles || 0} plików ({progressPercent}%)
+									{t("filesCount", {
+										processed: gdriveProgress?.processedFiles || 0,
+										total: gdriveProgress?.totalFiles || 0,
+										percent: progressPercent,
+									})}
 								</span>
 							</div>
 
@@ -212,7 +211,7 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 								aria-valuenow={progressPercent}
 								aria-valuemin={0}
 								aria-valuemax={100}
-								aria-label="Postęp przesyłania plików na Dysk Google"
+								aria-label={t("progressAria")}
 								className="w-full h-3 bg-amber-200/70 rounded-full overflow-hidden"
 							>
 								<div
@@ -224,8 +223,8 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 							<div className="flex items-center justify-between text-[11px] text-amber-800/80">
 								<span className="truncate max-w-md">
 									{gdriveProgress?.currentFile
-										? `Wysyłanie: ${gdriveProgress.currentFile}`
-										: "Przetwarzanie..."}
+										? t("uploadingFile", { file: gdriveProgress.currentFile })
+										: t("processing")}
 								</span>
 								<span>
 									{processedMB} MB / {totalProgMB} MB
@@ -233,8 +232,7 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 							</div>
 
 							<p className="text-[11px] text-amber-700/70 italic">
-								Transfer odbywa się bezpiecznie w tle na serwerze – możesz
-								swobodnie zamknąć kartę lub wyłączyć telefon.
+								{t("backgroundNote")}
 							</p>
 						</div>
 					)}
@@ -248,12 +246,10 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 								/>
 								<div>
 									<h3 className="text-xs font-bold text-orange-900">
-										Transfer został wstrzymany
+										{t("interruptedTitle")}
 									</h3>
 									<p className="text-xs text-orange-700 mt-0.5">
-										Proces eksportu został przerwany (np. przez restart
-										serwera). Kliknij przycisk „Wznów eksport” powyżej, aby
-										kontynuować od ostatniego pliku.
+										{t("interruptedDesc")}
 									</p>
 								</div>
 							</div>
@@ -271,11 +267,10 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 							/>
 							<div>
 								<h3 className="text-xs font-bold text-red-900">
-									Wystąpił problem podczas eksportu
+									{t("failedTitle")}
 								</h3>
 								<p className="text-xs text-red-700 mt-0.5">
-									{gdriveProgress?.error ||
-										"Nie udało się ukończyć transferu. Spróbuj ponownie za chwilę."}
+									{gdriveProgress?.error || t("defaultError")}
 								</p>
 							</div>
 						</div>
@@ -290,12 +285,16 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 								/>
 								<div>
 									<h3 className="text-xs font-bold text-emerald-900">
-										Wszystkie pliki zostały pomyślnie przesłane na Dysk Google!
+										{t("completedTitle")}
 									</h3>
 									<p className="text-xs text-emerald-700">
 										{gdriveExportedAt
-											? `Ostatni eksport: ${new Date(gdriveExportedAt).toLocaleString("pl-PL")}`
-											: "Pliki są posegregowane w folderach Zdjęcia i Filmy."}
+											? t("lastExport", {
+													date: new Date(gdriveExportedAt!).toLocaleString(
+														"pl-PL",
+													),
+												})
+											: t("completedDesc")}
 									</p>
 								</div>
 							</div>
@@ -308,7 +307,7 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 									className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
 								>
 									<ArrowUpRight className="w-4 h-4" aria-hidden="true" />
-									<span>Zobacz na Dysku Google</span>
+									<span>{t("viewGDrive")}</span>
 									<span className="sr-only">(otwiera się w nowej karcie)</span>
 								</a>
 							)}
@@ -318,13 +317,13 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 					{gdriveStatus === "idle" && (
 						<div className="text-xs text-slate-500 flex items-center justify-between flex-wrap gap-2">
 							<span>
-								Dysk podłączony do: <strong>{gdriveEmail}</strong>. Gotowy do
-								uruchomienia eksportu.
+								{t("idleDesc", { email: gdriveEmail || t("defaultAccount") })}
 							</span>
 							{gdriveExportedAt && (
 								<span className="text-[11px] text-slate-400">
-									Ostatni eksport:{" "}
-									{new Date(gdriveExportedAt).toLocaleString("pl-PL")}
+									{t("idleLastExport", {
+										date: new Date(gdriveExportedAt!).toLocaleString("pl-PL"),
+									})}
 								</span>
 							)}
 						</div>

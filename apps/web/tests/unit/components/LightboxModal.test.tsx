@@ -55,14 +55,14 @@ describe("LightboxModal Component", () => {
 
 		expect(screen.getByText("Kamil")).toBeInTheDocument();
 		expect(screen.getByText("zdjecie1.jpg")).toBeInTheDocument();
-		expect(screen.getByText("1 z 2")).toBeInTheDocument();
+		expect(screen.getByText("progressCount")).toBeInTheDocument();
 
 		const img = screen.getByAltText("zdjecie1.jpg");
 		expect(img).toBeInTheDocument();
 		expect(img).toHaveAttribute("src", "/raw1.jpg");
 
 		// Przycisk pobierania
-		const downloadLink = screen.getByTitle("Pobierz oryginalny plik");
+		const downloadLink = screen.getByTitle("downloadOriginal");
 		expect(downloadLink).toBeInTheDocument();
 		expect(downloadLink).toHaveAttribute("href", "/raw1.jpg");
 	});
@@ -77,7 +77,7 @@ describe("LightboxModal Component", () => {
 				onNavigate={vi.fn()}
 			/>,
 		);
-		expect(screen.queryByTitle("Pobierz oryginalny plik")).toBeNull();
+		expect(screen.queryByTitle("downloadOriginal")).toBeNull();
 	});
 
 	it("powinien renderować wideo dla elementu o fileType === 'video'", () => {

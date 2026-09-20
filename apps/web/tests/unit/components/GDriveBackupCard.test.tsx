@@ -23,9 +23,9 @@ describe("GDriveBackupCard Component", () => {
 			/>,
 		);
 
-		expect(screen.getByText("Niepodłączono")).toBeInTheDocument();
+		expect(screen.getByText("notConnected")).toBeInTheDocument();
 		const connectBtn = screen.getByRole("button", {
-			name: /Połącz z Google Drive/i,
+			name: "connectBtn",
 		});
 		fireEvent.click(connectBtn);
 		expect(onConnectMock).toHaveBeenCalledTimes(1);
@@ -47,9 +47,9 @@ describe("GDriveBackupCard Component", () => {
 			/>,
 		);
 
-		expect(screen.getByText(/GOOGLE_CLIENT_ID/)).toBeInTheDocument();
+		expect(screen.getByText("envWarning")).toBeInTheDocument();
 		const connectBtn = screen.getByRole("button", {
-			name: /Połącz z Google Drive/i,
+			name: "connectBtn",
 		});
 		expect(connectBtn).toBeDisabled();
 	});
@@ -73,18 +73,18 @@ describe("GDriveBackupCard Component", () => {
 			/>,
 		);
 
-		expect(screen.getAllByText(/mlodzi@gmail.com/)[0]).toBeInTheDocument();
-		expect(screen.getByText("Otwórz folder na Dysku")).toBeInTheDocument();
+		expect(screen.getAllByText("connected")[0]).toBeInTheDocument();
+		expect(screen.getByText("openFolder")).toBeInTheDocument();
 
 		// Kliknięcie otwarcia modalu eksportu
 		const exportBtn = screen.getByRole("button", {
-			name: /Eksportuj na Dysk Google/i,
+			name: "startExportBtn",
 		});
 		fireEvent.click(exportBtn);
 		expect(onOpenModalMock).toHaveBeenCalledTimes(1);
 
 		// Kliknięcie odłączenia
-		const disconnectBtn = screen.getByTitle("Odłącz konto Google");
+		const disconnectBtn = screen.getByTitle("disconnectBtn");
 		fireEvent.click(disconnectBtn);
 		expect(onDisconnectMock).toHaveBeenCalledTimes(1);
 	});
@@ -111,9 +111,9 @@ describe("GDriveBackupCard Component", () => {
 			/>,
 		);
 
-		expect(screen.getByText(/10 \/ 20 plików \(50%\)/)).toBeInTheDocument();
-		expect(screen.getByText(/Wysyłanie: slubne_foto.jpg/)).toBeInTheDocument();
-		expect(screen.getByText("Trwa eksport...")).toBeInTheDocument();
+		expect(screen.getByText("filesCount")).toBeInTheDocument();
+		expect(screen.getByText("uploadingFile")).toBeInTheDocument();
+		expect(screen.getByText("exportProgressTitle")).toBeInTheDocument();
 	});
 
 	it("powinien wyświetlić baner o wstrzymaniu eksportu (status: interrupted)", () => {
@@ -132,8 +132,8 @@ describe("GDriveBackupCard Component", () => {
 			/>,
 		);
 
-		expect(screen.getByText("Transfer został wstrzymany")).toBeInTheDocument();
-		expect(screen.getByText("Wznów eksport")).toBeInTheDocument();
+		expect(screen.getByText("interruptedTitle")).toBeInTheDocument();
+		expect(screen.getByText("resumeExport")).toBeInTheDocument();
 	});
 
 	it("powinien wyświetlić komunikat o błędzie podczas niepowodzenia (status: failed)", () => {
@@ -152,9 +152,7 @@ describe("GDriveBackupCard Component", () => {
 			/>,
 		);
 
-		expect(
-			screen.getByText("Wystąpił problem podczas eksportu"),
-		).toBeInTheDocument();
+		expect(screen.getByText("failedTitle")).toBeInTheDocument();
 		expect(
 			screen.getByText("Przekroczono limit zapytań API"),
 		).toBeInTheDocument();
@@ -176,11 +174,7 @@ describe("GDriveBackupCard Component", () => {
 			/>,
 		);
 
-		expect(
-			screen.getByText(
-				"Wszystkie pliki zostały pomyślnie przesłane na Dysk Google!",
-			),
-		).toBeInTheDocument();
-		expect(screen.getByText("Zobacz na Dysku Google")).toBeInTheDocument();
+		expect(screen.getByText("completedTitle")).toBeInTheDocument();
+		expect(screen.getByText("viewGDrive")).toBeInTheDocument();
 	});
 });

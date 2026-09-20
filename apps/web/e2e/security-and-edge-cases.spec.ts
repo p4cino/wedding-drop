@@ -121,17 +121,11 @@ test.describe("Bezpieczeństwo i Przypadki Brzegowe (Security & Edge Cases)", ()
 			},
 		});
 
-		expect([200, 201]).toContain(createRes.status());
+		expect(createRes.status()).toBe(400);
 		const createData = await createRes.json();
-		expect(createData.success).toBe(true);
-		expect(createData.gallery.slug).toMatch(/^[a-z0-9_-]+$/);
-		expect(createData.gallery.slug).not.toContain("/");
-		expect(createData.gallery.slug).not.toContain("..");
-
-		// Sprzątanie po teście
-		await request.delete(`/api/admin/galleries/${createData.gallery.id}`, {
-			headers: { "x-admin-token": adminToken },
-		});
+		expect(createData.error).toContain(
+			"Slug może zawierać wyłącznie małe litery",
+		);
 	});
 
 	test("UC8: dedykowane endpointy RESTful (GET, POST, DELETE) powinny poprawnie obsługiwać cykl życia zasobów", async ({

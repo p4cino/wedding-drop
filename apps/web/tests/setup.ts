@@ -13,3 +13,7 @@ if (typeof window !== "undefined") {
 	window.URL.createObjectURL = vi.fn(() => "blob:mock-url");
 	window.URL.revokeObjectURL = vi.fn();
 }
+
+vi.mock("next-intl", () => ({
+	useTranslations: () => (key: string) => key,
+}));

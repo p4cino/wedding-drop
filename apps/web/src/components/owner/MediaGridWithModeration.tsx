@@ -1,6 +1,7 @@
 "use client";
 
 import { Eye, EyeOff, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type React from "react";
 
 export interface OwnerMediaItem {
@@ -26,6 +27,7 @@ interface MediaGridWithModerationProps {
 export const MediaGridWithModeration: React.FC<
 	MediaGridWithModerationProps
 > = ({ mediaList, filter, setFilter, onToggleStatus, onDeleteMedia }) => {
+	const t = useTranslations("OwnerPanel");
 	const filteredMedia = mediaList.filter((m) => {
 		if (filter === "ready") return m.status === "ready";
 		if (filter === "hidden") return m.status === "hidden";
@@ -38,10 +40,12 @@ export const MediaGridWithModeration: React.FC<
 			<div className="bg-white p-4 rounded-2xl border border-slate-200/80 flex flex-wrap items-center justify-between gap-4">
 				<div
 					role="group"
-					aria-label="Filtrowanie multimediów"
+					aria-label={t("filterAria")}
 					className="flex items-center gap-2 text-xs font-medium"
 				>
-					<span className="text-slate-600 mr-1 font-semibold">Filtruj:</span>
+					<span className="text-slate-600 mr-1 font-semibold">
+						{t("filterLabel")}
+					</span>
 					<button
 						type="button"
 						onClick={() => setFilter("all")}
@@ -52,7 +56,7 @@ export const MediaGridWithModeration: React.FC<
 								: "bg-slate-100 text-slate-600 hover:bg-slate-200"
 						}`}
 					>
-						Wszystkie ({mediaList.length})
+						{t("filterAll", { count: mediaList.length })}
 					</button>
 					<button
 						type="button"
@@ -64,7 +68,9 @@ export const MediaGridWithModeration: React.FC<
 								: "bg-slate-100 text-slate-600 hover:bg-slate-200"
 						}`}
 					>
-						Widoczne ({mediaList.filter((m) => m.status === "ready").length})
+						{t("filterVisible", {
+							count: mediaList.filter((m) => m.status === "ready").length,
+						})}
 					</button>
 					<button
 						type="button"
@@ -76,14 +82,13 @@ export const MediaGridWithModeration: React.FC<
 								: "bg-slate-100 text-slate-600 hover:bg-slate-200"
 						}`}
 					>
-						Ukryte ({mediaList.filter((m) => m.status === "hidden").length})
+						{t("filterHidden", {
+							count: mediaList.filter((m) => m.status === "hidden").length,
+						})}
 					</button>
 				</div>
 
-				<p className="text-xs text-slate-500">
-					Kliknij ikonę oka, aby ukryć zdjęcie przed gośćmi (będzie widoczne
-					tylko dla Was w ZIP i na Dysku Google).
-				</p>
+				<p className="text-xs text-slate-500">{t("hiddenHint")}</p>
 			</div>
 
 			{/* Siatka moderacji */}
@@ -105,7 +110,7 @@ export const MediaGridWithModeration: React.FC<
 							/>
 							{item.status === "hidden" && (
 								<div className="absolute inset-0 bg-red-950/40 flex items-center justify-center text-white text-[10px] font-bold uppercase tracking-wider">
-									Ukryte
+									{t("hiddenOverlay")}
 								</div>
 							)}
 						</div>
@@ -121,14 +126,12 @@ export const MediaGridWithModeration: React.FC<
 									type="button"
 									onClick={() => onToggleStatus(item.id, item.status)}
 									title={
-										item.status === "ready"
-											? "Ukryj przed gośćmi"
-											: "Pokaż w galerii"
+										item.status === "ready" ? t("hideAction") : t("showAction")
 									}
 									aria-label={
 										item.status === "ready"
-											? `Ukryj plik ${item.originalFileName} przed gośćmi`
-											: `Pokaż plik ${item.originalFileName} w galerii`
+											? t("hideAria", { name: item.originalFileName })
+											: t("showAria", { name: item.originalFileName })
 									}
 									className={`p-1.5 rounded-lg transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none ${
 										item.status === "ready"
@@ -146,8 +149,8 @@ export const MediaGridWithModeration: React.FC<
 								<button
 									type="button"
 									onClick={() => onDeleteMedia(item.id)}
-									title="Usuń bezpowrotnie"
-									aria-label={`Usuń bezpowrotnie plik ${item.originalFileName}`}
+									title={t("deleteAction")}
+									aria-label={t("deleteAria", { name: item.originalFileName })}
 									className="p-1.5 rounded-lg text-slate-600 hover:text-red-600 hover:bg-red-50 transition focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
 								>
 									<Trash2 className="w-3.5 h-3.5" aria-hidden="true" />

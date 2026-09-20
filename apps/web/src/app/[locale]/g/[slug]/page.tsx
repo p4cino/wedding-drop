@@ -1,14 +1,14 @@
 "use client";
 
 import { Heart, Image as ImageIcon, Plus, Sparkles, Video } from "lucide-react";
-import {Link} from "@/i18n/routing";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
+import { LegalFooterLinks } from "@/components/LegalFooterLinks";
 import LightboxModal, { type MediaItemData } from "@/components/LightboxModal";
 import MediaGrid from "@/components/MediaGrid";
 import UploaderDrawer from "@/components/UploaderDrawer";
-import { LegalFooterLinks } from "@/components/LegalFooterLinks";
+import { Link } from "@/i18n/routing";
 
 interface GalleryData {
 	id: string;
@@ -30,7 +30,8 @@ export default function GuestGalleryPage() {
 	const [isUploaderOpen, setIsUploaderOpen] = useState(false);
 	const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 	const [isLiveConnected, setIsLiveConnected] = useState(false);
-	const t = useTranslations("Common");
+	const tCommon = useTranslations("Common");
+	const t = useTranslations("GuestGallery");
 
 	// Pobranie metadanych galerii i listy mediów
 	const fetchData = useCallback(
@@ -133,7 +134,7 @@ export default function GuestGalleryPage() {
 				<div className="text-center space-y-3">
 					<Heart className="w-10 h-10 text-amber-500 animate-pulse mx-auto" />
 					<p className="font-serif-luxury text-lg text-slate-700">
-						{t("loading")}
+						{tCommon("loading")}
 					</p>
 				</div>
 			</div>
@@ -145,16 +146,14 @@ export default function GuestGalleryPage() {
 			<div className="min-h-screen flex items-center justify-center bg-[#FAF8F5] p-6 text-center">
 				<div className="max-w-md bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
 					<h2 className="font-serif-luxury text-2xl font-bold text-slate-900 mb-2">
-						Galeria nie została znaleziona
+						{t("notFoundTitle")}
 					</h2>
-					<p className="text-sm text-slate-500 mb-6">
-						Upewnij się, że adres URL lub kod QR jest prawidłowy.
-					</p>
+					<p className="text-sm text-slate-500 mb-6">{t("notFoundDesc")}</p>
 					<Link
 						href="/"
 						className="inline-block px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-semibold hover:bg-slate-800 transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 					>
-						Strona główna
+						{t("homeBtn")}
 					</Link>
 				</div>
 			</div>
@@ -171,7 +170,7 @@ export default function GuestGalleryPage() {
 				<div className="max-w-xl mx-auto relative z-10">
 					<div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100/70 text-amber-800 text-xs font-semibold uppercase tracking-wider mb-3">
 						<Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-						Wspomnienia z Wesela
+						{t("badge")}
 					</div>
 
 					<h1 className="font-serif-luxury text-3xl sm:text-4xl md:text-5xl font-bold text-slate-900 tracking-tight mb-2">
@@ -193,7 +192,7 @@ export default function GuestGalleryPage() {
 								className={`w-2 h-2 rounded-full ${isLiveConnected ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`}
 								aria-hidden="true"
 							/>
-							<span>{isLiveConnected ? "Na żywo" : "Offline"}</span>
+							<span>{isLiveConnected ? t("live") : t("offline")}</span>
 						</div>
 
 						<div className="flex items-center gap-3 px-3 py-1 rounded-full bg-white shadow-xs border border-slate-200/80">
@@ -202,7 +201,7 @@ export default function GuestGalleryPage() {
 									className="w-3.5 h-3.5 text-slate-400"
 									aria-hidden="true"
 								/>
-								{imagesCount} zdjęć
+								{t("photosCount", { count: imagesCount })}
 							</span>
 							{videosCount > 0 && (
 								<span className="flex items-center gap-1">
@@ -210,7 +209,7 @@ export default function GuestGalleryPage() {
 										className="w-3.5 h-3.5 text-slate-400"
 										aria-hidden="true"
 									/>
-									{videosCount} filmów
+									{t("videosCount", { count: videosCount })}
 								</span>
 							)}
 						</div>
@@ -233,11 +232,11 @@ export default function GuestGalleryPage() {
 					onClick={() => setIsUploaderOpen(true)}
 					aria-haspopup="dialog"
 					aria-expanded={isUploaderOpen}
-					aria-label="Dodaj zdjęcia i filmy do galerii"
+					aria-label={t("addPhotosAria")}
 					className="pointer-events-auto flex items-center gap-2.5 px-6 py-4 rounded-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white font-semibold shadow-xl shadow-amber-600/30 hover:shadow-2xl hover:scale-105 active:scale-95 transition duration-200 text-sm sm:text-base border border-amber-400/30 focus-visible:ring-4 focus-visible:ring-amber-500/50 focus-visible:outline-none"
 				>
 					<Plus className="w-5 h-5 stroke-[2.5]" aria-hidden="true" />
-					<span>Dodaj zdjęcia i filmy</span>
+					<span>{t("addPhotosBtn")}</span>
 				</button>
 			</div>
 

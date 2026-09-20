@@ -13,9 +13,10 @@ import {
 	Users,
 	X,
 } from "lucide-react";
-import {Link} from "@/i18n/routing";
+import { useTranslations } from "next-intl";
 import type React from "react";
 import { useEffect, useState } from "react";
+import { Link } from "@/i18n/routing";
 
 interface GalleryRow {
 	id: string;
@@ -30,6 +31,7 @@ interface GalleryRow {
 }
 
 export default function AdminDashboardPage() {
+	const t = useTranslations("AdminPanel");
 	const [token, setToken] = useState<string | null>(null);
 	const [username, setUsername] = useState("admin");
 	const [password, setPassword] = useState("");
@@ -68,7 +70,7 @@ export default function AdminDashboardPage() {
 
 		const valResult = adminLoginDto.safeParse({ username, password });
 		if (!valResult.success) {
-			setError(valResult.error.issues[0]?.message || "Błędne dane logowania");
+			setError(valResult.error.issues[0]?.message || t("loginError"));
 			return;
 		}
 
@@ -83,14 +85,14 @@ export default function AdminDashboardPage() {
 
 			const data = await res.json();
 			if (!res.ok) {
-				setError(data.error || "Błędne dane logowania");
+				setError(data.error || t("loginError"));
 				return;
 			}
 
 			setToken(data.adminToken);
 			loadGalleries(data.adminToken);
 		} catch (_err) {
-			setError("Błąd połączenia");
+			setError(t("loginNetworkError"));
 		} finally {
 			setLoading(false);
 		}
@@ -191,10 +193,10 @@ export default function AdminDashboardPage() {
 						<ShieldCheck className="w-6 h-6" aria-hidden="true" />
 					</div>
 					<h2 className="font-serif-luxury text-2xl font-bold text-center text-slate-900 mb-1">
-						Panel Administratora
+						{t("loginTitle")}
 					</h2>
 					<p className="text-xs text-center text-slate-500 mb-6">
-						Logowanie do zarządzania wszystkimi galeriami ślubnymi.
+						{t("loginDesc")}
 					</p>
 
 					<form onSubmit={handleLogin} className="space-y-4">
@@ -213,7 +215,7 @@ export default function AdminDashboardPage() {
 								htmlFor="admin-username-input"
 								className="block text-xs font-semibold text-slate-700 mb-1"
 							>
-								Login
+								{t("usernameLabel")}
 							</label>
 							<input
 								id="admin-username-input"
@@ -231,7 +233,7 @@ export default function AdminDashboardPage() {
 								htmlFor="admin-password-input"
 								className="block text-xs font-semibold text-slate-700 mb-1"
 							>
-								Hasło
+								{t("passwordLabel")}
 							</label>
 							<input
 								id="admin-password-input"
@@ -250,7 +252,7 @@ export default function AdminDashboardPage() {
 							disabled={loading}
 							className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition shadow-sm focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 						>
-							{loading ? "Logowanie..." : "Zaloguj się"}
+							{loading ? t("loginBtnLoading") : t("loginBtn")}
 						</button>
 					</form>
 				</div>
@@ -278,11 +280,9 @@ export default function AdminDashboardPage() {
 					</div>
 					<div>
 						<h1 className="font-bold text-slate-900 text-base">
-							Zarządzanie WeddingDrop
+							{t("navTitle")}
 						</h1>
-						<p className="text-xs text-slate-500">
-							Panel Administratora Systemu
-						</p>
+						<p className="text-xs text-slate-500">{t("navSubtitle")}</p>
 					</div>
 				</div>
 
@@ -297,7 +297,7 @@ export default function AdminDashboardPage() {
 					className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-sm transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 				>
 					<Plus className="w-4 h-4" aria-hidden="true" />
-					<span>Nowe wesele</span>
+					<span>{t("newWeddingBtn")}</span>
 				</button>
 			</header>
 
@@ -307,7 +307,7 @@ export default function AdminDashboardPage() {
 					<div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
 						<div className="flex items-center gap-2 text-slate-600 text-xs font-medium mb-1">
 							<Users className="w-4 h-4 text-amber-600" aria-hidden="true" />
-							<span>Wszystkie wesela</span>
+							<span>{t("statsWeddings")}</span>
 						</div>
 						<p className="text-3xl font-bold text-slate-900">
 							{galleries.length}
@@ -317,7 +317,7 @@ export default function AdminDashboardPage() {
 					<div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
 						<div className="flex items-center gap-2 text-slate-600 text-xs font-medium mb-1">
 							<Calendar className="w-4 h-4 text-amber-600" aria-hidden="true" />
-							<span>Zebrane zdjęcia i filmy</span>
+							<span>{t("statsFiles")}</span>
 						</div>
 						<p className="text-3xl font-bold text-slate-900">
 							{totalGlobalFiles}
@@ -330,7 +330,7 @@ export default function AdminDashboardPage() {
 								className="w-4 h-4 text-amber-600"
 								aria-hidden="true"
 							/>
-							<span>Łączne zużycie dysku</span>
+							<span>{t("statsDisk")}</span>
 						</div>
 						<p className="text-3xl font-bold text-slate-900">
 							{totalGlobalMb} MB
@@ -342,10 +342,10 @@ export default function AdminDashboardPage() {
 				<div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
 					<div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
 						<h3 className="font-bold text-slate-800 text-sm">
-							Aktywne Galerie Weselne
+							{t("tableTitle")}
 						</h3>
 						<span className="text-xs text-slate-500">
-							{galleries.length} rekordów
+							{t("tableRecords", { count: galleries.length })}
 						</span>
 					</div>
 
@@ -357,25 +357,25 @@ export default function AdminDashboardPage() {
 							<thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-100">
 								<tr>
 									<th scope="col" className="px-6 py-3">
-										Para Młoda
+										{t("thCouple")}
 									</th>
 									<th scope="col" className="px-6 py-3">
-										Data
+										{t("thDate")}
 									</th>
 									<th scope="col" className="px-6 py-3">
-										Slug (URL)
+										{t("thSlug")}
 									</th>
 									<th scope="col" className="px-6 py-3">
-										E-mail właściciela
+										{t("thEmail")}
 									</th>
 									<th scope="col" className="px-6 py-3">
-										Pliki
+										{t("thFiles")}
 									</th>
 									<th scope="col" className="px-6 py-3">
-										Rozmiar
+										{t("thSize")}
 									</th>
 									<th scope="col" className="px-6 py-3 text-right">
-										Akcje
+										{t("thActions")}
 									</th>
 								</tr>
 							</thead>
@@ -409,8 +409,8 @@ export default function AdminDashboardPage() {
 												<Link
 													href={`/g/${g.slug}`}
 													target="_blank"
-													title="Otwórz widok gościa"
-													aria-label={`Otwórz widok gościa dla galerii ${g.coupleNames} (${g.slug})`}
+													title={t("actionGuest")}
+													aria-label={`${t("actionGuest")} (${g.slug})`}
 													className="inline-block p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 												>
 													<ExternalLink
@@ -424,8 +424,8 @@ export default function AdminDashboardPage() {
 												<Link
 													href={`/g/${g.slug}/card`}
 													target="_blank"
-													title="Drukuj karteczkę"
-													aria-label={`Drukuj karteczkę dla galerii ${g.coupleNames} (${g.slug})`}
+													title={t("actionPrint")}
+													aria-label={`${t("actionPrint")} (${g.slug})`}
 													className="inline-block p-1.5 rounded-lg text-amber-600 hover:text-amber-800 hover:bg-amber-50 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 												>
 													<QrCode className="w-4 h-4" aria-hidden="true" />
@@ -436,8 +436,8 @@ export default function AdminDashboardPage() {
 												<Link
 													href={`/owner/${g.slug}`}
 													target="_blank"
-													title="Panel pary młodej"
-													aria-label={`Panel pary młodej dla galerii ${g.coupleNames} (${g.slug})`}
+													title={t("actionOwner")}
+													aria-label={`${t("actionOwner")} (${g.slug})`}
 													className="inline-block p-1.5 rounded-lg text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition font-medium focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
 												>
 													Panel
@@ -448,8 +448,8 @@ export default function AdminDashboardPage() {
 												<button
 													type="button"
 													onClick={() => handleDelete(g.id, g.slug)}
-													title="Usuń galerię"
-													aria-label={`Usuń galerię ${g.coupleNames} (${g.slug})`}
+													title={t("actionDelete")}
+													aria-label={`${t("actionDelete")} (${g.slug})`}
 													className="inline-block p-1.5 rounded-lg text-slate-600 hover:text-red-600 hover:bg-red-50 transition focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
 												>
 													<Trash2 className="w-4 h-4" aria-hidden="true" />
@@ -472,7 +472,7 @@ export default function AdminDashboardPage() {
 					aria-labelledby="admin-create-wedding-title"
 					className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
 				>
-					<div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-6 relative">
+					<div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto">
 						<button
 							type="button"
 							onClick={() => setIsModalOpen(false)}
@@ -487,25 +487,24 @@ export default function AdminDashboardPage() {
 							id="admin-create-wedding-title"
 							className="font-serif-luxury text-xl font-bold text-slate-900 mb-1"
 						>
-							Nowa Galeria Weselna
+							{t("modalTitle")}
 						</h3>
-						<p className="text-xs text-slate-500 mb-5">
-							Wypełnij podstawowe dane. Kod QR i karteczka do druku wygenerują
-							się automatycznie.
-						</p>
+						<p className="text-xs text-slate-500 mb-5">{t("modalDesc")}</p>
 
 						{createdGallery ? (
 							<div className="space-y-4">
 								<div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 space-y-2">
 									<div className="flex items-center gap-1.5 font-bold">
-										<Check className="w-4 h-4" aria-hidden="true" /> Galeria
-										została pomyślnie utworzona!
+										<Check className="w-4 h-4" aria-hidden="true" />{" "}
+										{t("modalSuccess")}
 									</div>
 									<p>
-										<strong>Para:</strong> {createdGallery.coupleNames}
+										<strong>{t("modalSuccessCouple")}</strong>{" "}
+										{createdGallery.coupleNames}
 									</p>
 									<p>
-										<strong>Slug:</strong> {createdGallery.slug}
+										<strong>{t("modalSuccessSlug")}</strong>{" "}
+										{createdGallery.slug}
 									</p>
 								</div>
 
@@ -515,7 +514,7 @@ export default function AdminDashboardPage() {
 										target="_blank"
 										className="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 									>
-										<span>Otwórz galerię gościa</span>
+										<span>{t("modalLinkGuest")}</span>
 										<ExternalLink
 											className="w-4 h-4 text-slate-400"
 											aria-hidden="true"
@@ -530,7 +529,7 @@ export default function AdminDashboardPage() {
 										target="_blank"
 										className="flex items-center justify-between p-3 rounded-xl border border-amber-200 bg-amber-50/50 hover:bg-amber-100/50 text-xs font-semibold text-amber-900 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 									>
-										<span>Zobacz i pobierz karteczkę A6 do druku</span>
+										<span>{t("modalLinkPrint")}</span>
 										<QrCode
 											className="w-4 h-4 text-amber-700"
 											aria-hidden="true"
@@ -545,7 +544,7 @@ export default function AdminDashboardPage() {
 										target="_blank"
 										className="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 									>
-										<span>Panel zarządzania pary młodej</span>
+										<span>{t("modalLinkOwner")}</span>
 										<ExternalLink
 											className="w-4 h-4 text-slate-400"
 											aria-hidden="true"
@@ -561,7 +560,7 @@ export default function AdminDashboardPage() {
 									onClick={() => setIsModalOpen(false)}
 									className="w-full mt-4 py-3 bg-slate-900 text-white rounded-xl text-xs font-semibold focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 								>
-									Zamknij
+									{t("modalCloseBtn")}
 								</button>
 							</div>
 						) : (
@@ -571,13 +570,13 @@ export default function AdminDashboardPage() {
 										htmlFor="admin-couple-names"
 										className="block font-semibold text-slate-700 mb-1"
 									>
-										Imiona Pary Młodej *
+										{t("formCouple")}
 									</label>
 									<input
 										id="admin-couple-names"
 										type="text"
 										required
-										placeholder="np. Kasia & Tomek"
+										placeholder={t("formCouplePlaceholder")}
 										value={coupleNames}
 										onChange={(e) => setCoupleNames(e.target.value)}
 										className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500"
@@ -590,7 +589,7 @@ export default function AdminDashboardPage() {
 											htmlFor="admin-wedding-date"
 											className="block font-semibold text-slate-700 mb-1"
 										>
-											Data Ślubu *
+											{t("formDate")}
 										</label>
 										<input
 											id="admin-wedding-date"
@@ -607,12 +606,12 @@ export default function AdminDashboardPage() {
 											htmlFor="admin-custom-slug"
 											className="block font-semibold text-slate-700 mb-1"
 										>
-											Własny Slug (opcjonalny)
+											{t("formSlug")}
 										</label>
 										<input
 											id="admin-custom-slug"
 											type="text"
-											placeholder="np. kasia-i-tomek"
+											placeholder={t("formSlugPlaceholder")}
 											value={customSlug}
 											onChange={(e) => setCustomSlug(e.target.value)}
 											className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500"
@@ -625,7 +624,7 @@ export default function AdminDashboardPage() {
 										htmlFor="admin-owner-email"
 										className="block font-semibold text-slate-700 mb-1"
 									>
-										E-mail Pary Młodej *
+										{t("formEmail")}
 									</label>
 									<input
 										id="admin-owner-email"
@@ -643,13 +642,13 @@ export default function AdminDashboardPage() {
 										htmlFor="admin-owner-password"
 										className="block font-semibold text-slate-700 mb-1"
 									>
-										Hasło dostępu dla Pary Młodej *
+										{t("formPassword")}
 									</label>
 									<input
 										id="admin-owner-password"
 										type="password"
 										required
-										placeholder="Hasło do moderacji i pobierania ZIP"
+										placeholder={t("formPasswordPlaceholder")}
 										value={ownerPassword}
 										onChange={(e) => setOwnerPassword(e.target.value)}
 										className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500"
@@ -660,7 +659,7 @@ export default function AdminDashboardPage() {
 									type="submit"
 									className="w-full mt-4 py-3 bg-gradient-to-r from-amber-600 to-amber-500 text-white rounded-xl font-semibold shadow-md focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 								>
-									Utwórz wesele
+									{t("formSubmit")}
 								</button>
 							</form>
 						)}

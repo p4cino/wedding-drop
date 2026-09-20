@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, Download, User, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import React, { useEffect } from "react";
 
 export interface MediaItemData {
@@ -29,6 +30,8 @@ export default function LightboxModal({
 	onNavigate,
 	allowDownloads = true,
 }: LightboxModalProps) {
+	const t = useTranslations("GuestGallery");
+
 	const touchStartX = React.useRef<number | null>(null);
 	const touchEndX = React.useRef<number | null>(null);
 	const dialogRef = React.useRef<HTMLDivElement>(null);
@@ -164,8 +167,8 @@ export default function LightboxModal({
 							href={current.rawUrl}
 							download={current.originalFileName}
 							className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition backdrop-blur-sm focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
-							title="Pobierz oryginalny plik"
-							aria-label={`Pobierz oryginalny plik ${current.originalFileName}`}
+							title={t("downloadOriginal")}
+							aria-label={t("downloadOriginal")}
 						>
 							<Download className="w-5 h-5" aria-hidden="true" />
 						</a>
@@ -174,8 +177,8 @@ export default function LightboxModal({
 						type="button"
 						onClick={onClose}
 						className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition backdrop-blur-sm focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
-						title="Zamknij podgląd"
-						aria-label="Zamknij podgląd"
+						title={t("closeLightbox")}
+						aria-label={t("closeLightbox")}
 					>
 						<X className="w-5 h-5" aria-hidden="true" />
 					</button>
@@ -190,8 +193,8 @@ export default function LightboxModal({
 						e.stopPropagation();
 						onNavigate(currentIndex - 1);
 					}}
-					title="Poprzednie zdjęcie"
-					aria-label="Poprzednie zdjęcie"
+					title={t("prevMedia")}
+					aria-label={t("prevMedia")}
 					className="absolute left-2 sm:left-4 p-2.5 sm:p-3 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 text-white transition z-20 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
 				>
 					<ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" aria-hidden="true" />
@@ -205,8 +208,8 @@ export default function LightboxModal({
 						e.stopPropagation();
 						onNavigate(currentIndex + 1);
 					}}
-					title="Następne zdjęcie"
-					aria-label="Następne zdjęcie"
+					title={t("nextMedia")}
+					aria-label={t("nextMedia")}
 					className="absolute right-2 sm:right-4 p-2.5 sm:p-3 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 text-white transition z-20 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
 				>
 					<ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" aria-hidden="true" />
@@ -238,7 +241,7 @@ export default function LightboxModal({
 				aria-hidden="true"
 				className="absolute bottom-4 inset-x-0 text-center text-xs text-slate-400 font-medium pointer-events-none"
 			>
-				{currentIndex + 1} z {items.length}
+				{t("progressCount", { current: currentIndex + 1, total: items.length })}
 			</div>
 		</div>
 	);

@@ -19,10 +19,10 @@ describe("OwnerStatsGrid Component", () => {
 
 		expect(screen.getByText("42")).toBeInTheDocument();
 		expect(screen.getByText("5")).toBeInTheDocument();
-		expect(screen.getByText("128.5 MB")).toBeInTheDocument();
-		expect(screen.getByText("Aktywna")).toBeInTheDocument();
+		expect(screen.getByText("storageUnit")).toBeInTheDocument();
+		expect(screen.getByText("statusActive")).toBeInTheDocument();
 
-		const refreshBtn = screen.getByTitle("Odśwież");
+		const refreshBtn = screen.getByTitle("refreshBtn");
 		fireEvent.click(refreshBtn);
 		expect(onRefreshMock).toHaveBeenCalledTimes(1);
 	});

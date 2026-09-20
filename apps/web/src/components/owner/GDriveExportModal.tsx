@@ -1,6 +1,7 @@
 "use client";
 
 import { Cloud, Loader2, Play } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type React from "react";
 import { useEffect } from "react";
 
@@ -23,6 +24,7 @@ export const GDriveExportModal: React.FC<GDriveExportModalProps> = ({
 	onClose,
 	onStartExport,
 }) => {
+	const t = useTranslations("OwnerPanel");
 	// Obsługa klawisza Escape
 	useEffect(() => {
 		if (!isOpen) return;
@@ -55,16 +57,14 @@ export const GDriveExportModal: React.FC<GDriveExportModalProps> = ({
 							id="gdrive-export-modal-title"
 							className="text-base font-bold text-slate-900"
 						>
-							Eksport na Dysk Google
+							{t("modalTitle")}
 						</h3>
-						<p className="text-xs text-slate-500">
-							Wybierz zakres przesyłanych multimediów
-						</p>
+						<p className="text-xs text-slate-500">{t("modalSubtitle")}</p>
 					</div>
 				</div>
 
 				<fieldset className="space-y-3 text-xs border-0 p-0 m-0">
-					<legend className="sr-only">Wybierz zakres eksportu</legend>
+					<legend className="sr-only">{t("scopeAria")}</legend>
 
 					<label className="flex items-start gap-3 p-3.5 rounded-2xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition focus-within:ring-2 focus-within:ring-amber-500/30">
 						<input
@@ -76,11 +76,11 @@ export const GDriveExportModal: React.FC<GDriveExportModalProps> = ({
 						/>
 						<div>
 							<span className="font-semibold text-slate-900 block">
-								Prześlij wszystko (w tym ukryte)
+								{t("scopeAll")}
 							</span>
 							<span className="text-slate-500 block mt-0.5">
-								Zdjęcia ukryte przed gośćmi trafią do dedykowanego podfolderu{" "}
-								<strong>„Ukryte”</strong> na Twoim Dysku.
+								{t("scopeAllDesc1")}
+								<strong>{t("hiddenOverlay")}</strong> {t("scopeAllDesc2")}
 							</span>
 						</div>
 					</label>
@@ -95,10 +95,10 @@ export const GDriveExportModal: React.FC<GDriveExportModalProps> = ({
 						/>
 						<div>
 							<span className="font-semibold text-slate-900 block">
-								Tylko widoczne multimedia
+								{t("scopeVisible")}
 							</span>
 							<span className="text-slate-500 block mt-0.5">
-								Pliki oznaczone jako ukryte zostaną pominięte podczas eksportu.
+								{t("scopeVisibleDesc")}
 							</span>
 						</div>
 					</label>
@@ -106,15 +106,13 @@ export const GDriveExportModal: React.FC<GDriveExportModalProps> = ({
 
 				<div className="p-3 bg-slate-50 rounded-xl text-[11px] text-slate-600 space-y-1">
 					<p>
-						📁 Na Twoim Dysku Google zostanie utworzony folder:
+						{t("folderNote")}
 						<br />
 						<span className="font-mono font-semibold text-slate-800">
-							WeddingDrop - {coupleNames || "Para Młoda"}
+							WeddingDrop - {coupleNames || t("defaultCouple")}
 						</span>
 					</p>
-					<p className="text-slate-500">
-						Pliki zostaną rozpakowane i zachowają oryginalną jakość 1:1.
-					</p>
+					<p className="text-slate-500">{t("folderNote2")}</p>
 				</div>
 
 				<div className="flex items-center justify-end gap-2 pt-2">
@@ -124,7 +122,7 @@ export const GDriveExportModal: React.FC<GDriveExportModalProps> = ({
 						disabled={exportLoading}
 						className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:outline-none"
 					>
-						Anuluj
+						{t("cancelBtn")}
 					</button>
 					<button
 						type="button"
@@ -138,12 +136,12 @@ export const GDriveExportModal: React.FC<GDriveExportModalProps> = ({
 									className="w-3.5 h-3.5 animate-spin"
 									aria-hidden="true"
 								/>
-								<span>Inicjalizacja...</span>
+								<span>{t("initBtn")}</span>
 							</>
 						) : (
 							<>
 								<Play className="w-3.5 h-3.5" aria-hidden="true" />
-								<span>Rozpocznij eksport</span>
+								<span>{t("startBtn")}</span>
 							</>
 						)}
 					</button>

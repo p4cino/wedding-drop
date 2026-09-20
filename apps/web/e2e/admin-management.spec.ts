@@ -94,7 +94,7 @@ test.describe("Panel Administratora", () => {
 		await expect(page.getByText(`Slug: ${uniqueSlug}`)).toBeVisible();
 
 		// Zamknięcie modalu i sprawdzenie obecności w tabeli
-		await page.getByRole("button", { name: "Zamknij" }).click();
+		await page.getByRole("button", { name: "Zamknij", exact: true }).click();
 		await expect(
 			page.getByRole("cell", { name: uniqueSlug, exact: true }),
 		).toBeVisible();
@@ -137,7 +137,7 @@ test.describe("Panel Administratora", () => {
 			page.locator("text=/Slug: kasia-i-tomek-[a-z0-9]+/"),
 		).toBeVisible();
 
-		await page.getByRole("button", { name: "Zamknij" }).click();
+		await page.getByRole("button", { name: "Zamknij", exact: true }).click();
 		await expect(page.locator(`text=${coupleName}`)).toBeVisible();
 	});
 

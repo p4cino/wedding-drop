@@ -48,18 +48,18 @@ describe("MediaGridWithModeration Component", () => {
 			/>,
 		);
 
-		expect(screen.getByText(/Wszystkie \(2\)/)).toBeInTheDocument();
-		expect(screen.getByText(/Widoczne \(1\)/)).toBeInTheDocument();
-		expect(screen.getByText(/Ukryte \(1\)/)).toBeInTheDocument();
+		expect(screen.getByText("filterAll")).toBeInTheDocument();
+		expect(screen.getByText("filterVisible")).toBeInTheDocument();
+		expect(screen.getByText("filterHidden")).toBeInTheDocument();
 
 		// Kliknięcie filtrów
-		fireEvent.click(screen.getByText(/Wszystkie \(2\)/));
+		fireEvent.click(screen.getByText("filterAll"));
 		expect(setFilterMock).toHaveBeenCalledWith("all");
 
-		fireEvent.click(screen.getByText(/Widoczne \(1\)/));
+		fireEvent.click(screen.getByText("filterVisible"));
 		expect(setFilterMock).toHaveBeenCalledWith("ready");
 
-		fireEvent.click(screen.getByText(/Ukryte \(1\)/));
+		fireEvent.click(screen.getByText("filterHidden"));
 		expect(setFilterMock).toHaveBeenCalledWith("hidden");
 
 		// Rerender z filtrem "ready"
@@ -72,7 +72,7 @@ describe("MediaGridWithModeration Component", () => {
 				onDeleteMedia={onDeleteMediaMock}
 			/>,
 		);
-		expect(screen.queryByText("Ukryte")).not.toBeInTheDocument();
+		expect(screen.queryByText("hiddenOverlay")).not.toBeInTheDocument();
 
 		// Rerender z filtrem "hidden"
 		rerender(
@@ -84,7 +84,7 @@ describe("MediaGridWithModeration Component", () => {
 				onDeleteMedia={onDeleteMediaMock}
 			/>,
 		);
-		expect(screen.getByText("Ukryte")).toBeInTheDocument();
+		expect(screen.getByText("hiddenOverlay")).toBeInTheDocument();
 	});
 
 	it("powinien wywołać akcję ukrycia/pokazania zdjęcia oraz usunięcia", () => {
@@ -102,17 +102,17 @@ describe("MediaGridWithModeration Component", () => {
 		);
 
 		// Kliknięcie przełącznika statusu dla pierwszego zdjęcia
-		const hideBtn = screen.getByTitle("Ukryj przed gośćmi");
+		const hideBtn = screen.getByTitle("hideAction");
 		fireEvent.click(hideBtn);
 		expect(onToggleStatusMock).toHaveBeenCalledWith("med-1", "ready");
 
 		// Kliknięcie przełącznika statusu dla drugiego zdjęcia (pokaż)
-		const showBtn = screen.getByTitle("Pokaż w galerii");
+		const showBtn = screen.getByTitle("showAction");
 		fireEvent.click(showBtn);
 		expect(onToggleStatusMock).toHaveBeenCalledWith("med-2", "hidden");
 
 		// Kliknięcie usuwania
-		const deleteBtns = screen.getAllByTitle("Usuń bezpowrotnie");
+		const deleteBtns = screen.getAllByTitle("deleteAction");
 		fireEvent.click(deleteBtns[0]);
 		expect(onDeleteMediaMock).toHaveBeenCalledWith("med-1");
 	});

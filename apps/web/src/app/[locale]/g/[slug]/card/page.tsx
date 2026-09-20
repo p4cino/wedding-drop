@@ -1,28 +1,28 @@
 "use client";
 
 import { ArrowLeft, Check, Download, Printer, Sparkles } from "lucide-react";
-import {Link} from "@/i18n/routing";
 import { useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
-
-const PRESET_PALETTES = [
-	{ name: "Złoto & Granat", primary: "#1E293B", accent: "#D4AF37" },
-	{ name: "Butelkowa Zieleń", primary: "#1B4332", accent: "#D4AF37" },
-	{ name: "Pudrowy Róż", primary: "#2D3748", accent: "#E0A899" },
-	{ name: "Klasyczna Czerń", primary: "#0F172A", accent: "#475569" },
-];
+import { Link } from "@/i18n/routing";
 
 export default function CardCustomizerPage() {
 	const params = useParams();
 	const slug = params?.slug as string;
+	const t = useTranslations("CardPage");
+
+	const PRESET_PALETTES = [
+		{ name: t("paletteGoldNavy"), primary: "#1E293B", accent: "#D4AF37" },
+		{ name: t("paletteGreen"), primary: "#1B4332", accent: "#D4AF37" },
+		{ name: t("palettePink"), primary: "#2D3748", accent: "#E0A899" },
+		{ name: t("paletteBlack"), primary: "#0F172A", accent: "#475569" },
+	];
 
 	const [coupleNames, setCoupleNames] = useState("Katarzyna & Tomasz");
 	const [weddingDate, setWeddingDate] = useState("12.09.2026");
-	const [headline, setHeadline] = useState("Podziel się wspomnieniami!");
-	const [instructions, setInstructions] = useState(
-		"1. Otwórz aparat w telefonie\n2. Skieruj obiektyw na kod QR\n3. Dodawaj zdjęcia bez rejestracji i aplikacji!",
-	);
+	const [headline, setHeadline] = useState(t("defaultHeadline"));
+	const [instructions, setInstructions] = useState(t("defaultInstructions"));
 	const [primaryColor, setPrimaryColor] = useState("#1E293B");
 	const [accentColor, setAccentColor] = useState("#D4AF37");
 	const [qrDataUrl, setQrDataUrl] = useState<string>("");
@@ -87,7 +87,7 @@ export default function CardCustomizerPage() {
 				<div className="text-center space-y-3">
 					<div className="w-8 h-8 border-2 border-amber-600 border-t-transparent rounded-full animate-spin mx-auto" />
 					<p className="text-sm font-medium text-slate-600">
-						Ładowanie projektu winietki...
+						{t("loadingCard")}
 					</p>
 				</div>
 			</div>
@@ -103,26 +103,26 @@ export default function CardCustomizerPage() {
 					className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none rounded-lg p-1"
 				>
 					<ArrowLeft className="w-4 h-4" aria-hidden="true" />
-					<span>Powrót do galerii</span>
+					<span>{t("backToGallery")}</span>
 				</Link>
 				<div className="flex items-center gap-2">
 					<button
 						type="button"
 						onClick={handlePrint}
-						aria-label="Wydrukuj karteczkę na stolik"
+						aria-label={t("printAria")}
 						className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 					>
 						<Printer className="w-4 h-4" aria-hidden="true" />
-						<span className="hidden sm:inline">Drukuj</span>
+						<span className="hidden sm:inline">{t("printBtn")}</span>
 					</button>
 					<a
 						href={`/api/gallery/${slug}/card/pdf?primaryColor=${encodeURIComponent(primaryColor)}&accentColor=${encodeURIComponent(accentColor)}&headline=${encodeURIComponent(headline)}&instructions=${encodeURIComponent(instructions)}`}
 						download
-						aria-label="Pobierz karteczkę A6 w formacie PDF (300 DPI)"
+						aria-label={t("downloadAria")}
 						className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-amber-600 hover:bg-amber-700 text-white shadow-sm transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 					>
 						<Download className="w-4 h-4" aria-hidden="true" />
-						<span>Pobierz PDF (300 DPI)</span>
+						<span>{t("downloadBtn")}</span>
 					</a>
 				</div>
 			</nav>
@@ -133,15 +133,12 @@ export default function CardCustomizerPage() {
 					<div>
 						<div className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">
 							<Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-							Projektant Karteczki
+							{t("designerTitle")}
 						</div>
 						<h2 className="font-serif-luxury text-2xl font-bold text-slate-900">
-							Karteczka na Stolik (A6)
+							{t("designerSubtitle")}
 						</h2>
-						<p className="text-xs text-slate-500 mt-1">
-							Wydrukuj i postaw na stołach weselnych, by goście mogli
-							błyskawicznie dodać swoje zdjęcia.
-						</p>
+						<p className="text-xs text-slate-500 mt-1">{t("designerDesc")}</p>
 					</div>
 
 					{/* Palety kolorów */}
@@ -150,7 +147,7 @@ export default function CardCustomizerPage() {
 							id="color-palette-label"
 							className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2"
 						>
-							Motyw kolorystyczny
+							{t("colorTheme")}
 						</div>
 						<div
 							role="group"
@@ -209,7 +206,7 @@ export default function CardCustomizerPage() {
 								htmlFor="primary-color-text"
 								className="block text-[11px] font-medium text-slate-600 mb-1"
 							>
-								Kolor tekstu i QR
+								{t("textColor")}
 							</label>
 							<div className="flex items-center gap-2">
 								<input
@@ -234,7 +231,7 @@ export default function CardCustomizerPage() {
 								htmlFor="accent-color-text"
 								className="block text-[11px] font-medium text-slate-600 mb-1"
 							>
-								Kolor złotej ramki
+								{t("frameColor")}
 							</label>
 							<div className="flex items-center gap-2">
 								<input
@@ -263,7 +260,7 @@ export default function CardCustomizerPage() {
 								htmlFor="headline-input"
 								className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1"
 							>
-								Nagłówek
+								{t("headlineLabel")}
 							</label>
 							<input
 								id="headline-input"
@@ -279,7 +276,7 @@ export default function CardCustomizerPage() {
 								htmlFor="instructions-input"
 								className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1"
 							>
-								Instrukcja dla gości
+								{t("instructionsLabel")}
 							</label>
 							<textarea
 								id="instructions-input"
@@ -295,7 +292,7 @@ export default function CardCustomizerPage() {
 				{/* Prawa kolumna: Podgląd Karteczki A6 1:1 */}
 				<div className="lg:col-span-7 flex flex-col items-center justify-center">
 					<div className="no-print text-xs text-slate-400 mb-3 font-medium">
-						Format A6 (105 × 148 mm) • Skalowany podgląd 1:1
+						{t("previewFormat")}
 					</div>
 
 					{/* Podgląd wizualny karteczki */}
@@ -338,7 +335,7 @@ export default function CardCustomizerPage() {
 								{qrDataUrl ? (
 									<img
 										src={qrDataUrl}
-										alt={`Kod QR do galerii weselnej: ${coupleNames}`}
+										alt={`${t("qrAlt")} ${coupleNames}`}
 										className="w-36 h-36 sm:w-40 sm:h-40 object-contain"
 									/>
 								) : (

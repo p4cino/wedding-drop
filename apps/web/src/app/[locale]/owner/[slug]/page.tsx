@@ -10,8 +10,8 @@ import {
 	Lock,
 	QrCode,
 } from "lucide-react";
-import {Link} from "@/i18n/routing";
 import { useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -24,8 +24,10 @@ import {
 	type OwnerMediaItem,
 } from "@/components/owner/MediaGridWithModeration";
 import { OwnerStatsGrid } from "@/components/owner/OwnerStatsGrid";
+import { Link } from "@/i18n/routing";
 
 export default function OwnerDashboardPage() {
+	const t = useTranslations("OwnerPanel");
 	const params = useParams();
 	const slug = params?.slug as string;
 
@@ -92,7 +94,7 @@ export default function OwnerDashboardPage() {
 
 			const valResult = ownerLoginDto.safeParse({ password: pwd });
 			if (!valResult.success) {
-				setError(valResult.error.issues[0]?.message || "Hasło jest wymagane");
+				setError(valResult.error.issues[0]?.message || t("pwdRequired"));
 				return;
 			}
 
@@ -107,7 +109,7 @@ export default function OwnerDashboardPage() {
 
 				const data = await res.json();
 				if (!res.ok) {
-					setError(data.error || "Błędne hasło");
+					setError(data.error || t("invalidPwd"));
 					sessionStorage.removeItem(`owner_pwd_${slug}`);
 					sessionStorage.removeItem(`owner_token_${slug}`);
 					return;
@@ -131,7 +133,7 @@ export default function OwnerDashboardPage() {
 
 				loadMedia(data.ownerToken);
 			} catch (_err) {
-				setError("Błąd połączenia");
+				setError(t("connError"));
 			} finally {
 				setLoading(false);
 			}
@@ -156,7 +158,7 @@ export default function OwnerDashboardPage() {
 			if (urlParams.get("gdrive") === "connected") {
 				setGDriveToast({
 					type: "success",
-					text: "Dysk Google został pomyślnie podłączony do galerii!",
+					text: t("gdriveSuccess"),
 				});
 				window.history.replaceState(
 					{},
@@ -166,7 +168,9 @@ export default function OwnerDashboardPage() {
 			} else if (urlParams.get("gdrive_error")) {
 				setGDriveToast({
 					type: "error",
-					text: `Nie udało się połączyć Dysku Google: ${urlParams.get("gdrive_error")}`,
+					text: t("gdriveError", {
+						error: urlParams.get("gdrive_error") || "",
+					}),
 				});
 				window.history.replaceState(
 					{},
@@ -279,7 +283,7 @@ export default function OwnerDashboardPage() {
 	};
 
 	const deleteMedia = async (mediaId: string) => {
-		if (!confirm("Czy na pewno chcesz bezpowrotnie usunąć ten plik?")) return;
+		if (!confirm(t("deleteConfirm"))) return;
 		try {
 			const headers: Record<string, string> = {
 				"Content-Type": "application/json",
@@ -311,12 +315,7 @@ export default function OwnerDashboardPage() {
 
 	// Obsługa odłączania Dysku Google
 	const handleDisconnectGDrive = async () => {
-		if (
-			!confirm(
-				"Czy na pewno chcesz odłączyć konto Google Drive od tej galerii?",
-			)
-		)
-			return;
+		if (!confirm(t("disconnectConfirm"))) return;
 		try {
 			const headers: Record<string, string> = {
 				"Content-Type": "application/json",
@@ -335,7 +334,7 @@ export default function OwnerDashboardPage() {
 				setGDriveProgress(null);
 				setGDriveToast({
 					type: "success",
-					text: "Konto Google Drive zostało odłączone.",
+					text: t("disconnectSuccess"),
 				});
 			}
 		} catch (e) {
@@ -362,17 +361,17 @@ export default function OwnerDashboardPage() {
 			});
 			const data = await res.json();
 			if (!res.ok) {
-				alert(data.error || "Nie udało się rozpocząć eksportu.");
+				alert(data.error || t("exportStartError"));
 				return;
 			}
 			setGDriveStatus("running");
 			setShowExportModal(false);
 			setGDriveToast({
 				type: "success",
-				text: "Eksport został uruchomiony w tle. Poniżej możesz śledzić postęp.",
+				text: t("exportStartSuccess"),
 			});
 		} catch (_e) {
-			alert("Błąd połączenia podczas uruchamiania eksportu.");
+			alert(t("exportConnError"));
 		} finally {
 			setExportLoading(false);
 		}
@@ -386,11 +385,10 @@ export default function OwnerDashboardPage() {
 						<Lock className="w-6 h-6" aria-hidden="true" />
 					</div>
 					<h2 className="font-serif-luxury text-2xl font-bold text-center text-slate-900 mb-1">
-						Panel Pary Młodej
+						{t("panelTitle")}
 					</h2>
 					<p className="text-xs text-center text-slate-500 mb-6">
-						Podaj hasło do swojej galerii ({slug}), aby zarządzać zdjęciami,
-						pobrać ZIP lub przesłać na Dysk Google.
+						{t("panelDesc", { slug })}
 					</p>
 
 					<form onSubmit={handleLogin} className="space-y-4">
@@ -410,7 +408,7 @@ export default function OwnerDashboardPage() {
 								htmlFor="owner-pwd-input"
 								className="block text-xs font-semibold text-slate-700 mb-1.5"
 							>
-								Hasło właściciela
+								{t("pwdLabel")}
 							</label>
 							<input
 								id="owner-pwd-input"
@@ -420,7 +418,7 @@ export default function OwnerDashboardPage() {
 								aria-describedby={error ? "owner-login-error" : undefined}
 								value={password}
 								onChange={(e) => setPassword(e.target.value)}
-								placeholder="Wpisz hasło dostępu"
+								placeholder={t("pwdPlaceholder")}
 								className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500"
 							/>
 						</div>
@@ -433,7 +431,7 @@ export default function OwnerDashboardPage() {
 							{loading && (
 								<Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
 							)}
-							<span>{loading ? "Logowanie..." : "Zaloguj się"}</span>
+							<span>{loading ? t("loggingIn") : t("loginBtn")}</span>
 						</button>
 					</form>
 				</div>
@@ -473,8 +471,8 @@ export default function OwnerDashboardPage() {
 					<button
 						type="button"
 						onClick={() => setGDriveToast(null)}
-						aria-label="Zamknij powiadomienie"
-						title="Zamknij powiadomienie"
+						aria-label={t("closeToast")}
+						title={t("closeToast")}
 						className="text-xs font-bold opacity-60 hover:opacity-100 p-1 focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:outline-none rounded"
 					>
 						✕
@@ -486,11 +484,9 @@ export default function OwnerDashboardPage() {
 			<header className="bg-white border-b border-slate-200 px-4 sm:px-8 py-4 sticky top-0 z-30 flex flex-wrap items-center justify-between gap-4">
 				<div>
 					<h1 className="font-serif-luxury text-xl sm:text-2xl font-bold text-slate-900">
-						{galleryInfo?.coupleNames || "Panel Właściciela"}
+						{galleryInfo?.coupleNames || t("defaultOwnerTitle")}
 					</h1>
-					<p className="text-xs text-slate-500">
-						Zarządzanie galerią, eksport i moderacja treści
-					</p>
+					<p className="text-xs text-slate-500">{t("ownerSubtitle")}</p>
 				</div>
 
 				<div className="flex items-center gap-2.5">
@@ -500,7 +496,7 @@ export default function OwnerDashboardPage() {
 						className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 					>
 						<ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
-						<span>Zobacz galerię gościa</span>
+						<span>{t("viewGallery")}</span>
 						<span className="sr-only">(otwiera się w nowej karcie)</span>
 					</Link>
 
@@ -509,7 +505,7 @@ export default function OwnerDashboardPage() {
 						className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 					>
 						<QrCode className="w-3.5 h-3.5" aria-hidden="true" />
-						<span>Karteczka A6</span>
+						<span>{t("cardBtn")}</span>
 					</Link>
 
 					<a
@@ -517,7 +513,7 @@ export default function OwnerDashboardPage() {
 						className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-900 text-white shadow-sm transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 					>
 						<Download className="w-4 h-4" aria-hidden="true" />
-						<span>Pobierz ZIP</span>
+						<span>{t("downloadZip")}</span>
 					</a>
 				</div>
 			</header>

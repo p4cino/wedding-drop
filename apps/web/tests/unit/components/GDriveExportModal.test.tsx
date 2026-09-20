@@ -38,23 +38,23 @@ describe("GDriveExportModal Component", () => {
 			/>,
 		);
 
-		expect(screen.getByText("Eksport na Dysk Google")).toBeInTheDocument();
+		expect(screen.getByText("modalTitle")).toBeInTheDocument();
 		expect(screen.getByText("WeddingDrop - Kasia i Tomek")).toBeInTheDocument();
 
 		// Kliknięcie radio "Prześlij wszystko"
-		const radioAll = screen.getByLabelText(/Prześlij wszystko/i);
+		const radioAll = screen.getByLabelText("scopeAll", { exact: false });
 		fireEvent.click(radioAll);
 		expect(setIncludeHiddenMock).toHaveBeenCalledWith(true);
 
 		// Kliknięcie "Rozpocznij eksport"
 		const exportBtn = screen.getByRole("button", {
-			name: /Rozpocznij eksport/i,
+			name: "startBtn",
 		});
 		fireEvent.click(exportBtn);
 		expect(onStartExportMock).toHaveBeenCalledTimes(1);
 
 		// Kliknięcie "Anuluj"
-		const cancelBtn = screen.getByRole("button", { name: /Anuluj/i });
+		const cancelBtn = screen.getByRole("button", { name: "cancelBtn" });
 		fireEvent.click(cancelBtn);
 		expect(onCloseMock).toHaveBeenCalledTimes(1);
 	});
@@ -72,10 +72,8 @@ describe("GDriveExportModal Component", () => {
 			/>,
 		);
 
-		expect(screen.getByText("Inicjalizacja...")).toBeInTheDocument();
-		expect(
-			screen.getByRole("button", { name: /Inicjalizacja.../i }),
-		).toBeDisabled();
+		expect(screen.getByText("initBtn")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "initBtn" })).toBeDisabled();
 	});
 
 	it("powinien przełączyć na tylko widoczne multimedia", () => {
@@ -92,9 +90,9 @@ describe("GDriveExportModal Component", () => {
 			/>,
 		);
 
-		const radioVisibleOnly = screen.getByLabelText(
-			/Tylko widoczne multimedia/i,
-		);
+		const radioVisibleOnly = screen.getByLabelText("scopeVisible", {
+			exact: false,
+		});
 		fireEvent.click(radioVisibleOnly);
 		expect(setIncludeHiddenMock).toHaveBeenCalledWith(false);
 	});
