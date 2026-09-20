@@ -28,13 +28,5 @@
 		"*": [
 			"biome check --write --no-errors-on-unmatched"
 		]
-	},
-	"pnpm": {
-		"onlyBuiltDependencies": [
-			"@parcel/watcher",
-			"@swc/core",
-			"esbuild",
-			"sharp"
-		]
 	}
 }
