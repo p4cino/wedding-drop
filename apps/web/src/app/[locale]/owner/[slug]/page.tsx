@@ -10,10 +10,10 @@ import {
 	Lock,
 	QrCode,
 } from "lucide-react";
-import Link from "next/link";
+import {Link} from "@/i18n/routing";
 import { useParams } from "next/navigation";
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	GDriveBackupCard,
 	type GDriveProgressData,
@@ -144,9 +144,14 @@ export default function OwnerDashboardPage() {
 		doLogin(password);
 	};
 
+	const hasInitialized = useRef(false);
+
 	// Sprawdzanie parametrów powrotnych z Google OAuth i pamięci sesji
 	useEffect(() => {
+		if (hasInitialized.current) return;
+
 		if (typeof window !== "undefined") {
+			hasInitialized.current = true;
 			const urlParams = new URLSearchParams(window.location.search);
 			if (urlParams.get("gdrive") === "connected") {
 				setGDriveToast({

@@ -1,12 +1,14 @@
 "use client";
 
 import { Heart, Image as ImageIcon, Plus, Sparkles, Video } from "lucide-react";
-import Link from "next/link";
+import {Link} from "@/i18n/routing";
 import { useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import LightboxModal, { type MediaItemData } from "@/components/LightboxModal";
 import MediaGrid from "@/components/MediaGrid";
 import UploaderDrawer from "@/components/UploaderDrawer";
+import { LegalFooterLinks } from "@/components/LegalFooterLinks";
 
 interface GalleryData {
 	id: string;
@@ -28,6 +30,7 @@ export default function GuestGalleryPage() {
 	const [isUploaderOpen, setIsUploaderOpen] = useState(false);
 	const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 	const [isLiveConnected, setIsLiveConnected] = useState(false);
+	const t = useTranslations("Common");
 
 	// Pobranie metadanych galerii i listy mediów
 	const fetchData = useCallback(
@@ -130,7 +133,7 @@ export default function GuestGalleryPage() {
 				<div className="text-center space-y-3">
 					<Heart className="w-10 h-10 text-amber-500 animate-pulse mx-auto" />
 					<p className="font-serif-luxury text-lg text-slate-700">
-						Wczytywanie galerii ślubnej...
+						{t("loading")}
 					</p>
 				</div>
 			</div>
@@ -264,6 +267,11 @@ export default function GuestGalleryPage() {
 				onNavigate={(newIndex) => setLightboxIndex(newIndex)}
 				allowDownloads={gallery.allowGuestDownloads}
 			/>
+
+			{/* Stopka z dokumentami prawnymi */}
+			<footer className="pt-16 pb-8 text-center text-xs text-slate-500">
+				<LegalFooterLinks />
+			</footer>
 		</div>
 	);
 }

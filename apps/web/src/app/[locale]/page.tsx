@@ -8,10 +8,11 @@ import {
 	QrCode,
 	Sparkles,
 } from "lucide-react";
-import Link from "next/link";
+import {Link} from "@/i18n/routing";
 import { useRouter } from "next/navigation";
 import type React from "react";
 import { useState } from "react";
+import { LegalFooterLinks } from "@/components/LegalFooterLinks";
 
 export default function HomePage() {
 	const [slugInput, setSlugInput] = useState("");
@@ -138,11 +139,12 @@ export default function HomePage() {
 			</main>
 
 			{/* Stopka */}
-			<footer className="border-t border-slate-200/60 py-6 text-center text-xs text-slate-600">
-				<p>
+			<footer className="border-t border-slate-200/60 py-8 text-center text-xs text-slate-600">
+				<p className="mb-4">
 					WeddingDrop • Self-Hosted Wedding Gallery Platform • Zoptymalizowano
 					pod Intel N100
 				</p>
+				<LegalFooterLinks />
 			</footer>
 		</div>
 	);

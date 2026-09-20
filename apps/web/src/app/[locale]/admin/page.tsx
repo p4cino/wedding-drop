@@ -13,7 +13,7 @@ import {
 	Users,
 	X,
 } from "lucide-react";
-import Link from "next/link";
+import {Link} from "@/i18n/routing";
 import type React from "react";
 import { useEffect, useState } from "react";
 

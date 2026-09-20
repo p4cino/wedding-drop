@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowLeft, Check, Download, Printer, Sparkles } from "lucide-react";
-import Link from "next/link";
+import {Link} from "@/i18n/routing";
 import { useParams } from "next/navigation";
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
