@@ -138,7 +138,7 @@ export default function OwnerDashboardPage() {
 				setLoading(false);
 			}
 		},
-		[slug, loadMedia],
+		[slug, loadMedia, t],
 	);
 
 	const handleLogin = async (e: React.FormEvent) => {
@@ -189,7 +189,7 @@ export default function OwnerDashboardPage() {
 				doLogin(savedPwd);
 			}
 		}
-	}, [slug, doLogin]);
+	}, [slug, doLogin, t]);
 
 	// Nasłuch zdarzeń SSE na żywo (nowe pliki oraz postęp Google Drive)
 	useEffect(() => {

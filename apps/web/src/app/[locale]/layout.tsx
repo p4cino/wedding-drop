@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import {NextIntlClientProvider} from 'next-intl';
-import {getMessages} from 'next-intl/server';
-import {notFound} from 'next/navigation';
-import {routing} from '@/i18n/routing';
+import { notFound } from "next/navigation";
+import { NextIntlClientProvider } from "next-intl";
+import { getMessages } from "next-intl/server";
+import { routing } from "@/i18n/routing";
 import "../globals.css";
 
 export const metadata: Metadata = {
@@ -32,13 +32,13 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({
 	children,
-	params
+	params,
 }: Readonly<{
 	children: React.ReactNode;
-	params: Promise<{locale: string}>;
+	params: Promise<{ locale: string }>;
 }>) {
 	const { locale } = await params;
-	if (!routing.locales.includes(locale as any)) {
+	if (!routing.locales.includes(locale as (typeof routing.locales)[number])) {
 		notFound();
 	}
 	const messages = await getMessages();

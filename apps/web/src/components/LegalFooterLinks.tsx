@@ -1,5 +1,4 @@
 import { useTranslations } from "next-intl";
-import React from "react";
 import { Link } from "@/i18n/routing";
 
 export function LegalFooterLinks() {

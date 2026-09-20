@@ -1,6 +1,6 @@
-import {Link} from "@/i18n/routing";
 import { ArrowLeft } from "lucide-react";
 import type React from "react";
+import { Link } from "@/i18n/routing";
 
 export default function LegalLayout({
 	children,
