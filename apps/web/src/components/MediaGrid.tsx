@@ -1,6 +1,7 @@
 "use client";
 
 import { Image as ImageIcon, Play, User } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { MediaItemData } from "./LightboxModal";
 
 interface MediaGridProps {
@@ -9,6 +10,7 @@ interface MediaGridProps {
 }
 
 export default function MediaGrid({ items, onItemClick }: MediaGridProps) {
+	const t = useTranslations("GuestGallery");
 	if (items.length === 0) {
 		return (
 			<div className="text-center py-20 px-4 bg-white/60 backdrop-blur-sm rounded-3xl border border-dashed border-slate-300">
@@ -16,11 +18,10 @@ export default function MediaGrid({ items, onItemClick }: MediaGridProps) {
 					<ImageIcon className="w-8 h-8" aria-hidden="true" />
 				</div>
 				<h4 className="font-serif-luxury text-xl font-bold text-slate-800">
-					Galeria czeka na pierwsze zdjęcia!
+					{t("noPhotos")}
 				</h4>
 				<p className="text-sm text-slate-500 max-w-sm mx-auto mt-1.5">
-					Bądź pierwszą osobą, która uwieczni ten wyjątkowy dzień. Kliknij
-					przycisk poniżej, aby dodać zdjęcia.
+					{t("beFirst")}
 				</p>
 			</div>
 		);
@@ -30,14 +31,15 @@ export default function MediaGrid({ items, onItemClick }: MediaGridProps) {
 		<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
 			{items.map((item, index) => {
 				const isVideo = item.fileType === "video";
-				const uploader = item.uploaderName || "Gość";
+				const uploader = item.uploaderName || t("defaultUploaderName");
+				const ariaLabel = `${isVideo ? "Video" : "Image"}: ${item.originalFileName}, ${t("uploaderLabel")} ${uploader}`;
 
 				return (
 					<button
 						type="button"
 						key={item.id}
 						onClick={() => onItemClick(index)}
-						aria-label={`Powiększ ${isVideo ? "wideo" : "zdjęcie"}: ${item.originalFileName}, dodał: ${uploader}`}
+						aria-label={ariaLabel}
 						className="group relative aspect-square bg-slate-100 rounded-2xl overflow-hidden cursor-pointer shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02] text-left p-0 border-0 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 					>
 						{/* Miniatura */}

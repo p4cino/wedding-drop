@@ -12,16 +12,16 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 		await expect(passwordInput).toBeVisible();
 
 		// Podanie hasła i zatwierdzenie
-		await passwordInput.fill("wesele2026");
+		await passwordInput.fill("sekret123");
 		await page.getByRole("button", { name: "Zaloguj się" }).click();
 
 		// Po zalogowaniu widok dashboardu
 		await expect(
-			page.getByText("Zarządzanie galerią i moderacja treści"),
+			page.getByText("Zarządzanie galerią, eksport i moderacja treści"),
 		).toBeVisible();
 		await expect(page.getByText("Zajęte miejsce")).toBeVisible();
-		await expect(page.getByText("Zdjęcia")).toBeVisible();
-		await expect(page.getByText("Filmy")).toBeVisible();
+		await expect(page.getByText("Zdjęcia", { exact: true })).toBeVisible();
+		await expect(page.getByText("Filmy", { exact: true })).toBeVisible();
 	});
 
 	test("UC2: powinien odrzucić błędne hasło właściciela i wyświetlić błąd", async ({
@@ -35,7 +35,7 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 
 		await expect(page.getByText("Nieprawidłowe hasło")).toBeVisible();
 		await expect(
-			page.getByText("Zarządzanie galerią i moderacja treści"),
+			page.getByText("Zarządzanie galerią, eksport i moderacja treści"),
 		).not.toBeVisible();
 	});
 
@@ -43,21 +43,21 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 		page,
 	}) => {
 		await page.goto("/owner/kasia-i-tomek");
-		await page.getByPlaceholder("Wpisz hasło dostępu").fill("wesele2026");
+		await page.getByPlaceholder("Wpisz hasło dostępu").fill("sekret123");
 		await page.getByRole("button", { name: "Zaloguj się" }).click();
 
 		await expect(
-			page.getByText("Zarządzanie galerią i moderacja treści"),
+			page.getByText("Zarządzanie galerią, eksport i moderacja treści"),
 		).toBeVisible();
 
 		// Przycisk pobierania ZIP
 		const zipBtn = page.getByRole("link", {
-			name: /Pobierz wszystko \(\.ZIP\)/i,
+			name: /Pobierz ZIP/i,
 		});
 		await expect(zipBtn).toBeVisible();
 		await expect(zipBtn).toHaveAttribute(
 			"href",
-			"/api/gallery/kasia-i-tomek/zip?password=wesele2026",
+			"/api/gallery/kasia-i-tomek/zip?password=sekret123",
 		);
 	});
 
@@ -89,7 +89,7 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 		});
 
 		await page.goto("/owner/kasia-i-tomek");
-		await page.getByPlaceholder("Wpisz hasło dostępu").fill("wesele2026");
+		await page.getByPlaceholder("Wpisz hasło dostępu").fill("sekret123");
 		await page.getByRole("button", { name: "Zaloguj się" }).click();
 
 		await expect(page.getByText("Świadek Jan")).toBeVisible();
@@ -163,7 +163,7 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 		});
 
 		await page.goto("/owner/kasia-i-tomek");
-		await page.getByPlaceholder("Wpisz hasło dostępu").fill("wesele2026");
+		await page.getByPlaceholder("Wpisz hasło dostępu").fill("sekret123");
 		await page.getByRole("button", { name: "Zaloguj się" }).click();
 
 		// Domyślnie widok 'Wszystkie (2)'
@@ -208,7 +208,7 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 		});
 
 		await page.goto("/owner/kasia-i-tomek");
-		await page.getByPlaceholder("Wpisz hasło dostępu").fill("wesele2026");
+		await page.getByPlaceholder("Wpisz hasło dostępu").fill("sekret123");
 		await page.getByRole("button", { name: "Zaloguj się" }).click();
 		await expect(page.getByText("Do Skasowania")).toBeVisible();
 
@@ -244,7 +244,7 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 		page,
 	}) => {
 		await page.goto("/owner/kasia-i-tomek");
-		await page.getByPlaceholder("Wpisz hasło dostępu").fill("wesele2026");
+		await page.getByPlaceholder("Wpisz hasło dostępu").fill("sekret123");
 		await page.getByRole("button", { name: "Zaloguj się" }).click();
 
 		const cardLink = page.getByRole("link", { name: /Karteczka A6/i });

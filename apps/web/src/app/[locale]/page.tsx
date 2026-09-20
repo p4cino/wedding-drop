@@ -8,12 +8,15 @@ import {
 	QrCode,
 	Sparkles,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import type React from "react";
 import { useState } from "react";
+import { LegalFooterLinks } from "@/components/LegalFooterLinks";
+import { Link } from "@/i18n/routing";
 
 export default function HomePage() {
+	const t = useTranslations("LandingPage");
 	const [slugInput, setSlugInput] = useState("");
 	const router = useRouter();
 
@@ -45,7 +48,7 @@ export default function HomePage() {
 						href="/admin"
 						className="text-xs font-semibold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg hover:bg-slate-200/50 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 					>
-						Panel Administratora
+						{t("adminPanel")}
 					</Link>
 				</div>
 			</header>
@@ -54,29 +57,28 @@ export default function HomePage() {
 			<main className="max-w-3xl mx-auto px-6 py-12 text-center my-auto">
 				<div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-100/70 text-amber-800 text-xs font-semibold uppercase tracking-wider mb-6">
 					<Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-					Samoobsługowa Fotowrzutka Ślubna
+					{t("badge")}
 				</div>
 
 				<h1 className="font-serif-luxury text-4xl sm:text-5xl md:text-6xl font-bold text-slate-900 tracking-tight leading-tight mb-4">
-					Wszystkie zdjęcia z Twojego wesela w jednym miejscu
+					{t("heroTitle")}
 				</h1>
 
 				<p className="text-base sm:text-lg text-slate-600 max-w-xl mx-auto mb-8 font-light">
-					Goście skanują kod QR ze stolika i wrzucają zdjęcia prosto z
-					telefonów. Bez instalowania aplikacji, bez logowania i bez limitów.
+					{t("heroSubtitle")}
 				</p>
 
 				{/* Formularz wejścia do galerii */}
 				<form onSubmit={handleSearch} className="max-w-md mx-auto mb-12">
 					<div className="flex items-center bg-white p-2 rounded-2xl shadow-xl border border-slate-200/80 focus-within:ring-2 focus-within:ring-amber-500/30 transition">
 						<label htmlFor="gallery-slug-input" className="sr-only">
-							Wpisz nazwę galerii weselnej
+							{t("inputLabel")}
 						</label>
 						<input
 							id="gallery-slug-input"
 							type="text"
-							aria-label="Wpisz nazwę galerii weselnej"
-							placeholder="Wpisz nazwę galerii (np. kasia-i-tomek)"
+							aria-label={t("inputLabel")}
+							placeholder={t("inputPlaceholder")}
 							value={slugInput}
 							onChange={(e) => setSlugInput(e.target.value)}
 							className="flex-1 px-4 py-2.5 text-sm bg-transparent focus:outline-none text-slate-800"
@@ -85,7 +87,7 @@ export default function HomePage() {
 							type="submit"
 							className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition flex items-center gap-1.5 shrink-0 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 						>
-							<span>Otwórz</span>
+							<span>{t("submitBtn")}</span>
 							<ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
 						</button>
 					</div>
@@ -99,11 +101,10 @@ export default function HomePage() {
 							aria-hidden="true"
 						/>
 						<h3 className="font-bold text-slate-900 text-sm mb-1">
-							Karteczki A6 z QR
+							{t("feature1Title")}
 						</h3>
 						<p className="text-xs text-slate-500 leading-relaxed">
-							Automatyczny generator gotowych do druku winietek na stoły weselne
-							w wysokiej rozdzielczości.
+							{t("feature1Desc")}
 						</p>
 					</div>
 
@@ -113,11 +114,10 @@ export default function HomePage() {
 							aria-hidden="true"
 						/>
 						<h3 className="font-bold text-slate-900 text-sm mb-1">
-							Wznawialny Upload
+							{t("feature2Title")}
 						</h3>
 						<p className="text-xs text-slate-500 leading-relaxed">
-							Protokół TUS gwarantuje, że zerwane połączenie Wi-Fi/LTE na sali
-							wznowi się bez utraty danych.
+							{t("feature2Desc")}
 						</p>
 					</div>
 
@@ -127,22 +127,19 @@ export default function HomePage() {
 							aria-hidden="true"
 						/>
 						<h3 className="font-bold text-slate-900 text-sm mb-1">
-							Pobieranie ZIP w locie
+							{t("feature3Title")}
 						</h3>
 						<p className="text-xs text-slate-500 leading-relaxed">
-							Para młoda pobiera wszystkie zdjęcia jednym kliknięciem bez
-							czekania na kompresję i bez zapychania RAMu.
+							{t("feature3Desc")}
 						</p>
 					</div>
 				</div>
 			</main>
 
 			{/* Stopka */}
-			<footer className="border-t border-slate-200/60 py-6 text-center text-xs text-slate-600">
-				<p>
-					WeddingDrop • Self-Hosted Wedding Gallery Platform • Zoptymalizowano
-					pod Intel N100
-				</p>
+			<footer className="border-t border-slate-200/60 py-8 text-center text-xs text-slate-600">
+				<p className="mb-4">{t("footerText")}</p>
+				<LegalFooterLinks />
 			</footer>
 		</div>
 	);

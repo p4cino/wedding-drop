@@ -94,7 +94,9 @@ test.describe("Generator i Edytor Karteczki A6", () => {
 		await page.getByRole("button", { name: /Klasyczna Czerń/i }).click();
 
 		// Weryfikacja linku pobierania PDF
-		const pdfBtn = page.getByRole("link", { name: /Pobierz PDF \(300 DPI\)/i });
+		const pdfBtn = page.getByRole("link", {
+			name: /Pobierz karteczkę A6 w formacie PDF \(300 DPI\)/i,
+		});
 		await expect(pdfBtn).toBeVisible();
 
 		// Oczekiwanie na atrybut href zawierający zaktualizowane parametry

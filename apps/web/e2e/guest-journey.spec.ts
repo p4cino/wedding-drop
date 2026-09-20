@@ -148,18 +148,22 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 		await page.getByText("Wujek Staszek").click();
 
 		// Weryfikacja otwarcia Lightboxa
-		await expect(page.getByText("1 z 2")).toBeVisible();
-		await expect(page.getByText("pierwszy_taniec.jpg")).toBeVisible();
+		await expect(page.getByText("1 z 2", { exact: true })).toBeVisible();
+		await expect(
+			page.getByText("pierwszy_taniec.jpg", { exact: true }),
+		).toBeVisible();
 
 		// Nawigacja klawiaturą: Strzałka w prawo -> zdjęcie 2
 		await page.keyboard.press("ArrowRight");
-		await expect(page.getByText("2 z 2")).toBeVisible();
+		await expect(page.getByText("2 z 2", { exact: true })).toBeVisible();
 		await expect(page.getByText("tort_weselny.jpg")).toBeVisible();
 
 		// Nawigacja klawiaturą: Strzałka w lewo -> powrót do zdjęcia 1
 		await page.keyboard.press("ArrowLeft");
-		await expect(page.getByText("1 z 2")).toBeVisible();
-		await expect(page.getByText("pierwszy_taniec.jpg")).toBeVisible();
+		await expect(page.getByText("1 z 2", { exact: true })).toBeVisible();
+		await expect(
+			page.getByText("pierwszy_taniec.jpg", { exact: true }),
+		).toBeVisible();
 
 		// Zamknięcie klawiszem Escape
 		await page.keyboard.press("Escape");
@@ -179,7 +183,7 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 
 		await page.goto("/g/kasia-i-tomek");
 		await page.getByText("Wujek Staszek").click();
-		await expect(page.getByText("1 z 2")).toBeVisible();
+		await expect(page.getByText("1 z 2", { exact: true })).toBeVisible();
 
 		// 1. Symulacja Swipe w lewo (przesunięcie palca z 300px do 100px -> diff > 45px -> Następne zdjęcie)
 		await page.evaluate(() => {
@@ -199,8 +203,10 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 		});
 
 		// Powinno przejść do zdjęcia nr 2
-		await expect(page.getByText("2 z 2")).toBeVisible();
-		await expect(page.getByText("tort_weselny.jpg")).toBeVisible();
+		await expect(page.getByText("2 z 2", { exact: true })).toBeVisible();
+		await expect(
+			page.getByText("tort_weselny.jpg", { exact: true }),
+		).toBeVisible();
 
 		// 2. Symulacja Swipe w prawo (przesunięcie palca z 100px do 300px -> diff < -45px -> Poprzednie zdjęcie)
 		await page.evaluate(() => {
@@ -220,8 +226,10 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 		});
 
 		// Powrót do zdjęcia nr 1
-		await expect(page.getByText("1 z 2")).toBeVisible();
-		await expect(page.getByText("pierwszy_taniec.jpg")).toBeVisible();
+		await expect(page.getByText("1 z 2", { exact: true })).toBeVisible();
+		await expect(
+			page.getByText("pierwszy_taniec.jpg", { exact: true }),
+		).toBeVisible();
 	});
 
 	test("UC7: powinien zawierać przycisk pobierania pojedynczego zdjęcia z Lightboxa", async ({

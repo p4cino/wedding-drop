@@ -9,6 +9,7 @@ import {
 	Video,
 	X,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import * as tus from "tus-js-client";
@@ -39,6 +40,7 @@ export default function UploaderDrawer({
 	const [files, setFiles] = useState<UploadingFile[]>([]);
 	const [isUploading, setIsUploading] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const t = useTranslations("GuestGallery");
 
 	// Obsługa klawisza Escape
 	useEffect(() => {
@@ -74,7 +76,7 @@ export default function UploaderDrawer({
 		if (files.length === 0) return;
 		setIsUploading(true);
 
-		const name = uploaderName.trim() || "Gość weselny";
+		const name = uploaderName.trim() || t("defaultUploaderName");
 
 		for (let i = 0; i < files.length; i++) {
 			const item = files[i];
@@ -104,7 +106,7 @@ export default function UploaderDrawer({
 						setFiles((prev) =>
 							prev.map((f) =>
 								f.id === item.id
-									? { ...f, status: "error", error: "Błąd połączenia" }
+									? { ...f, status: "error", error: t("uploadError") }
 									: f,
 							),
 						);
@@ -168,18 +170,18 @@ export default function UploaderDrawer({
 							id="uploader-drawer-title"
 							className="font-serif-luxury text-xl font-bold text-slate-900"
 						>
-							Dodaj zdjęcia i filmy
+							{t("drawerTitle")}
 						</h3>
 						<p id="uploader-drawer-desc" className="text-xs text-slate-500">
-							Bez logowania • Zostaną zapisane w galerii
+							{t("drawerSubtitle")}
 						</p>
 					</div>
 					<button
 						type="button"
 						onClick={onClose}
 						disabled={isUploading}
-						aria-label="Zamknij okno przesyłania"
-						title="Zamknij okno przesyłania"
+						aria-label={t("drawerCloseTitle")}
+						title={t("drawerCloseTitle")}
 						className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200/50 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 					>
 						<X className="w-5 h-5" aria-hidden="true" />
@@ -194,12 +196,12 @@ export default function UploaderDrawer({
 							htmlFor="uploader-name-input"
 							className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5"
 						>
-							Twój podpis (opcjonalnie)
+							{t("signatureLabel")}
 						</label>
 						<input
 							id="uploader-name-input"
 							type="text"
-							placeholder="np. Ciocia Kasia i Wujek Michał"
+							placeholder={t("signaturePlaceholder")}
 							value={uploaderName}
 							onChange={(e) => setUploaderName(e.target.value)}
 							disabled={isUploading}
@@ -212,7 +214,7 @@ export default function UploaderDrawer({
 						type="button"
 						disabled={isUploading}
 						onClick={() => fileInputRef.current?.click()}
-						aria-label="Kliknij, aby wybrać zdjęcia lub filmy z galerii lub aparatu"
+						aria-label={t("dropzoneTitle")}
 						className="w-full border-2 border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/40 rounded-2xl p-6 text-center cursor-pointer transition group focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						<input
@@ -227,11 +229,9 @@ export default function UploaderDrawer({
 							<Upload className="w-6 h-6" aria-hidden="true" />
 						</div>
 						<p className="text-sm font-semibold text-slate-800">
-							Kliknij, aby wybrać z galerii lub aparatu
+							{t("dropzoneTitle")}
 						</p>
-						<p className="text-xs text-slate-500 mt-1">
-							Obsługa zdjęć JPEG, PNG, HEIC oraz filmów MP4/MOV
-						</p>
+						<p className="text-xs text-slate-500 mt-1">{t("dropzoneHint")}</p>
 					</button>
 
 					{/* Lista wybranych plików */}
@@ -241,10 +241,10 @@ export default function UploaderDrawer({
 								className="flex justify-between items-center text-xs text-slate-500 px-1"
 								aria-live="polite"
 							>
-								<span>Wybrano: {files.length} plików</span>
+								<span>{t("selectedCount", { count: files.length })}</span>
 								{allCompleted && (
 									<span className="text-emerald-600 font-semibold">
-										Wszystko wysłane! 🎉
+										{t("allUploaded")}
 									</span>
 								)}
 							</div>
@@ -281,7 +281,9 @@ export default function UploaderDrawer({
 													aria-valuenow={item.progress}
 													aria-valuemin={0}
 													aria-valuemax={100}
-													aria-label={`Postęp wysyłania: ${item.file.name}`}
+													aria-label={t("progressAria", {
+														name: item.file.name,
+													})}
 													className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden"
 												>
 													<div
@@ -323,8 +325,12 @@ export default function UploaderDrawer({
 															e.stopPropagation();
 															removeFile(item.id);
 														}}
-														aria-label={`Usuń plik ${item.file.name}`}
-														title={`Usuń plik ${item.file.name}`}
+														aria-label={t("removeFileTitle", {
+															name: item.file.name,
+														})}
+														title={t("removeFileTitle", {
+															name: item.file.name,
+														})}
 														className="p-1 hover:text-red-500 text-slate-400 focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:outline-none rounded-md"
 													>
 														<X className="w-4 h-4" aria-hidden="true" />
@@ -348,7 +354,7 @@ export default function UploaderDrawer({
 							className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-semibold shadow-lg shadow-emerald-600/20 transition flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
 						>
 							<CheckCircle2 className="w-5 h-5" aria-hidden="true" />
-							Gotowe, wróć do galerii
+							{t("doneBtn")}
 						</button>
 					) : (
 						<button
@@ -363,12 +369,12 @@ export default function UploaderDrawer({
 										className="w-5 h-5 animate-spin"
 										aria-hidden="true"
 									/>
-									Wysyłanie plików...
+									{t("uploadingBtn")}
 								</>
 							) : (
 								<>
 									<Upload className="w-5 h-5" aria-hidden="true" />
-									Wyślij do galerii ({files.length})
+									{t("submitBtn", { count: files.length })}
 								</>
 							)}
 						</button>

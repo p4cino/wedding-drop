@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import "./globals.css";
+import { notFound } from "next/navigation";
+import { NextIntlClientProvider } from "next-intl";
+import { getMessages } from "next-intl/server";
+import { routing } from "@/i18n/routing";
+import "../globals.css";
 
 export const metadata: Metadata = {
 	title: "WeddingDrop - Zdjęcia i Filmy z Wesela",
@@ -26,18 +30,28 @@ export const viewport: Viewport = {
 	themeColor: "#FAF8F5",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
 	children,
+	params,
 }: Readonly<{
 	children: React.ReactNode;
+	params: Promise<{ locale: string }>;
 }>) {
+	const { locale } = await params;
+	if (!routing.locales.includes(locale as (typeof routing.locales)[number])) {
+		notFound();
+	}
+	const messages = await getMessages();
+
 	return (
-		<html lang="pl">
+		<html lang={locale}>
 			<head>
 				<meta name="robots" content="noindex, nofollow, noarchive" />
 			</head>
 			<body className="min-h-screen bg-[#FAF8F5] text-slate-800 antialiased selection:bg-amber-100 selection:text-amber-900">
-				{children}
+				<NextIntlClientProvider messages={messages}>
+					{children}
+				</NextIntlClientProvider>
 			</body>
 		</html>
 	);

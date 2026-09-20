@@ -61,12 +61,10 @@ describe("UploaderDrawer Component", () => {
 			/>,
 		);
 
-		expect(screen.getByText("Dodaj zdjęcia i filmy")).toBeInTheDocument();
+		expect(screen.getByText("drawerTitle")).toBeInTheDocument();
 
 		// Wpisanie podpisu
-		const nameInput = screen.getByPlaceholderText(
-			/np. Ciocia Kasia i Wujek Michał/i,
-		);
+		const nameInput = screen.getByPlaceholderText("signaturePlaceholder");
 		fireEvent.change(nameInput, { target: { value: "Wujek Zdzichu" } });
 		expect(nameInput).toHaveValue("Wujek Zdzichu");
 
@@ -85,16 +83,16 @@ describe("UploaderDrawer Component", () => {
 
 		// Kliknięcie "Wyślij do galerii"
 		const uploadBtn = screen.getByRole("button", {
-			name: /Wyślij do galerii/i,
+			name: "submitBtn",
 		});
 		fireEvent.click(uploadBtn);
 
 		await waitFor(() => {
-			expect(screen.getByText(/Gotowe, wróć do galerii/i)).toBeInTheDocument();
+			expect(screen.getByText("doneBtn")).toBeInTheDocument();
 		});
 
 		const doneBtn = screen.getByRole("button", {
-			name: /Gotowe, wróć do galerii/i,
+			name: "doneBtn",
 		});
 		fireEvent.click(doneBtn);
 		expect(onClose).toHaveBeenCalled();
@@ -144,7 +142,7 @@ describe("UploaderDrawer Component", () => {
 		fireEvent.change(fileInput, { target: { files: [file] } });
 
 		const uploadBtn = screen.getByRole("button", {
-			name: /Wyślij do galerii/i,
+			name: "submitBtn",
 		});
 		fireEvent.click(uploadBtn);
 
@@ -167,9 +165,7 @@ describe("UploaderDrawer Component", () => {
 		) as HTMLInputElement;
 		const clickSpy = vi.spyOn(fileInput, "click");
 
-		const dropzone = screen.getByText(
-			/Kliknij, aby wybrać z galerii lub aparatu/i,
-		).parentElement;
+		const dropzone = screen.getByText("dropzoneTitle").parentElement;
 		if (dropzone) {
 			fireEvent.click(dropzone);
 			expect(clickSpy).toHaveBeenCalled();
@@ -207,7 +203,7 @@ describe("UploaderDrawer Component", () => {
 		fireEvent.change(fileInput, { target: { files: [file] } });
 
 		const uploadBtn = screen.getByRole("button", {
-			name: /Wyślij do galerii/i,
+			name: "submitBtn",
 		});
 		fireEvent.click(uploadBtn);
 
