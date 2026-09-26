@@ -15,7 +15,7 @@
 		"@tus/server": "^2.4.5",
 		"@wedding-drop/db": "workspace:*",
 		"archiver": "^8.0.0",
-		"drizzle-orm": "^0.45.2",
+		"drizzle-orm": "^0.45.3",
 		"googleapis": "^181.0.0",
 		"p-queue": "^9.3.3",
 		"pdf-lib": "^1.17.1",
