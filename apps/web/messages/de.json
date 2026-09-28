@@ -123,6 +123,7 @@
 		"closeLightbox": "Vorschau schließen",
 		"prevMedia": "Zurück",
 		"nextMedia": "Weiter",
+		"progressCount": "{current} von {total}",
 		"downloadOriginal": "Originaldatei herunterladen",
 		"badge": "Hochzeitserinnerungen",
 		"live": "Live",
