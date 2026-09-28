@@ -46,12 +46,45 @@ vi.mock("tus-js-client", () => {
 	};
 });
 
+vi.mock("@/components/CameraCapture", () => ({
+	default: ({
+		onCapture,
+		onCancel,
+	}: {
+		onCapture: (file: File) => void;
+		onCancel: () => void;
+	}) => (
+		<div data-testid="camera-capture-mock">
+			<button
+				type="button"
+				onClick={() =>
+					onCapture(
+						new File(["dane-zdjecia"], "photobooth_123.jpg", {
+							type: "image/jpeg",
+						}),
+					)
+				}
+			>
+				mock-camera-shutter
+			</button>
+			<button type="button" onClick={onCancel}>
+				mock-camera-cancel
+			</button>
+		</div>
+	),
+}));
+
 describe("UploaderDrawer Component", () => {
 	beforeEach(() => {
 		shouldFailUpload = false;
 		failFileNames = new Set();
 		deferUploadFinish = false;
 		pendingFinish = null;
+		// Symulacja obsługi getUserMedia przez przeglądarkę — opcja "Zrób zdjęcie" widoczna
+		Object.defineProperty(navigator, "mediaDevices", {
+			configurable: true,
+			value: { getUserMedia: vi.fn() },
+		});
 	});
 
 	it("nie powinien renderować niczego, gdy isOpen === false", () => {
@@ -309,5 +342,76 @@ describe("UploaderDrawer Component", () => {
 		await waitFor(() => {
 			expect(screen.getByText("doneBtn")).toBeInTheDocument();
 		});
+	});
+
+	it("powinien otworzyć tryb aparatu i dodać zrobione zdjęcie do wspólnej kolejki uploadu", async () => {
+		render(
+			<UploaderDrawer
+				gallerySlug="kasia-i-tomek"
+				primaryColor="#112233"
+				accentColor="#AABBCC"
+				isOpen={true}
+				onClose={vi.fn()}
+			/>,
+		);
+
+		// Otwarcie trybu aparatu
+		fireEvent.click(screen.getByRole("button", { name: "cameraOptionBtn" }));
+		expect(screen.getByTestId("camera-capture-mock")).toBeInTheDocument();
+
+		// Symulacja zrobienia zdjęcia (mock CameraCapture wywołuje onCapture)
+		fireEvent.click(screen.getByText("mock-camera-shutter"));
+
+		// Powrót do widoku wyboru plików + zdjęcie z aparatu na wspólnej liście
+		expect(screen.queryByTestId("camera-capture-mock")).toBeNull();
+		expect(screen.getByText("photobooth_123.jpg")).toBeInTheDocument();
+
+		// Zdjęcie z aparatu trafia do dokładnie tej samej kolejki wysyłki `startUpload`
+		const uploadBtn = screen.getByRole("button", { name: "submitBtn" });
+		fireEvent.click(uploadBtn);
+
+		await waitFor(() => {
+			expect(screen.getByText("doneBtn")).toBeInTheDocument();
+		});
+	});
+
+	it("powinien wrócić do wyboru plików po anulowaniu trybu aparatu, bez dodawania zdjęcia", () => {
+		render(
+			<UploaderDrawer
+				gallerySlug="kasia-i-tomek"
+				isOpen={true}
+				onClose={vi.fn()}
+			/>,
+		);
+
+		fireEvent.click(screen.getByRole("button", { name: "cameraOptionBtn" }));
+		expect(screen.getByTestId("camera-capture-mock")).toBeInTheDocument();
+
+		fireEvent.click(screen.getByText("mock-camera-cancel"));
+
+		expect(screen.queryByTestId("camera-capture-mock")).toBeNull();
+		expect(
+			screen.getByRole("button", { name: "cameraOptionBtn" }),
+		).toBeInTheDocument();
+		expect(screen.queryByText("photobooth_123.jpg")).toBeNull();
+	});
+
+	it("nie powinien pokazywać opcji 'Zrób zdjęcie', gdy przeglądarka nie obsługuje getUserMedia", () => {
+		Object.defineProperty(navigator, "mediaDevices", {
+			configurable: true,
+			value: undefined,
+		});
+
+		render(
+			<UploaderDrawer
+				gallerySlug="kasia-i-tomek"
+				isOpen={true}
+				onClose={vi.fn()}
+			/>,
+		);
+
+		expect(
+			screen.queryByRole("button", { name: "cameraOptionBtn" }),
+		).toBeNull();
 	});
 });

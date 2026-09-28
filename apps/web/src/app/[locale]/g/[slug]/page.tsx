@@ -18,6 +18,11 @@ interface GalleryData {
 	isActive: boolean;
 	allowGuestDownloads: boolean;
 	allowVideos: boolean;
+	// Kolory motywu wesela (zawsze zwracane przez API, z domyślnymi wartościami
+	// generatora winietek A6, gdy galeria nie ma zapisanych ustawień) — używane
+	// do ramki zdjęcia zrobionego w photobooth przeglądarki.
+	primaryColor?: string;
+	accentColor?: string;
 }
 
 export default function GuestGalleryPage() {
@@ -243,6 +248,8 @@ export default function GuestGalleryPage() {
 			{/* Drawer Uploadu */}
 			<UploaderDrawer
 				gallerySlug={slug}
+				primaryColor={gallery.primaryColor}
+				accentColor={gallery.accentColor}
 				isOpen={isUploaderOpen}
 				onClose={() => {
 					setIsUploaderOpen(false);
