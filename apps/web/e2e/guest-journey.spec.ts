@@ -232,6 +232,89 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 		).toBeVisible();
 	});
 
+	test("UC8: powinien umożliwić dodanie życzenia z księgi gości i wyświetlić je natychmiast na liście", async ({
+		page,
+	}) => {
+		let wishesStore: Array<{
+			id: string;
+			guestName: string | null;
+			message: string;
+			createdAt: string;
+		}> = [];
+
+		await page.route("**/api/gallery/kasia-i-tomek/wishes", async (route) => {
+			const method = route.request().method();
+			if (method === "POST") {
+				const body = route.request().postDataJSON();
+				const newWish = {
+					id: `wish-${wishesStore.length + 1}`,
+					guestName: body.guestName || null,
+					message: body.message,
+					createdAt: new Date().toISOString(),
+				};
+				wishesStore = [newWish, ...wishesStore];
+				await route.fulfill({
+					status: 201,
+					contentType: "application/json",
+					body: JSON.stringify({ success: true, wish: newWish }),
+				});
+			} else {
+				await route.fulfill({
+					status: 200,
+					contentType: "application/json",
+					body: JSON.stringify({ wishes: wishesStore }),
+				});
+			}
+		});
+
+		await page.goto("/g/kasia-i-tomek");
+
+		// Przejście na zakładkę Życzenia
+		await page.getByRole("tab", { name: /Życzenia/i }).click();
+		await expect(
+			page.getByText("Księga życzeń czeka na pierwsze wpisy"),
+		).toBeVisible();
+
+		// Wypełnienie formularza życzenia
+		await page
+			.getByPlaceholder("np. Ciocia Kasia i Wujek Michał")
+			.fill("Ciocia Zosia");
+		await page
+			.getByPlaceholder("Napisz kilka ciepłych słów dla Pary Młodej...")
+			.fill("Sto lat i samych szczęśliwych dni!");
+
+		await page.getByRole("button", { name: /Wyślij życzenia/i }).click();
+
+		// Życzenie powinno pojawić się natychmiast na liście
+		await expect(
+			page.getByText("Sto lat i samych szczęśliwych dni!"),
+		).toBeVisible();
+		await expect(page.getByText("Ciocia Zosia")).toBeVisible();
+	});
+
+	test("UC9: przycisk wysyłania życzenia powinien być zablokowany, dopóki treść jest pusta", async ({
+		page,
+	}) => {
+		await page.route("**/api/gallery/kasia-i-tomek/wishes", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({ wishes: [] }),
+			});
+		});
+
+		await page.goto("/g/kasia-i-tomek");
+		await page.getByRole("tab", { name: /Życzenia/i }).click();
+
+		const submitBtn = page.getByRole("button", { name: /Wyślij życzenia/i });
+		await expect(submitBtn).toBeDisabled();
+
+		await page
+			.getByPlaceholder("Napisz kilka ciepłych słów dla Pary Młodej...")
+			.fill("Wszystkiego najlepszego!");
+		await expect(submitBtn).toBeEnabled();
+	});
+
 	test("UC7: powinien zawierać przycisk pobierania pojedynczego zdjęcia z Lightboxa", async ({
 		page,
 	}) => {

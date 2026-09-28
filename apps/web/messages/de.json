@@ -133,7 +133,9 @@
 		"notFoundTitle": "Galerie nicht gefunden",
 		"notFoundDesc": "Stellen Sie sicher, dass die URL oder der QR-Code korrekt ist.",
 		"homeBtn": "Startseite",
-		"addPhotosAria": "Fügen Sie Fotos und Videos zur Galerie hinzu"
+		"addPhotosAria": "Fügen Sie Fotos und Videos zur Galerie hinzu",
+		"tabsAria": "Zwischen Fotos und Wünschen wechseln",
+		"tabPhotos": "Fotos und Videos"
 	},
 	"CardPage": {
 		"paletteGoldNavy": "Gold & Marineblau",
@@ -247,5 +249,31 @@
 		"cancelBtn": "Abbrechen",
 		"initBtn": "Initialisierung...",
 		"startBtn": "Export starten"
+	},
+	"Wishes": {
+		"tabWishes": "Wünsche ({count})",
+		"formTitle": "Hinterlassen Sie einen Wunsch für das Brautpaar",
+		"nameLabel": "Ihr Name (optional)",
+		"namePlaceholder": "z. B. Tante Kate und Onkel Mike",
+		"messageLabel": "Ihr Wunsch",
+		"messagePlaceholder": "Schreiben Sie ein paar warme Worte für das Brautpaar...",
+		"messageRequired": "Der Wunschtext ist erforderlich",
+		"submitError": "Der Wunsch konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
+		"sending": "Wird gesendet...",
+		"submitBtn": "Wunsch senden",
+		"noWishes": "Das Wunschbuch wartet auf die ersten Einträge",
+		"beFirstWish": "Seien Sie der Erste, der dem Brautpaar ein warmes Wort hinterlässt!",
+		"anonymousGuest": "Anonymer Gast",
+		"moderationTitle": "Filter:",
+		"moderationFilterAria": "Wünsche filtern",
+		"filterAll": "Alle ({count})",
+		"filterVisible": "Sichtbar ({count})",
+		"filterHidden": "Versteckt ({count})",
+		"noWishesOwner": "Keine Wünsche in dieser Kategorie.",
+		"hiddenOverlay": "Versteckt",
+		"hideAction": "Vor Gästen verbergen",
+		"showAction": "Im Wunschbuch anzeigen",
+		"deleteAction": "Unwiderruflich löschen",
+		"deleteConfirm": "Sind Sie sicher, dass Sie diesen Wunsch unwiderruflich löschen möchten?"
 	}
 }

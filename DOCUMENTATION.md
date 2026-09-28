@@ -166,6 +166,20 @@ Dla zapewnienia błyskawicznego działania zapytań SQL na tysiącach zdjęć ut
 | `username` | TEXT UNIQUE | Login administratora |
 | `password_hash` | TEXT | Hasz hasła administratora (bcrypt) |
 
+### Tabela `wishes`
+Oddzielna, równoległa do `media_items` "księga życzeń" — tekstowe życzenia gości niezwiązane z żadnym plikiem, o identycznym kształcie stanu i moderacji.
+
+| Kolumna | Typ | Opis |
+|---|---|---|
+| `id` | UUID | Klucz główny (`defaultRandom()`) |
+| `gallery_id` | UUID FK | Odwołanie do `galleries.id` (`ON DELETE CASCADE`) |
+| `guest_name` | TEXT (nullable) | Opcjonalne imię/nazwisko gościa — `NULL` wyświetlane w UI jako "Anonimowy gość" |
+| `message` | TEXT | Treść życzenia (wymagane, max 500 znaków) |
+| `status` | TEXT | `ready` (widoczne), `hidden` (ukryte przez parę), `deleted` (trwale usunięte — soft-delete, bo brak plików do fizycznego skasowania) |
+| `created_at` | TIMESTAMPTZ | Czas dodania |
+
+Indeks `idx_wishes_gallery_status_created` na `(gallery_id, status, created_at)` — identyczny wzorzec co `idx_media_items_gallery_status_created`, bo zapytania mają dokładnie ten sam kształt (lista życzeń danej galerii, filtrowana po statusie, sortowana chronologicznie).
+
 ---
 
 ## 5. Wykaz Endpointów API
@@ -178,6 +192,8 @@ Dla zapewnienia błyskawicznego działania zapytań SQL na tysiącach zdjęć ut
 - `GET /api/gallery/:slug/live` – Strumień Server-Sent Events (SSE):
   - Emisja `new-media`: powiadomienie o nowym przetworzonym zdjęciu.
   - Emisja `media-updated`: natychmiastowa aktualizacja widoczności (ukrycie/odkrycie/usunięcie) synchronizowana na żywo na ekranach wszystkich gości.
+  - Emisja `new-wish`: powiadomienie o nowym życzeniu dodanym do księgi gości.
+  - Emisja `wish-updated`: natychmiastowa aktualizacja widoczności życzenia (ukrycie/odkrycie/usunięcie) synchronizowana na żywo, tym samym wzorcem co `media-updated`.
 - `ANY /api/upload/tus/*` – W pełni zgodny ze specyfikacją protokół TUS 1.0.0 (`POST`, `PATCH`, `HEAD`, `OPTIONS`, `DELETE`).
 - `GET /api/gallery/:slug/card/pdf` – Wektorowy dokument PDF A6 (300 DPI) generowany w locie:
   - Obsługuje zapytanie z parametrami URL (`headline`, `primaryColor`, `accentColor`, `instructions`), dzięki czemu pobierany plik od razu odzwierciedla stan edytora wizualnego bez wymogu uprzedniego zapisu w bazie.
@@ -186,12 +202,23 @@ Dla zapewnienia błyskawicznego działania zapytań SQL na tysiącach zdjęć ut
   - Weryfikuje uprawnienie `allowGuestDownloads` oraz PIN galerii.
   - Przy podaniu hasła właściciela (`?password=`) do archiwum dołączane są również zdjęcia ukryte (`status: "hidden"`).
   - Oparte o nowoczesny strumień `ZipArchive` z pakietu `archiver` (brak buforowania gigabajtów w RAM).
+  - Jeśli galeria zawiera widoczne życzenia (zgodnie z tymi samymi zasadami widoczności `hidden` co przy przeglądaniu przez właściciela), do archiwum dogrywany jest dodatkowy plik tekstowy `zyczenia.txt` z treścią i autorem każdego wpisu.
 - `GET /media-file/*` – Bezpośrednie serwowanie statycznych plików przez zoptymalizowane proxy Caddy (bez udziału Node.js), z pełną obsługą cache i nagłówków Byte-Range.
+- `POST /api/gallery/:slug/wishes` – Dodanie tekstowego życzenia do księgi gości (publiczne, bez logowania, bez pliku):
+  - Waliduje `addWishDto` (treść wymagana, max 500 znaków; opcjonalne imię/nazwisko, max 60 znaków).
+  - Odrzuca żądanie kodem `404`, gdy galeria nie istnieje, lub `400`, gdy jest nieaktywna albo treść jest pusta/nieprawidłowa.
+  - Emitowana jest natychmiastowa notyfikacja SSE `new-wish`.
+- `GET /api/gallery/:slug/wishes` – Lista życzeń, dokładnie ten sam wzorzec autoryzacji co `GET /api/gallery/:slug/media` (`includeHidden`, `ownerToken`/`password`/`adminToken`):
+  - Bez poświadczeń zwraca wyłącznie życzenia o statusie `ready`.
+  - Z poświadczeniami właściciela/administratora zwraca wszystkie poza `deleted`.
 
 ### Panel Pary Młodej (RESTful API)
 - `POST /api/owner/:slug/auth` – Logowanie hasłem właściciela, wydanie podpisanego tokenu HMAC-SHA256, zwrócenie statystyk galerii, stanu Google Drive i konfiguracji winietki.
 - `PATCH /api/owner/:slug/media/:id/status` – Zmiana widoczności zdjęcia (`ready` <-> `hidden`) autoryzowana tokenem HMAC, wraz z natychmiastową emisją SSE `media-updated`.
 - `DELETE /api/owner/:slug/media/:id` – Fizyczne usunięcie pliku źródłowego i miniatury z dysku oraz bazy danych z powiadomieniem SSE.
+- `PATCH /api/owner/:slug/wishes/:id/status` – Moderacja życzenia autoryzowana tokenem HMAC (`authenticateOwner`), analogicznie do moderacji zdjęć:
+  - `newStatus: "hidden"` ukrywa życzenie przed gośćmi, `"ready"` przywraca widoczność, `"deleted"` trwale je usuwa (soft-delete — brak plików do fizycznego skasowania, więc wystarczy zmiana statusu).
+  - Emisja SSE `wish-updated` synchronizuje zmianę na żywo ze wszystkimi otwartymi widokami galerii.
 - `PUT /api/owner/:slug/card` – Zapis zmodyfikowanych kolorów i tekstów winietki.
 - `GET /api/owner/:slug/gdrive` – Pobranie aktualnego stanu transferu, liczby przetworzonych bajtów i linku do folderu Google Drive.
 - `POST /api/owner/:slug/gdrive/export` – Uruchomienie asynchronicznego eksportu multimediów na Dysk Google w tle z opcją dołączenia ukrytych zdjęć.
@@ -297,13 +324,14 @@ Projekt objęty jest dwupoziomową piramidą testów automatycznych oraz standar
    - Weryfikacja typów TypeScript w całym monorepo: `pnpm -r check-types`.
 
 2. **Testy Jednostkowe i Integracyjne (Vitest)**:
-   - Liczba testów: **80 testów** w 11 plikach.
-   - `packages/media/tests/`: 28 testów potoku przetwarzania mediów, integracji Google Drive i wznawialnego serwera TUS.
-   - `apps/web/tests/`: 52 testy integracyjne tras API (`admin`, `gallery`, `owner`) oraz komponentów UI (`LightboxModal`, `MediaGrid`, `UploaderDrawer`).
+   - Liczba testów: **241 testów** w 24 plikach.
+   - `packages/db/tests/`: 36 testów schematu Drizzle, walidatorów Zod (w tym `wishes`/`addWishDto`) i klienta bazy.
+   - `packages/media/tests/`: 70 testów potoku przetwarzania mediów, integracji Google Drive, wznawialnego serwera TUS, event-busa SSE (w tym `new-wish`/`wish-updated`) i strumienia ZIP (w tym dołączanie `zyczenia.txt`).
+   - `apps/web/tests/`: 135 testów integracyjnych tras API (`admin`, `gallery`, `owner`, w tym księga życzeń) oraz komponentów UI (`LightboxModal`, `MediaGrid`, `UploaderDrawer`).
    - Uruchomienie: `pnpm turbo run test` lub `docker run --rm -v "${PWD}:/app" -w /app node:24-alpine sh -c "corepack enable && pnpm -r test"`
 
 3. **Testy End-to-End (Playwright)**:
-   - Liczba testów: **32 unikalne scenariusze (96 testów łącznych)** w katalogu `apps/web/e2e/`.
+   - Liczba testów: **36 unikalnych scenariuszy (108 testów łącznych)** w katalogu `apps/web/e2e/`.
    - Macierz środowiskowa: **Desktop Chromium**, **Mobile Chrome (Pixel 5)**, **Mobile Safari (iPhone 13 / WebKit)**.
    - Uruchomienie: `pnpm --filter @wedding-drop/web test:e2e` lub w sieci Docker:
      `docker run --rm --network wedding-drop_wedding_net -v wedding_playwright_browsers:/ms-playwright -v "${PWD}:/app" -w /app/apps/web -e BASE_URL=http://wedding_web:3000 mcr.microsoft.com/playwright:v1.50.0-noble npx playwright test`
