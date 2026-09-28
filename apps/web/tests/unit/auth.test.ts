@@ -3,6 +3,7 @@ import {
 	generateAdminToken,
 	generateOwnerToken,
 	verifyAdminToken,
+	verifyOwnerCredentialsForTus,
 	verifyOwnerToken,
 } from "@/lib/auth";
 
@@ -38,5 +39,31 @@ describe("Auth HMAC Tokens", () => {
 		parts[3] =
 			"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
 		expect(verifyOwnerToken(parts.join("_"), slug)).toBe(false);
+	});
+});
+
+describe("verifyOwnerCredentialsForTus (adapter wstrzykiwany do packages/media)", () => {
+	it("powinien zaakceptować poprawny token właściciela dla danego sluga galerii", () => {
+		const slug = "kasia-i-tomek";
+		const token = generateOwnerToken(slug);
+		expect(verifyOwnerCredentialsForTus(slug, token)).toBe(true);
+	});
+
+	it("powinien odrzucić brak tokenu", () => {
+		expect(verifyOwnerCredentialsForTus("kasia-i-tomek", undefined)).toBe(
+			false,
+		);
+	});
+
+	it("powinien odrzucić token wygenerowany dla innej galerii", () => {
+		const token = generateOwnerToken("kasia-i-tomek");
+		expect(verifyOwnerCredentialsForTus("inna-galeria", token)).toBe(false);
+	});
+
+	it("powinien odrzucić sfałszowany token", () => {
+		const token = generateOwnerToken("kasia-i-tomek");
+		expect(verifyOwnerCredentialsForTus("kasia-i-tomek", `${token}bad`)).toBe(
+			false,
+		);
 	});
 });

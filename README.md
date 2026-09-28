@@ -65,6 +65,7 @@ Szybki podgląd wszystkich ślubów, zarządzanie przestrzenią dyskową oraz b�
 2. **Dla Pary Młodej (Właściciela Galerii)**:
    - Panel zarządzania dostępny pod `/owner/[slug]`.
    - Podgląd liczby zdjęć, filmów oraz sumarycznego zajętego miejsca na dysku.
+   - **Import materiałów fotografa/kamerzysty**: masowy, wznawialny import profesjonalnych zdjęć i filmów (ten sam protokół TUS co upload gości) do tej samej galerii i chronologii — dostępny wyłącznie po zalogowaniu właściciela. Zaimportowane pliki są oznaczone w siatce galerii odróżniającą odznaką "Fotograf" i przechodzą przez dokładnie tę samą, ograniczoną kolejkę przetwarzania (`p-queue` concurrency: 2) co uploady gości — bez priorytetu ani osobnego limitu. Jeśli administrator ustawił limit pojemności galerii (`maxStorageBytes`), import fotografa go respektuje i odrzuci pojedyncze pliki przekraczające limit (nie wpływając na pozostałe pliki tej samej paczki importu).
    - **Pobieranie całej galerii jako jeden plik ZIP**: Generowanie strumieniowe w locie (`archiver`) bez obciążania pamięci RAM serwera (z uwzględnieniem zdjęć ukrytych po podaniu hasła).
    - **Moderacja na żywo**: Szybkie ukrywanie zdjęć niepożądanych jednym kliknięciem oraz usuwanie — zmiana statusu natychmiast synchronizuje się ze wszystkimi telefonami na sali weselnej przez SSE (`media-updated`).
    - Bezpośredni dostęp do generatora winietki na stolik.

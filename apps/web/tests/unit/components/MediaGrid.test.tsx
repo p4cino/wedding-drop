@@ -51,4 +51,35 @@ describe("MediaGrid Component", () => {
 		fireEvent.click(images[1]);
 		expect(onItemClick).toHaveBeenCalledWith(1);
 	});
+
+	it("powinien wyświetlić odznakę fotografa wyłącznie dla materiałów source: photographer", () => {
+		const mockItems: MediaItemData[] = [
+			{
+				id: "1",
+				uploaderName: "Wujek Staszek",
+				source: "guest",
+				fileType: "image",
+				mimeType: "image/jpeg",
+				originalFileName: "taniec.jpg",
+				thumbUrl: "/thumb1.webp",
+				rawUrl: "/raw1.jpg",
+				createdAt: "2026-09-12",
+			},
+			{
+				id: "2",
+				uploaderName: "Fotograf Jan Kowalski",
+				source: "photographer",
+				fileType: "image",
+				mimeType: "image/jpeg",
+				originalFileName: "sesja.jpg",
+				thumbUrl: "/thumb2.webp",
+				rawUrl: "/raw2.jpg",
+				createdAt: "2026-09-12",
+			},
+		];
+
+		render(<MediaGrid items={mockItems} onItemClick={vi.fn()} />);
+
+		expect(screen.getAllByText("photographerBadge")).toHaveLength(1);
+	});
 });

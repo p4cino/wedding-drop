@@ -133,7 +133,8 @@
 		"notFoundTitle": "Gallery not found",
 		"notFoundDesc": "Make sure the URL or QR code is correct.",
 		"homeBtn": "Home",
-		"addPhotosAria": "Add photos and videos to the gallery"
+		"addPhotosAria": "Add photos and videos to the gallery",
+		"photographerBadge": "Photographer"
 	},
 	"CardPage": {
 		"paletteGoldNavy": "Gold & Navy",
@@ -246,6 +247,19 @@
 		"folderNote2": "Files will be unpacked and retain original 1:1 quality.",
 		"cancelBtn": "Cancel",
 		"initBtn": "Initializing...",
-		"startBtn": "Start export"
+		"startBtn": "Start export",
+		"photographerBadge": "Photographer",
+		"importTitle": "Import photographer's photos/videos",
+		"importSubtitle": "Bulk import of files from a professional photographer or videographer into this same gallery",
+		"importDropzoneTitle": "Click to select the photographer's files from disk",
+		"importDropzoneHint": "Supports JPEG, PNG, HEIC photos and MP4/MOV videos - select many files at once",
+		"importSelectedCount": "Selected: {count} files",
+		"importClearAll": "Clear list",
+		"importAllUploaded": "Imported {count} files! 🎉",
+		"importProgressAria": "Import progress: {name}",
+		"importRemoveFileTitle": "Remove file {name} from the import list",
+		"importError": "Import error (check authorization or gallery storage limit)",
+		"importUploadingBtn": "Importing files...",
+		"importSubmitBtn": "Import to gallery ({count})"
 	}
 }

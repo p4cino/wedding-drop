@@ -251,4 +251,107 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 		await expect(cardLink).toBeVisible();
 		await expect(cardLink).toHaveAttribute("href", "/g/kasia-i-tomek/card");
 	});
+
+	test("UC8: import fotografa bez poprawnego tokenu właściciela powinien zostać odrzucony przez serwer TUS (401)", async ({
+		request,
+	}) => {
+		// Prawdziwe żądanie utworzenia uploadu TUS (protokół tus 1.0.0) do rzeczywistego backendu -
+		// weryfikuje, że onUploadCreate w packages/media/src/tus-server.ts odrzuca import fotografa
+		// bez wstrzykniętej, poprawnej autoryzacji właściciela, zanim jakikolwiek plik trafi na dysk.
+		const encodeMeta = (value: string) =>
+			Buffer.from(value, "utf-8").toString("base64");
+
+		const metadataNoToken = [
+			`gallerySlug ${encodeMeta("kasia-i-tomek")}`,
+			`source ${encodeMeta("photographer")}`,
+			`originalName ${encodeMeta("sesja-bez-tokenu.jpg")}`,
+			`fileType ${encodeMeta("image/jpeg")}`,
+		].join(",");
+
+		const resNoToken = await request.post("/api/upload/tus", {
+			headers: {
+				"Tus-Resumable": "1.0.0",
+				"Upload-Length": "1000",
+				"Upload-Metadata": metadataNoToken,
+			},
+		});
+		expect(resNoToken.status()).toBe(401);
+
+		const metadataWrongToken = [
+			`gallerySlug ${encodeMeta("kasia-i-tomek")}`,
+			`source ${encodeMeta("photographer")}`,
+			`ownerToken ${encodeMeta("owner_1_ZmFrZQ==_totalnie-zly-hmac")}`,
+			`originalName ${encodeMeta("sesja-zly-token.jpg")}`,
+			`fileType ${encodeMeta("image/jpeg")}`,
+		].join(",");
+
+		const resWrongToken = await request.post("/api/upload/tus", {
+			headers: {
+				"Tus-Resumable": "1.0.0",
+				"Upload-Length": "1000",
+				"Upload-Metadata": metadataWrongToken,
+			},
+		});
+		expect(resWrongToken.status()).toBe(401);
+	});
+
+	test("UC9: powinien umożliwić import fotografa po zalogowaniu i wyświetlić odróżniającą odznakę źródła w galerii", async ({
+		page,
+	}) => {
+		// Symulacja odpowiedzi galerii po pomyślnym imporcie fotografa - potwierdza, że panel importu
+		// jest dostępny po zalogowaniu właściciela i że materiały source: "photographer" otrzymują
+		// odróżniającą odznakę w siatce moderacji (patrz MediaGridWithModeration.tsx).
+		await page.route("**/api/gallery/kasia-i-tomek/media*", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({
+					media: [
+						{
+							id: "foto-gosc",
+							uploaderName: "Ciocia Ania",
+							source: "guest",
+							fileType: "image",
+							originalFileName: "kwiaty.jpg",
+							fileSize: 204800,
+							thumbUrl:
+								"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='pink'/></svg>",
+							rawUrl: "#",
+							status: "ready",
+							createdAt: "2026-09-12T12:00:00.000Z",
+						},
+						{
+							id: "foto-fotograf",
+							uploaderName: "Fotograf Jan Kowalski",
+							source: "photographer",
+							fileType: "image",
+							originalFileName: "sesja-plenerowa.jpg",
+							fileSize: 4096000,
+							thumbUrl:
+								"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='goldenrod'/></svg>",
+							rawUrl: "#",
+							status: "ready",
+							createdAt: "2026-09-12T13:00:00.000Z",
+						},
+					],
+				}),
+			});
+		});
+
+		await page.goto("/owner/kasia-i-tomek");
+		await page.getByPlaceholder("Wpisz hasło dostępu").fill("sekret123");
+		await page.getByRole("button", { name: "Zaloguj się" }).click();
+
+		// Sekcja importu fotografa jest widoczna wyłącznie po zalogowaniu właściciela
+		await expect(
+			page.getByText("Importuj zdjęcia/filmy fotografa"),
+		).toBeVisible();
+
+		// Materiał gościa nie ma odznaki źródła fotografa
+		await expect(page.getByText("Ciocia Ania")).toBeVisible();
+
+		// Materiał fotografa w siatce moderacji ma odróżniającą odznakę
+		await expect(page.getByText("Fotograf Jan Kowalski")).toBeVisible();
+		await expect(page.getByText("Fotograf", { exact: true })).toBeVisible();
+	});
 });

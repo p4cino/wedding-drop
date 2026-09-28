@@ -7,6 +7,7 @@ import React, { useEffect } from "react";
 export interface MediaItemData {
 	id: string;
 	uploaderName: string;
+	source?: "guest" | "photographer";
 	fileType: "image" | "video";
 	mimeType: string;
 	originalFileName: string;

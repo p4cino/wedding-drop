@@ -63,6 +63,7 @@ export const mediaItems = pgTable(
 			.notNull()
 			.references(() => galleries.id, { onDelete: "cascade" }),
 		uploaderName: text("uploader_name").notNull().default("Gość weselny"),
+		source: text("source").notNull().default("guest"), // 'guest' | 'photographer'
 		fileType: text("file_type").notNull(), // 'image' | 'video'
 		mimeType: text("mime_type").notNull(),
 		originalFileName: text("original_file_name").notNull(),

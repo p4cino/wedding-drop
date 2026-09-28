@@ -133,7 +133,8 @@
 		"notFoundTitle": "Galeria nie została znaleziona",
 		"notFoundDesc": "Upewnij się, że adres URL lub kod QR jest prawidłowy.",
 		"homeBtn": "Strona główna",
-		"addPhotosAria": "Dodaj zdjęcia i filmy do galerii"
+		"addPhotosAria": "Dodaj zdjęcia i filmy do galerii",
+		"photographerBadge": "Fotograf"
 	},
 	"CardPage": {
 		"paletteGoldNavy": "Złoto & Granat",
@@ -246,6 +247,19 @@
 		"folderNote2": "Pliki zostaną rozpakowane i zachowają oryginalną jakość 1:1.",
 		"cancelBtn": "Anuluj",
 		"initBtn": "Inicjalizacja...",
-		"startBtn": "Rozpocznij eksport"
+		"startBtn": "Rozpocznij eksport",
+		"photographerBadge": "Fotograf",
+		"importTitle": "Importuj zdjęcia/filmy fotografa",
+		"importSubtitle": "Masowy import materiałów od profesjonalnego fotografa lub kamerzysty do tej samej galerii",
+		"importDropzoneTitle": "Kliknij, aby wybrać pliki fotografa z dysku",
+		"importDropzoneHint": "Obsługa zdjęć JPEG, PNG, HEIC oraz filmów MP4/MOV - masowy wybór wielu plików naraz",
+		"importSelectedCount": "Wybrano: {count} plików",
+		"importClearAll": "Wyczyść listę",
+		"importAllUploaded": "Zaimportowano {count} plików! 🎉",
+		"importProgressAria": "Postęp importu: {name}",
+		"importRemoveFileTitle": "Usuń plik {name} z listy importu",
+		"importError": "Błąd importu (sprawdź autoryzację lub limit pojemności galerii)",
+		"importUploadingBtn": "Importowanie plików...",
+		"importSubmitBtn": "Importuj do galerii ({count})"
 	}
 }

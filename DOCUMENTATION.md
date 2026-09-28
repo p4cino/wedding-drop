@@ -89,6 +89,15 @@ graph TD
    - Wszystkie podłączone smartfony na sali weselnej otrzymują powiadomienie przez otwarty strumień SSE i natychmiast renderują nowe zdjęcie w siatce Masonry (bez zakłócania otwartego u innego gościa Lightboxa).
    - Dodatkowo interfejs gościa realizuje cichy fallback polling (po 1s, 2.5s i 5s) w tle na wypadek chwilowego zerwania strumienia SSE podczas obróbki długiego materiału wideo.
 
+### 3.1. Import materiałów profesjonalnego fotografa/kamerzysty
+
+Para Młoda może w panelu właściciela (`/owner/[slug]`, komponent `PhotographerImportPanel.tsx`) masowo zaimportować materiały otrzymane od profesjonalnego fotografa lub kamerzysty do tej samej galerii i chronologii co uploady gości, korzystając z dokładnie tego samego protokołu TUS 1.0.0 i tego samego endpointu `/api/upload/tus`. Różnice względem zwykłego uploadu gościa:
+
+1. **Autoryzacja właściciela jest obowiązkowa**: metadane TUS niosą dodatkowe pola `source: "photographer"` i `ownerToken`. `onUploadCreate` w `packages/media/src/tus-server.ts` odrzuca (`401 Unauthorized`) każdy upload ze `source: "photographer"`, jeśli `ownerToken` nie zweryfikuje się poprawnie dla danej galerii — zanim jakikolwiek plik trafi na dysk lub do bazy. Weryfikacja odbywa się przez funkcję wstrzykiwaną z `apps/web/server.ts` (`verifyOwnerCredentialsForTus`, reużywającą istniejący `verifyOwnerToken` z `@/lib/auth`), aby `packages/media` nigdy nie importowało kodu z `apps/web` (zachowany kierunek zależności monorepo).
+2. **Egzekwowanie limitu pojemności galerii (`maxStorageBytes`)**: to pierwsze miejsce w całym kodzie, w którym ta istniejąca od dawna kolumna jest faktycznie sprawdzana. Jeśli galeria ma ustawiony niezerowy limit, `onUploadCreate` sumuje dotychczasowe `file_size` z `media_items` i odrzuca (`413 Payload Too Large`) tylko ten pojedynczy plik importu, który przekroczyłby limit — pozostałe pliki tej samej paczki importu (każdy plik to osobne żądanie TUS) przechodzą normalnie. **Uwaga**: ten limit dotyczy wyłącznie ścieżki importu fotografa; zwykłe uploady gości pozostają nieograniczone (`maxStorageBytes` nie jest tam sprawdzane).
+3. **Wspólna, ograniczona kolejka przetwarzania**: zaimportowane pliki trafiają do dokładnie tej samej kolejki `p-queue` (concurrency: 2) i tego samego watchdoga FFmpeg (25s SIGKILL) co uploady gości — brak priorytetu i osobnego limitu współbieżności. Masowy import wielu dużych plików w trakcie trwającej recepcji może chwilowo spowolnić przetwarzanie bieżących zdjęć gości; zalecane jest wykonywanie importu poza szczytem aktywności gości (np. dzień po weselu).
+4. **Oznaczenie źródła**: każdy wpis w `media_items` ma kolumnę `source` (`"guest"` domyślnie, `"photographer"` dla importu). Materiały fotografa są widoczne w tej samej siatce galerii (gościa i właściciela) z odróżniającą odznaką "Fotograf" i podlegają dokładnie tej samej moderacji (ukrywanie/usuwanie, propagacja SSE) co materiały gości.
+
 ---
 
 ## 4. Model Bazy Danych (PostgreSQL)
@@ -143,6 +152,7 @@ graph TD
 | `id` | UUID | Klucz główny |
 | `gallery_id` | UUID FK | Odwołanie do `galleries.id` (`ON DELETE CASCADE`) |
 | `uploader_name` | TEXT | Podpis gościa (np. "Świadek Piotr") |
+| `source` | TEXT | Źródło materiału: `guest` (domyślnie) lub `photographer` (import przez właściciela) |
 | `file_type` | TEXT | `image` lub `video` |
 | `mime_type` | TEXT | Typ MIME (np. `image/jpeg`, `video/mp4`) |
 | `original_file_name` | TEXT | Pierwotna nazwa pliku z telefonu |
@@ -178,7 +188,7 @@ Dla zapewnienia błyskawicznego działania zapytań SQL na tysiącach zdjęć ut
 - `GET /api/gallery/:slug/live` – Strumień Server-Sent Events (SSE):
   - Emisja `new-media`: powiadomienie o nowym przetworzonym zdjęciu.
   - Emisja `media-updated`: natychmiastowa aktualizacja widoczności (ukrycie/odkrycie/usunięcie) synchronizowana na żywo na ekranach wszystkich gości.
-- `ANY /api/upload/tus/*` – W pełni zgodny ze specyfikacją protokół TUS 1.0.0 (`POST`, `PATCH`, `HEAD`, `OPTIONS`, `DELETE`).
+- `ANY /api/upload/tus/*` – W pełni zgodny ze specyfikacją protokół TUS 1.0.0 (`POST`, `PATCH`, `HEAD`, `OPTIONS`, `DELETE`). Ten sam endpoint obsługuje zarówno upload gościa, jak i import fotografa (`source: "photographer"` w metadanych TUS): import fotografa wymaga dodatkowo poprawnego `ownerToken` (inaczej `401 Unauthorized`) i respektuje limit `maxStorageBytes` galerii (inaczej `413 Payload Too Large` dla konkretnego pliku) — patrz sekcja 3.1.
 - `GET /api/gallery/:slug/card/pdf` – Wektorowy dokument PDF A6 (300 DPI) generowany w locie:
   - Obsługuje zapytanie z parametrami URL (`headline`, `primaryColor`, `accentColor`, `instructions`), dzięki czemu pobierany plik od razu odzwierciedla stan edytora wizualnego bez wymogu uprzedniego zapisu w bazie.
   - Generuje prawidłowy kod QR z dynamicznym wykrywaniem hosta (brak sztywnego kodowania domen lokalnych).
@@ -190,6 +200,7 @@ Dla zapewnienia błyskawicznego działania zapytań SQL na tysiącach zdjęć ut
 
 ### Panel Pary Młodej (RESTful API)
 - `POST /api/owner/:slug/auth` – Logowanie hasłem właściciela, wydanie podpisanego tokenu HMAC-SHA256, zwrócenie statystyk galerii, stanu Google Drive i konfiguracji winietki.
+- Import materiałów fotografa/kamerzysty (`PhotographerImportPanel.tsx`) nie ma osobnego endpointu REST — korzysta z tego samego `ANY /api/upload/tus/*` co upload gościa, przekazując dodatkowo `ownerToken` z logowania właściciela oraz `source: "photographer"` w metadanych TUS (patrz sekcja 3.1 i 5 wyżej).
 - `PATCH /api/owner/:slug/media/:id/status` – Zmiana widoczności zdjęcia (`ready` <-> `hidden`) autoryzowana tokenem HMAC, wraz z natychmiastową emisją SSE `media-updated`.
 - `DELETE /api/owner/:slug/media/:id` – Fizyczne usunięcie pliku źródłowego i miniatury z dysku oraz bazy danych z powiadomieniem SSE.
 - `PUT /api/owner/:slug/card` – Zapis zmodyfikowanych kolorów i tekstów winietki.

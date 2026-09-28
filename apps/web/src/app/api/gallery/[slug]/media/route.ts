@@ -78,6 +78,7 @@ export async function GET(
 		const formatted = items.map((m) => ({
 			id: m.id,
 			uploaderName: m.uploaderName,
+			source: m.source,
 			fileType: m.fileType,
 			mimeType: m.mimeType,
 			originalFileName: m.originalFileName,
