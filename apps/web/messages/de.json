@@ -133,7 +133,13 @@
 		"notFoundTitle": "Galerie nicht gefunden",
 		"notFoundDesc": "Stellen Sie sicher, dass die URL oder der QR-Code korrekt ist.",
 		"homeBtn": "Startseite",
-		"addPhotosAria": "Fügen Sie Fotos und Videos zur Galerie hinzu"
+		"addPhotosAria": "Fügen Sie Fotos und Videos zur Galerie hinzu",
+		"cameraOptionBtn": "Foto aufnehmen",
+		"cameraStarting": "Kamera wird gestartet...",
+		"cameraError": "Die Kamera konnte nicht gestartet werden. Überprüfen Sie die Browserberechtigungen oder verwenden Sie die normale Dateiauswahl.",
+		"cameraBackToFiles": "Zurück zur Dateiauswahl",
+		"cameraCancel": "Kameravorschau schließen",
+		"cameraShutter": "Foto aufnehmen"
 	},
 	"CardPage": {
 		"paletteGoldNavy": "Gold & Marineblau",

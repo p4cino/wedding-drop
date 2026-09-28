@@ -254,4 +254,81 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 			"pierwszy_taniec.jpg",
 		);
 	});
+
+	test("UC8: powinien pozwolić zrobić zdjęcie aparatem w przeglądarce (photobooth) i wysłać je do galerii tym samym potokiem co zwykły upload", async ({
+		page,
+	}) => {
+		// Symulacja getUserMedia fałszywym strumieniem opartym o canvas (bez realnej
+		// kamery/uprawnień) — działa identycznie w Chromium i WebKit, bo canvas.captureStream()
+		// jest standardowym API HTML5, a nie sztuczką specyficzną dla jednej przeglądarki.
+		await page.addInitScript(() => {
+			const canvas = document.createElement("canvas");
+			canvas.width = 320;
+			canvas.height = 240;
+			const ctx = canvas.getContext("2d");
+			const paint = () => {
+				if (ctx) {
+					ctx.fillStyle = "goldenrod";
+					ctx.fillRect(0, 0, canvas.width, canvas.height);
+				}
+				requestAnimationFrame(paint);
+			};
+			paint();
+
+			const fakeStream = (
+				canvas as HTMLCanvasElement & {
+					captureStream: (frameRate?: number) => MediaStream;
+				}
+			).captureStream(15);
+
+			const mediaDevicesStub = {
+				getUserMedia: () => Promise.resolve(fakeStream),
+			};
+			Object.defineProperty(navigator, "mediaDevices", {
+				configurable: true,
+				get: () => mediaDevicesStub,
+			});
+		});
+
+		await page.goto("/g/kasia-i-tomek");
+
+		// Otwarcie drawera i przełączenie na tryb aparatu w przeglądarce
+		await page.getByRole("button", { name: /Dodaj zdjęcia i filmy/i }).click();
+		await page.getByRole("button", { name: "Zrób zdjęcie" }).click();
+
+		// Podgląd na żywo z (fałszywej) kamery + gotowy przycisk spustu migawki
+		const shutterBtn = page.getByRole("button", { name: "Zrób zdjęcie" });
+		await expect(shutterBtn).toBeEnabled({ timeout: 15000 });
+		// Krótkie oczekiwanie na załadowanie faktycznych wymiarów strumienia wideo
+		// (video.videoWidth/videoHeight) zanim klatka zostanie zrzucona na canvas
+		await page.waitForTimeout(500);
+
+		// Podpis gościa dla zrobionego zdjęcia
+		const nameInput = page.getByPlaceholder("np. Ciocia Kasia i Wujek Michał");
+		await nameInput.fill("Photobooth E2E Gość");
+
+		// Spust migawki -> kompozycja canvas + ramka motywu -> plik JPEG w kolejce
+		await shutterBtn.click();
+		const queuedFileName = page.getByText(/photobooth_\d+\.jpg/);
+		await expect(queuedFileName).toBeVisible();
+		// Dokładna, unikalna (znacznik czasu) nazwa pliku z tego konkretnego przebiegu testu —
+		// unika niejednoznaczności strict-mode, gdy w tej samej, współdzielonej galerii
+		// zostały już wcześniej zdjęcia z photobooth z innych przebiegów/profili Playwrighta.
+		const exactFileName = (await queuedFileName.textContent())?.trim();
+		expect(exactFileName).toMatch(/^photobooth_\d+\.jpg$/);
+
+		// Wysyłka dokładnie tym samym przyciskiem/potokiem TUS co zwykły upload
+		await page.getByRole("button", { name: /Wyślij do galerii/i }).click();
+		await expect(page.getByText("Gotowe, wróć do galerii")).toBeVisible({
+			timeout: 30000,
+		});
+		await page.getByRole("button", { name: "Gotowe, wróć do galerii" }).click();
+
+		// Zdjęcie z photobooth pojawia się w galerii na tych samych zasadach co zwykły upload
+		await expect(
+			page.getByRole("button", {
+				name: new RegExp(`^Image: ${exactFileName}, `),
+			}),
+		).toBeVisible({ timeout: 30000 });
+	});
 });

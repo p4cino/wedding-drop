@@ -133,7 +133,13 @@
 		"notFoundTitle": "Galeria nie została znaleziona",
 		"notFoundDesc": "Upewnij się, że adres URL lub kod QR jest prawidłowy.",
 		"homeBtn": "Strona główna",
-		"addPhotosAria": "Dodaj zdjęcia i filmy do galerii"
+		"addPhotosAria": "Dodaj zdjęcia i filmy do galerii",
+		"cameraOptionBtn": "Zrób zdjęcie",
+		"cameraStarting": "Uruchamianie aparatu...",
+		"cameraError": "Nie udało się uruchomić aparatu. Sprawdź uprawnienia przeglądarki lub użyj zwykłego wyboru pliku.",
+		"cameraBackToFiles": "Wróć do wyboru pliku",
+		"cameraCancel": "Zamknij podgląd aparatu",
+		"cameraShutter": "Zrób zdjęcie"
 	},
 	"CardPage": {
 		"paletteGoldNavy": "Złoto & Granat",
