@@ -7,8 +7,8 @@
 [![Turborepo](https://img.shields.io/badge/Turborepo-Monorepo-EF4444?style=flat-square&logo=turborepo&logoColor=white)](turbo.json)
 [![pnpm](https://img.shields.io/badge/pnpm-12.4.1-F69220?style=flat-square&logo=pnpm&logoColor=white)](pnpm-lock.yaml)
 [![Biome](https://img.shields.io/badge/Biome-v2.5.13-60A5FA?style=flat-square&logo=biome&logoColor=white)](biome.json)
-[![Vitest](https://img.shields.io/badge/Vitest-80%20passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](package.json)
-[![Playwright](https://img.shields.io/badge/Playwright-96%20E2E%20passing-2EAD33?style=flat-square&logo=playwright&logoColor=white)](package.json)
+[![Vitest](https://img.shields.io/badge/Vitest-211%20passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](package.json)
+[![Playwright](https://img.shields.io/badge/Playwright-105%20E2E%20passing-2EAD33?style=flat-square&logo=playwright&logoColor=white)](package.json)
 [![Hardware](https://img.shields.io/badge/Hardware-Intel%20N100%20Optimized-0071C5?style=flat-square&logo=intel&logoColor=white)](#-optymalizacje-pod-procesor-intel-n100)
 
 Kompletna, samoobsługowa aplikacja internetowa do zbierania zdjęć i filmów z wesel, zaprojektowana z myślą o serwerach domowych i mini-PC (np. z procesorem **Intel N100**). Działa w 100% w środowisku **Docker**, bez żadnych płatnych planów i bez limitów.
@@ -67,15 +67,23 @@ Szybki podgląd wszystkich ślubów, zarządzanie przestrzenią dyskową oraz b�
    - Podgląd liczby zdjęć, filmów oraz sumarycznego zajętego miejsca na dysku.
    - **Pobieranie całej galerii jako jeden plik ZIP**: Generowanie strumieniowe w locie (`archiver`) bez obciążania pamięci RAM serwera (z uwzględnieniem zdjęć ukrytych po podaniu hasła).
    - **Moderacja na żywo**: Szybkie ukrywanie zdjęć niepożądanych jednym kliknięciem oraz usuwanie — zmiana statusu natychmiast synchronizuje się ze wszystkimi telefonami na sali weselnej przez SSE (`media-updated`).
-   - Bezpośredni dostęp do generatora winietki na stolik.
+   - Bezpośredni dostęp do generatora winietki na stolik oraz do trybu TV.
 
-3. **Generator Karteczek na Stoły (Format A6 / 300 DPI)**:
+3. **Tryb TV / Pokaz Slajdów na Sali (`/g/[slug]/tv`)**:
+   - Publiczna, tylko-do-odczytu, pełnoekranowa trasa myślana pod telewizor lub rzutnik w sali weselnej — bez logowania, bez FAB-a uploadu i bez klikalnego lightboxa.
+   - Reużywa dokładnie te same, niezmodyfikowane publiczne endpointy co galeria gościa (`/api/gallery/[slug]/media` i `/api/gallery/[slug]/live`), więc dziedziczy ich filtrowanie `status: "ready"` — zdjęcia `hidden`/`deleted` nigdy się tam nie pojawiają, nawet jeśli ktoś doda do adresu URL parametry sugerujące dostęp właściciela.
+   - Automatyczna rotacja materiałów w pełnej rozdzielczości; nowo wgrane zdjęcie/wideo wskakuje na wierzch rotacji zaraz po zdarzeniu SSE `new-media`, a ukryte przez Parę Młodą — natychmiast znika (`media-updated`).
+   - Materiały wideo pokazywane jako statyczna miniatura (bez autoodtwarzania dźwięku).
+   - Stały kod QR w rogu ekranu (generowany po stronie klienta biblioteką `qrcode`), by goście patrzący na telewizor mogli dołączyć.
+   - Link "Otwórz tryb TV" dostępny bezpośrednio w panelu Pary Młodej (`/owner/[slug]`).
+
+4. **Generator Karteczek na Stoły (Format A6 / 300 DPI)**:
    - Wektorowy generator dokumentu **PDF do druku** ze złotą ramką, imionami, datą, dynamicznym kodem QR i instrukcją.
    - Wizualny edytor z wyborem motywu barwnego (*Złoto & Granat*, *Butelkowa Zieleń*, *Pudrowy Róż*, *Klasyczna Czerń* lub własne kolory HEX).
    - Generowanie PDF na żywo z aktualnymi parametrami z formularza.
    - Opcja bezpośredniego druku (Ctrl+P) zoptymalizowana pod format A6.
 
-4. **Dla Administratora (Panel Główny)**:
+5. **Dla Administratora (Panel Główny)**:
    - Dostęp pod `/admin`.
    - Bezpieczna autoryzacja kryptograficznym tokenem **HMAC-SHA256** z ochroną przed atakami czasowymi (Timing Attacks).
    - Przegląd wszystkich ślubów, liczby plików i sumarycznego zużycia dysku w oparciu o szybkie indeksy bazodanowe.
@@ -187,14 +195,14 @@ Aby aplikacja działała na Twojej publicznej domenie z darmowym certyfikatem Le
  
 ### 1. Testy Jednostkowe i Integracyjne (Vitest)
 ```bash
-# Uruchomienie 80 testów jednostkowych i integracyjnych w monorepo
+# Uruchomienie testów jednostkowych i integracyjnych w całym monorepo
 pnpm turbo run test
 # lub w kontenerze Docker (Node 24 Alpine)
 docker run --rm -v "${PWD}:/app" -w /app node:24-alpine sh -c "corepack enable && pnpm -r test"
 ```
 
 ### 2. Testy End-to-End (Playwright)
-Pakiet **32 unikalnych scenariuszy testowych (łącznie 96 testów)** uruchamianych w profilach Desktop Chromium, Mobile Chrome oraz Mobile Safari (WebKit):
+Pakiet **35 unikalnych scenariuszy testowych (łącznie 105 testów)** uruchamianych w profilach Desktop Chromium, Mobile Chrome oraz Mobile Safari (WebKit):
 ```bash
 # Uruchomienie pełnego zestawu Playwright E2E
 pnpm --filter @wedding-drop/web test:e2e
@@ -206,7 +214,7 @@ Pokrywa:
 - **Panel Pary Młodej (Moderacja)**: logowanie hasłem, pobieranie ZIP z hasłem (w tym zdjęć ukrytych), moderacja widoczności (ukryj/pokaż), filtrowanie zakładek, usuwanie multimediów.
 - **Ścieżka Gościa & Mobile UX**: przeglądanie galerii na żywo, drawer uploadu TUS, siatka zdjęć z podpisami, pełnoekranowy Lightbox z gestami **Touch Swipe** (przesuwanie palcem lewo/prawo) oraz pobieranie plików.
 - **Kreator Winietek A6**: podgląd karty `#printable-card` z kodem QR, zmiana palet barwnych, edycja tekstów na żywo, generowanie wektorowego PDF (300 DPI) z parametrami w URL.
-- **Bezpieczeństwo & Edge Cases**: blokada ukrytych zdjęć (401), ekran 404, ochrona sandbox Directory Traversal, pobieranie ZIP pustej galerii (400), blokada fałszywych tokenów HMAC (401), sanityzacja złośliwego sluga z path traversal.
+- **Bezpieczeństwo & Edge Cases**: blokada ukrytych zdjęć (401), ekran 404, ochrona sandbox Directory Traversal, pobieranie ZIP pustej galerii (400), blokada fałszywych tokenów HMAC (401), sanityzacja złośliwego sluga z path traversal, tryb TV natychmiast usuwający z rotacji zdjęcie ukryte na żywo (SSE) oraz ignorujący sfałszowane parametry dostępu właściciela w adresie URL.
 
 ---
 

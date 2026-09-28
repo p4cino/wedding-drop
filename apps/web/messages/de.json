@@ -246,6 +246,17 @@
 		"folderNote2": "Dateien werden entpackt und behalten ihre 1:1 Originalqualität.",
 		"cancelBtn": "Abbrechen",
 		"initBtn": "Initialisierung...",
-		"startBtn": "Export starten"
+		"startBtn": "Export starten",
+		"openTvBtn": "TV-Modus öffnen"
+	},
+	"TvSlideshow": {
+		"notFoundTitle": "Galerie nicht gefunden",
+		"notFoundDesc": "Stellen Sie sicher, dass die URL oder der QR-Code korrekt ist.",
+		"homeBtn": "Startseite",
+		"live": "Live",
+		"offline": "Offline",
+		"waitingForFirstPhoto": "Warten auf das erste Foto...",
+		"uploaderPrefix": "Hinzugefügt von:",
+		"qrHint": "Scannen, um eigene Fotos hinzuzufügen"
 	}
 }

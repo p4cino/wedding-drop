@@ -9,6 +9,7 @@ export default defineConfig({
 	reporter: "html",
 	use: {
 		baseURL: process.env.BASE_URL || "https://localhost",
+		locale: "pl-PL", // next-intl renderuje wg Accept-Language; testy zakładają polskie teksty
 		ignoreHTTPSErrors: true, // Dla lokalnego certyfikatu Caddy
 		trace: "on-first-retry",
 		screenshot: "only-on-failure",

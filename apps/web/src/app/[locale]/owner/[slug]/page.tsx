@@ -9,6 +9,7 @@ import {
 	Loader2,
 	Lock,
 	QrCode,
+	Tv,
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -506,6 +507,16 @@ export default function OwnerDashboardPage() {
 					>
 						<QrCode className="w-3.5 h-3.5" aria-hidden="true" />
 						<span>{t("cardBtn")}</span>
+					</Link>
+
+					<Link
+						href={`/g/${slug}/tv`}
+						target="_blank"
+						className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
+					>
+						<Tv className="w-3.5 h-3.5" aria-hidden="true" />
+						<span>{t("openTvBtn")}</span>
+						<span className="sr-only">(otwiera się w nowej karcie)</span>
 					</Link>
 
 					<a

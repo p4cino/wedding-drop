@@ -246,6 +246,17 @@
 		"folderNote2": "Pliki zostaną rozpakowane i zachowają oryginalną jakość 1:1.",
 		"cancelBtn": "Anuluj",
 		"initBtn": "Inicjalizacja...",
-		"startBtn": "Rozpocznij eksport"
+		"startBtn": "Rozpocznij eksport",
+		"openTvBtn": "Otwórz tryb TV"
+	},
+	"TvSlideshow": {
+		"notFoundTitle": "Galeria nie została znaleziona",
+		"notFoundDesc": "Upewnij się, że adres URL lub kod QR jest prawidłowy.",
+		"homeBtn": "Strona główna",
+		"live": "Na żywo",
+		"offline": "Offline",
+		"waitingForFirstPhoto": "Czekamy na pierwsze zdjęcie...",
+		"uploaderPrefix": "Dodał(a):",
+		"qrHint": "Zeskanuj i dodaj swoje zdjęcia"
 	}
 }
