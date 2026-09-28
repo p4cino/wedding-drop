@@ -213,7 +213,11 @@ Dla zapewnienia błyskawicznego działania zapytań SQL na tysiącach zdjęć ut
    - **Natywna obsługa gestów dotykowych Swipe**: Użytkownik smartfona może płynnie przesuwać zdjęcia w lewo i w prawo palcem.
    - **Nawigacja klawiaturą**: Klawisze Strzałka w lewo / w prawo oraz Escape do zamykania.
    - **Stabilność indeksu przy transmisji SSE**: Napływ nowych zdjęć od innych gości na sali weselnej nie powoduje nieoczekiwanego przeskakiwania aktualnie oglądanego zdjęcia w powiększeniu.
-2. **Kreator Karteczek na Stoły (`/g/[slug]/card`)**:
+2. **Drawer uploadu gościa (`UploaderDrawer`)**:
+   - Po **pełnym sukcesie** sesji wysyłania kolejka plików czyści się **natychmiast** (komunikat sukcesu + przycisk „Gotowe” bez listy completed).
+   - Zamknięcie drawera (X / Escape / Gotowe) nie zachowuje kolejki — kolejne otwarcie startuje z pustą listą, co utrudnia przypadkowe ponowne wysłanie tych samych zdjęć.
+   - Przy częściowych błędach na liście zostają pozycje z błędem (pozycje udane są usuwane), aby gość mógł ponowić wysyłanie.
+3. **Kreator Karteczek na Stoły (`/g/[slug]/card`)**:
    - Przeniesiony do strefy zarządzania dla Pary Młodej (wyeliminowano zbędne odnośniki z nagłówka gościa).
    - Dynamiczny podgląd na żywo stylów i kolorów.
    - Pobieranie PDF przekazuje aktualne parametry edytora bezpośrednio do generatora `pdf-lib`.
@@ -274,6 +278,16 @@ docker run --rm -v wedding-drop_app_data:/data -v $(pwd):/backup alpine tar -xzf
 ---
 
 ## 9. Strategia Testów i Narzędzia Jakościowe (Turborepo + Biome)
+
+### 9.0. OpenSpec (spec-driven development)
+
+Zmiany funkcjonalne i architektoniczne mogą być prowadzone przez [OpenSpec](https://github.com/Fission-AI/OpenSpec):
+
+- Katalog `openspec/` — `config.yaml` (kontekst WeddingDrop + reguły artefaktów), `specs/` (specyfikacje główne), `changes/` (aktywne propozycje).
+- Skill/komendy Cursor: `.cursor/skills/openspec-*`, `.cursor/commands/opsx-*.md` (`/opsx-explore`, `/opsx-propose`, `/opsx-apply`, …).
+- Skill/komendy Claude Code: `.claude/skills/openspec-*`, `.claude/commands/opsx/` (`/opsx:explore`, `/opsx:propose`, …).
+- Artefakty (proposal, design, specs, tasks) piszemy po polsku; nagłówki strukturalne OpenSpec oraz słowa SHALL/MUST pozostają po angielsku.
+- Konstytucja techniczna (`AGENTS.md`) ma pierwszeństwo przed propozycjami OpenSpec — change nie może poluzować limitów N100 ani reguł bezpieczeństwa.
 
 Projekt objęty jest dwupoziomową piramidą testów automatycznych oraz standardami Biome:
 

@@ -123,6 +123,7 @@
 		"closeLightbox": "Close preview",
 		"prevMedia": "Previous",
 		"nextMedia": "Next",
+		"progressCount": "{current} of {total}",
 		"downloadOriginal": "Download original file",
 		"badge": "Wedding Memories",
 		"live": "Live",

@@ -123,6 +123,7 @@
 		"closeLightbox": "Zamknij podgląd",
 		"prevMedia": "Poprzednie",
 		"nextMedia": "Następne",
+		"progressCount": "{current} z {total}",
 		"downloadOriginal": "Pobierz oryginalny plik",
 		"badge": "Wspomnienia z Wesela",
 		"live": "Na żywo",

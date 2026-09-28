@@ -210,6 +210,20 @@ Pokrywa:
 
 ---
 
+## 🧭 OpenSpec (spec-driven changes)
+
+Repozytorium używa [OpenSpec](https://github.com/Fission-AI/OpenSpec) do propozycji zmian i specyfikacji (`openspec/`). Artefakty piszemy po polsku; kontekst projektu jest w `openspec/config.yaml`.
+
+Komendy w Cursorze: `/opsx-explore`, `/opsx-propose`, `/opsx-apply`, `/opsx-update`, `/opsx-sync`, `/opsx-archive`  
+(Claude Code: `/opsx:explore`, `/opsx:propose`, …).
+
+```bash
+npx @fission-ai/openspec list          # aktywne change'e
+npx @fission-ai/openspec list --specs  # główne specyfikacje
+```
+
+---
+
 ## 📄 Licencja
 
 Projekt **WeddingDrop** jest wolnym i otwartym oprogramowaniem (Free & Open Source Software) publikowanym na warunkach licencji **GNU Affero General Public License v3.0 (AGPL-3.0)**.

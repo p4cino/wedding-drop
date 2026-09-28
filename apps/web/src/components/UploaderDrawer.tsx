@@ -39,8 +39,31 @@ export default function UploaderDrawer({
 	const [uploaderName, setUploaderName] = useState("");
 	const [files, setFiles] = useState<UploadingFile[]>([]);
 	const [isUploading, setIsUploading] = useState(false);
+	const [justFinished, setJustFinished] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const t = useTranslations("GuestGallery");
+
+	const resetQueue = () => {
+		setFiles([]);
+		setJustFinished(false);
+		if (fileInputRef.current) {
+			fileInputRef.current.value = "";
+		}
+	};
+
+	const handleClose = () => {
+		if (isUploading) return;
+		resetQueue();
+		onClose();
+	};
+
+	// Zamknięcie (również z rodzica) nie może zostawić kolejki na kolejne otwarcie
+	useEffect(() => {
+		if (!isOpen) {
+			setFiles([]);
+			setJustFinished(false);
+		}
+	}, [isOpen]);
 
 	// Obsługa klawisza Escape
 	useEffect(() => {
@@ -59,6 +82,7 @@ export default function UploaderDrawer({
 
 	const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
 		if (!e.target.files?.length) return;
+		setJustFinished(false);
 		const selected = Array.from(e.target.files).map((f) => ({
 			id: Math.random().toString(36).substring(2, 9),
 			file: f,
@@ -66,6 +90,8 @@ export default function UploaderDrawer({
 			status: "pending" as const,
 		}));
 		setFiles((prev) => [...prev, ...selected]);
+		// Allow selecting the same file again later
+		e.target.value = "";
 	};
 
 	const removeFile = (id: string) => {
@@ -75,8 +101,10 @@ export default function UploaderDrawer({
 	const startUpload = async () => {
 		if (files.length === 0) return;
 		setIsUploading(true);
+		setJustFinished(false);
 
 		const name = uploaderName.trim() || t("defaultUploaderName");
+		const failedIds = new Set<string>();
 
 		for (let i = 0; i < files.length; i++) {
 			const item = files[i];
@@ -103,6 +131,7 @@ export default function UploaderDrawer({
 					},
 					onError: (error) => {
 						console.error(`Błąd uploadu pliku ${item.file.name}:`, error);
+						failedIds.add(item.id);
 						setFiles((prev) =>
 							prev.map((f) =>
 								f.id === item.id
@@ -148,11 +177,19 @@ export default function UploaderDrawer({
 		}
 
 		setIsUploading(false);
+
+		if (failedIds.size > 0) {
+			setFiles((prev) => prev.filter((f) => failedIds.has(f.id)));
+		} else {
+			setFiles([]);
+			setJustFinished(true);
+			if (fileInputRef.current) {
+				fileInputRef.current.value = "";
+			}
+		}
+
 		onUploadSuccess?.();
 	};
-
-	const allCompleted =
-		files.length > 0 && files.every((f) => f.status === "completed");
 
 	return (
 		<div
@@ -178,7 +215,7 @@ export default function UploaderDrawer({
 					</div>
 					<button
 						type="button"
-						onClick={onClose}
+						onClick={handleClose}
 						disabled={isUploading}
 						aria-label={t("drawerCloseTitle")}
 						title={t("drawerCloseTitle")}
@@ -234,6 +271,15 @@ export default function UploaderDrawer({
 						<p className="text-xs text-slate-500 mt-1">{t("dropzoneHint")}</p>
 					</button>
 
+					{justFinished && files.length === 0 && (
+						<p
+							className="text-sm text-emerald-600 font-semibold text-center"
+							aria-live="polite"
+						>
+							{t("allUploaded")}
+						</p>
+					)}
+
 					{/* Lista wybranych plików */}
 					{files.length > 0 && (
 						<div className="space-y-2.5">
@@ -242,11 +288,6 @@ export default function UploaderDrawer({
 								aria-live="polite"
 							>
 								<span>{t("selectedCount", { count: files.length })}</span>
-								{allCompleted && (
-									<span className="text-emerald-600 font-semibold">
-										{t("allUploaded")}
-									</span>
-								)}
 							</div>
 
 							<div className="max-h-48 overflow-y-auto space-y-2 pr-1">
@@ -347,10 +388,10 @@ export default function UploaderDrawer({
 
 				{/* Dolny przycisk akcji */}
 				<div className="p-4 bg-white border-t border-slate-100 flex gap-3">
-					{allCompleted ? (
+					{justFinished ? (
 						<button
 							type="button"
-							onClick={onClose}
+							onClick={handleClose}
 							className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-semibold shadow-lg shadow-emerald-600/20 transition flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
 						>
 							<CheckCircle2 className="w-5 h-5" aria-hidden="true" />

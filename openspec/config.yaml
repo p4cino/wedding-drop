@@ -1,0 +1,52 @@
+schema: spec-driven
+
+context: |
+  Language: pl
+  All artifacts must be written in pl.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+
+  Project: WeddingDrop — self-hosted, multi-tenant wedding photo/video drop
+  (guests upload via QR, no login/app). Docs and UI strings are in Polish.
+
+  Stack:
+  - Turborepo + pnpm workspaces (never npm/yarn)
+  - apps/web: Next.js 16 App Router + custom server.ts (TUS + Next on one HTTP server)
+  - packages/db: Drizzle ORM + PostgreSQL 16
+  - packages/media: TUS, Sharp/FFmpeg pipeline, SSE bus, PDF cards, ZIP stream, GDrive
+  - Docker: Caddy (TLS) + Node 24 Alpine + Postgres; target hardware Intel N100
+
+  Non-negotiable constraints (see AGENTS.md):
+  - p-queue concurrency must stay 2 for media processing
+  - FFmpeg spawn has hard 25s SIGKILL watchdog
+  - ZIP downloads stream via archiver — never buffer full archive
+  - File-serving routes path.resolve() and stay inside /data
+  - Slugs sanitized to ^[a-z0-9_-]+$
+  - HMAC comparisons use crypto.timingSafeEqual
+  - status "hidden"/"deleted" never on unauthenticated guest endpoints
+  - DB path columns use POSIX separators (path.posix.join)
+
+  Tooling: Biome only (tabs, double quotes); TypeScript strict; Vitest + Playwright.
+  Docs policy: update README.md and DOCUMENTATION.md when features/architecture change.
+  Constitution: AGENTS.md; commands map: CLAUDE.md.
+
+rules:
+  proposal:
+    - Keep proposals under ~500 words when possible
+    - Always include a "Non-goals" / "Poza zakresem" section
+    - Call out any impact on N100 constraints (concurrency, FFmpeg, ZIP, path safety)
+  design:
+    - Prefer extending existing packages (web/db/media) over new packages
+    - Explicitly address privacy of hidden/deleted media when touching gallery APIs
+  tasks:
+    - Break tasks into small, verifiable chunks
+    - Include test updates (Vitest and/or Playwright) when behavior changes
+    - Include docs updates (README.md / DOCUMENTATION.md) when required by AGENTS.md §7
+
+operations:
+  apply:
+    guidance:
+      - Respect AGENTS.md hardware and security invariants; do not relax them in code
+      - Prefer pnpm and package filters; never introduce npm/yarn workflows
+  archive:
+    guidance:
+      - Summarize archive outcome and note any main-spec deltas before finishing

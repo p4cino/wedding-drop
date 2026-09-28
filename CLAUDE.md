@@ -4,6 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Read `AGENTS.md` first.** It is this repo's architecture constitution (hardware constraints, security rules, mobile UX rules, docs policy) and applies to all code changes here; this file adds the commands and big-picture map AGENTS.md doesn't spell out. `DOCUMENTATION.md` (Polish) has the full DB schema, API endpoint list, and sequence diagram if you need more detail than below.
 
+**OpenSpec** (`openspec/`): use `/opsx:explore`, `/opsx:propose`, `/opsx:apply`, `/opsx:update`, `/opsx:sync`, `/opsx:archive` for spec-driven changes. Project context and artifact rules live in `openspec/config.yaml`.
+
 ## What this is
 
 WeddingDrop is a self-hosted, multi-tenant web app for collecting wedding photos/videos from guests via QR code (guests upload with no login/app install). Target deployment is a low-power **Intel N100** mini-PC running entirely in Docker (Caddy + Node/Next.js + Postgres). Docs and UI strings are in Polish.
