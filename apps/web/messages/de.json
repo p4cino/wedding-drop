@@ -133,7 +133,10 @@
 		"notFoundTitle": "Galerie nicht gefunden",
 		"notFoundDesc": "Stellen Sie sicher, dass die URL oder der QR-Code korrekt ist.",
 		"homeBtn": "Startseite",
-		"addPhotosAria": "Fügen Sie Fotos und Videos zur Galerie hinzu"
+		"addPhotosAria": "Fügen Sie Fotos und Videos zur Galerie hinzu",
+		"leaderboardTitle": "Aktivste Gäste",
+		"leaderboardRankAria": "Platz {rank}",
+		"leaderboardCount": "{count} Beiträge"
 	},
 	"CardPage": {
 		"paletteGoldNavy": "Gold & Marineblau",

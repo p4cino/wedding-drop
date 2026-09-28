@@ -63,11 +63,9 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 		});
 
 		await page.goto("/g/kasia-i-tomek");
+		await expect(page.getByText("Brak zdjęć w tej galerii")).toBeVisible();
 		await expect(
-			page.getByText("Galeria czeka na pierwsze zdjęcia!"),
-		).toBeVisible();
-		await expect(
-			page.getByText("Bądź pierwszą osobą, która uwieczni ten wyjątkowy dzień"),
+			page.getByText("Bądź pierwszą osobą, która coś doda!"),
 		).toBeVisible();
 	});
 
@@ -123,9 +121,11 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 
 		await page.goto("/g/kasia-i-tomek");
 
-		// Weryfikacja kafelków w siatce
-		await expect(page.getByText("Wujek Staszek")).toBeVisible();
-		await expect(page.getByText("Ciocia Halinka")).toBeVisible();
+		// Weryfikacja kafelków w siatce (scoped do <main>, bo te same podpisy
+		// gości pojawiają się też w widgecie rankingu nad galerią)
+		const grid = page.getByRole("main");
+		await expect(grid.getByText("Wujek Staszek")).toBeVisible();
+		await expect(grid.getByText("Ciocia Halinka")).toBeVisible();
 
 		// Weryfikacja licznika zdjęć w nagłówku
 		await expect(page.getByText("2 zdjęć")).toBeVisible();
@@ -144,8 +144,9 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 
 		await page.goto("/g/kasia-i-tomek");
 
-		// Kliknięcie pierwszego zdjęcia
-		await page.getByText("Wujek Staszek").click();
+		// Kliknięcie pierwszego zdjęcia (scoped do <main>, bo ten sam podpis
+		// gościa pojawia się też w widgecie rankingu nad galerią)
+		await page.getByRole("main").getByText("Wujek Staszek").click();
 
 		// Weryfikacja otwarcia Lightboxa
 		await expect(page.getByText("1 z 2", { exact: true })).toBeVisible();
@@ -156,7 +157,9 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 		// Nawigacja klawiaturą: Strzałka w prawo -> zdjęcie 2
 		await page.keyboard.press("ArrowRight");
 		await expect(page.getByText("2 z 2", { exact: true })).toBeVisible();
-		await expect(page.getByText("tort_weselny.jpg")).toBeVisible();
+		await expect(
+			page.getByText("tort_weselny.jpg", { exact: true }),
+		).toBeVisible();
 
 		// Nawigacja klawiaturą: Strzałka w lewo -> powrót do zdjęcia 1
 		await page.keyboard.press("ArrowLeft");
@@ -182,7 +185,7 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 		});
 
 		await page.goto("/g/kasia-i-tomek");
-		await page.getByText("Wujek Staszek").click();
+		await page.getByRole("main").getByText("Wujek Staszek").click();
 		await expect(page.getByText("1 z 2", { exact: true })).toBeVisible();
 
 		// 1. Symulacja Swipe w lewo (przesunięcie palca z 300px do 100px -> diff > 45px -> Następne zdjęcie)
@@ -244,7 +247,7 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 		});
 
 		await page.goto("/g/kasia-i-tomek");
-		await page.getByText("Wujek Staszek").click();
+		await page.getByRole("main").getByText("Wujek Staszek").click();
 
 		// Przycisk pobierania pliku
 		const downloadBtn = page.getByTitle("Pobierz oryginalny plik");
@@ -253,5 +256,121 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 			"download",
 			"pierwszy_taniec.jpg",
 		);
+	});
+
+	test("UC8: powinien pokazać ranking TOP 3 najaktywniejszych gości w poprawnej kolejności", async ({
+		page,
+	}) => {
+		// Trzech różnych "gości" o różnej liczbie wgranych materiałów, plus czwarty
+		// (spoza podium) i dwa wgrania tej samej osoby zapisane niespójnie
+		// (wielkość liter / spacje), by upewnić się, że liczą się razem.
+		const leaderboardMedia = [
+			{
+				id: "lb-1",
+				uploaderName: "Wujek Staszek",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "foto1.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				createdAt: "2026-09-12T15:00:00.000Z",
+			},
+			{
+				id: "lb-2",
+				uploaderName: "wujek staszek ",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "foto2.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				createdAt: "2026-09-12T15:01:00.000Z",
+			},
+			{
+				id: "lb-3",
+				uploaderName: "Wujek Staszek",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "foto3.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				createdAt: "2026-09-12T15:02:00.000Z",
+			},
+			{
+				id: "lb-4",
+				uploaderName: "Ciocia Halinka",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "foto4.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				createdAt: "2026-09-12T15:03:00.000Z",
+			},
+			{
+				id: "lb-5",
+				uploaderName: "Ciocia Halinka",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "foto5.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				createdAt: "2026-09-12T15:04:00.000Z",
+			},
+			{
+				id: "lb-6",
+				uploaderName: "Kuzyn Tomek",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "foto6.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				createdAt: "2026-09-12T15:05:00.000Z",
+			},
+			{
+				id: "lb-7",
+				uploaderName: "Nieznajomy Gość",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "foto7.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				createdAt: "2026-09-12T15:06:00.000Z",
+			},
+		];
+
+		await page.route("**/api/gallery/kasia-i-tomek/media", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({ media: leaderboardMedia }),
+			});
+		});
+
+		await page.goto("/g/kasia-i-tomek");
+
+		const leaderboard = page.getByRole("region", {
+			name: "Najaktywniejsi goście",
+		});
+		await expect(leaderboard).toBeVisible();
+
+		const rows = leaderboard.getByRole("listitem");
+		await expect(rows).toHaveCount(3);
+
+		// Kolejność malejąco: Wujek Staszek (3, po zgrupowaniu) > Ciocia Halinka (2) > Kuzyn Tomek (1)
+		await expect(rows.nth(0)).toContainText("Wujek Staszek");
+		await expect(rows.nth(0)).toContainText("3 materiałów");
+		await expect(rows.nth(1)).toContainText("Ciocia Halinka");
+		await expect(rows.nth(1)).toContainText("2 materiałów");
+		await expect(rows.nth(2)).toContainText("Kuzyn Tomek");
+		await expect(rows.nth(2)).toContainText("1 materiałów");
+
+		// Czwarty gość (Nieznajomy Gość, 1 materiał) nie mieści się na podium TOP 3
+		await expect(leaderboard.getByText("Nieznajomy Gość")).not.toBeVisible();
 	});
 });

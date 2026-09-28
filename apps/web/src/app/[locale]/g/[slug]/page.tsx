@@ -4,6 +4,7 @@ import { Heart, Image as ImageIcon, Plus, Sparkles, Video } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
+import ContributorLeaderboard from "@/components/ContributorLeaderboard";
 import { LegalFooterLinks } from "@/components/LegalFooterLinks";
 import LightboxModal, { type MediaItemData } from "@/components/LightboxModal";
 import MediaGrid from "@/components/MediaGrid";
@@ -217,8 +218,13 @@ export default function GuestGalleryPage() {
 				</div>
 			</header>
 
+			{/* Ranking najaktywniejszych gości (TOP 3) */}
+			<div className="pt-6">
+				<ContributorLeaderboard items={items} />
+			</div>
+
 			{/* Siatka galerii */}
-			<main className="max-w-6xl mx-auto px-4 sm:px-6 pt-6">
+			<main className="max-w-6xl mx-auto px-4 sm:px-6">
 				<MediaGrid
 					items={items}
 					onItemClick={(index) => setLightboxIndex(index)}
