@@ -128,7 +128,7 @@ export default function LightboxModal({
 			ref={dialogRef}
 			role="dialog"
 			aria-modal="true"
-			aria-label={`Podgląd multimediów: ${current.originalFileName}`}
+			aria-label={t("lightboxAria", { name: current.originalFileName })}
 			tabIndex={-1}
 			className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md select-none touch-none focus:outline-none"
 			onTouchStart={handleTouchStart}
@@ -137,7 +137,11 @@ export default function LightboxModal({
 		>
 			{/* Region dostępny dla czytników ekranu anonsujący zmianę slajdu */}
 			<div className="sr-only" aria-live="polite" aria-atomic="true">
-				Element {currentIndex + 1} z {items.length}: {current.originalFileName}
+				{t("slideAnnouncement", {
+					current: currentIndex + 1,
+					total: items.length,
+					name: current.originalFileName,
+				})}
 			</div>
 
 			{/* Górny pasek nawigacji */}
@@ -217,7 +221,7 @@ export default function LightboxModal({
 						controls
 						autoPlay
 						playsInline
-						aria-label={`Wideo: ${current.originalFileName}`}
+						aria-label={`${t("videoAria")}: ${current.originalFileName}`}
 						className="max-w-full max-h-[85vh] rounded-xl shadow-2xl"
 					/>
 				) : (

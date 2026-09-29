@@ -163,7 +163,7 @@ export default function CardCustomizerPage() {
 										key={palette.name}
 										type="button"
 										aria-pressed={isActive}
-										aria-label={`Wybierz motyw: ${palette.name}`}
+										aria-label={t("paletteAria", { name: palette.name })}
 										onClick={() => {
 											setPrimaryColor(palette.primary);
 											setAccentColor(palette.accent);
@@ -211,7 +211,7 @@ export default function CardCustomizerPage() {
 							<div className="flex items-center gap-2">
 								<input
 									type="color"
-									aria-label="Wybierz kolor tekstu i QR z próbnika"
+									aria-label={t("textColorPickerAria")}
 									value={primaryColor}
 									onChange={(e) => setPrimaryColor(e.target.value)}
 									className="w-8 h-8 rounded-lg cursor-pointer border border-slate-200 p-0.5 focus-visible:ring-2 focus-visible:ring-amber-500"
@@ -219,7 +219,7 @@ export default function CardCustomizerPage() {
 								<input
 									id="primary-color-text"
 									type="text"
-									aria-label="Wpisz kod HEX koloru tekstu i QR"
+									aria-label={t("textColorHexAria")}
 									value={primaryColor}
 									onChange={(e) => setPrimaryColor(e.target.value)}
 									className="w-full px-2 py-1 text-xs border rounded-lg uppercase focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
@@ -236,7 +236,7 @@ export default function CardCustomizerPage() {
 							<div className="flex items-center gap-2">
 								<input
 									type="color"
-									aria-label="Wybierz kolor złotej ramki z próbnika"
+									aria-label={t("accentColorPickerAria")}
 									value={accentColor}
 									onChange={(e) => setAccentColor(e.target.value)}
 									className="w-8 h-8 rounded-lg cursor-pointer border border-slate-200 p-0.5 focus-visible:ring-2 focus-visible:ring-amber-500"
@@ -244,7 +244,7 @@ export default function CardCustomizerPage() {
 								<input
 									id="accent-color-text"
 									type="text"
-									aria-label="Wpisz kod HEX koloru złotej ramki"
+									aria-label={t("accentColorHexAria")}
 									value={accentColor}
 									onChange={(e) => setAccentColor(e.target.value)}
 									className="w-full px-2 py-1 text-xs border rounded-lg uppercase focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"

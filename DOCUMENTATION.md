@@ -288,6 +288,8 @@ Logika klienta wspólna dla wielu stron jest w `apps/web/src/hooks/` i `apps/web
 
 - **Panel administratora** — `lib/api-request.ts` (`authedRequest`, wspólna nierzucająca warstwa `fetch` dla paneli) i `useAdminApi` (nagłówek `x-admin-token`; odpowiedź 401 wraca do logowania z komunikatem „sesja wygasła" zamiast pustej tabeli). Strona składa widok z `components/admin/*` (`AdminLoginForm`, `AdminStats`, `GalleryTable`, `CreateGalleryModal` z formularzem na `useReducer`); trzy linki do galerii (gość, wydruk karty, panel pary) pochodzą z jednej tablicy `GALLERY_LINKS`. Błędy tworzenia/usuwania są pokazywane inline (bez `alert()`).
 
+- **Lokalizacja (pl/en/de)** — żaden tekst widoczny lub czytany przez czytniki ekranu nie jest zakodowany na sztywno: etykiety lightboxa i siatki mediów, układ stron prawnych, ekran offline, `sr-only` „otwiera się w nowej karcie" (`NewTabLabel`), `aria-label` edytora karty oraz `metadata` dokumentu (`generateMetadata` z przestrzenią `Meta`). Test `tests/unit/messages-parity.test.ts` wymusza identyczne zbiory kluczy w `pl.json`, `en.json` i `de.json`.
+
 ## 7. Procedury Kopiowania Zapasowego i Przywracania (Backup)
 
 Wszystkie dane aplikacji znajdują się w dwóch dedykowanych wolumenach Dockera:

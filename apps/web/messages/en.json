@@ -5,7 +5,10 @@
 		"termsOfService": "Terms of Service",
 		"loadError": "Couldn't load the gallery",
 		"loadErrorDesc": "Check your internet connection and try again.",
-		"retryBtn": "Try again"
+		"retryBtn": "Try again",
+		"opensInNewTab": "(opens in a new tab)",
+		"backToHome": "Back to the home page",
+		"footerTagline": "WeddingDrop • Self-Hosted Wedding Gallery Platform"
 	},
 	"Legal": {
 		"privacyTitle": "Privacy Policy",
@@ -157,7 +160,11 @@
 		"cameraError": "Couldn't start the camera. Check your browser permissions or use the regular file picker instead.",
 		"cameraBackToFiles": "Back to file picker",
 		"cameraCancel": "Close camera preview",
-		"cameraShutter": "Take photo"
+		"cameraShutter": "Take photo",
+		"lightboxAria": "Media preview: {name}",
+		"slideAnnouncement": "Item {current} of {total}: {name}",
+		"imageAria": "Photo",
+		"videoAria": "Video"
 	},
 	"CardPage": {
 		"paletteGoldNavy": "Gold & Navy",
@@ -182,7 +189,12 @@
 		"headlineLabel": "Headline",
 		"instructionsLabel": "Instructions for guests",
 		"previewFormat": "A6 format (105 × 148 mm) • Scaled 1:1 preview",
-		"qrAlt": "QR code for wedding gallery: "
+		"qrAlt": "QR code for wedding gallery: ",
+		"paletteAria": "Choose theme: {name}",
+		"textColorPickerAria": "Pick the text and QR colour with the colour picker",
+		"textColorHexAria": "Enter the HEX code of the text and QR colour",
+		"accentColorPickerAria": "Pick the gold border colour with the colour picker",
+		"accentColorHexAria": "Enter the HEX code of the gold border colour"
 	},
 	"OwnerPanel": {
 		"gdriveSuccess": "Google Drive has been successfully connected to the gallery!",
@@ -322,5 +334,15 @@
 		"waitingForFirstPhoto": "Waiting for the first photo...",
 		"uploaderPrefix": "Added by:",
 		"qrHint": "Scan to add your photos"
+	},
+	"Offline": {
+		"title": "No internet connection",
+		"heading": "You are offline",
+		"description": "It looks like you lost your network connection. If you were uploading files, don't worry - uploading will resume automatically once you are back online.",
+		"refreshBtn": "Try to refresh"
+	},
+	"Meta": {
+		"title": "WeddingDrop - Wedding Photos and Videos",
+		"description": "Share wedding photos and videos without having to install an app."
 	}
 }

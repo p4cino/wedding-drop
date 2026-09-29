@@ -82,4 +82,29 @@ describe("MediaGrid Component", () => {
 
 		expect(screen.getAllByText("photographerBadge")).toHaveLength(1);
 	});
+
+	it("aria-label elementu zaczyna się od przetłumaczonego typu (zdjęcie/wideo)", () => {
+		const base = {
+			uploaderName: "X",
+			mimeType: "x",
+			thumbUrl: "/t",
+			rawUrl: "/r",
+			createdAt: "2026-09-12",
+		};
+		render(
+			<MediaGrid
+				items={[
+					{ ...base, id: "1", fileType: "image", originalFileName: "a.jpg" },
+					{ ...base, id: "2", fileType: "video", originalFileName: "b.mp4" },
+				]}
+				onItemClick={vi.fn()}
+			/>,
+		);
+		expect(
+			screen.getByRole("button", { name: /^imageAria: a\.jpg,/ }),
+		).toBeInTheDocument();
+		expect(
+			screen.getByRole("button", { name: /^videoAria: b\.mp4,/ }),
+		).toBeInTheDocument();
+	});
 });

@@ -5,7 +5,10 @@
 		"termsOfService": "Nutzungsbedingungen",
 		"loadError": "Die Galerie konnte nicht geladen werden",
 		"loadErrorDesc": "Überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
-		"retryBtn": "Erneut versuchen"
+		"retryBtn": "Erneut versuchen",
+		"opensInNewTab": "(öffnet in einem neuen Tab)",
+		"backToHome": "Zurück zur Startseite",
+		"footerTagline": "WeddingDrop • Self-Hosted Wedding Gallery Platform"
 	},
 	"Legal": {
 		"privacyTitle": "Datenschutzerklärung",
@@ -157,7 +160,11 @@
 		"cameraError": "Die Kamera konnte nicht gestartet werden. Überprüfen Sie die Browserberechtigungen oder verwenden Sie die normale Dateiauswahl.",
 		"cameraBackToFiles": "Zurück zur Dateiauswahl",
 		"cameraCancel": "Kameravorschau schließen",
-		"cameraShutter": "Foto aufnehmen"
+		"cameraShutter": "Foto aufnehmen",
+		"lightboxAria": "Medienvorschau: {name}",
+		"slideAnnouncement": "Element {current} von {total}: {name}",
+		"imageAria": "Foto",
+		"videoAria": "Video"
 	},
 	"CardPage": {
 		"paletteGoldNavy": "Gold & Marineblau",
@@ -182,7 +189,12 @@
 		"headlineLabel": "Überschrift",
 		"instructionsLabel": "Anweisungen für Gäste",
 		"previewFormat": "A6-Format (105 × 148 mm) • Skalierte 1:1-Vorschau",
-		"qrAlt": "QR-Code für Hochzeitsgalerie: "
+		"qrAlt": "QR-Code für Hochzeitsgalerie: ",
+		"paletteAria": "Design wählen: {name}",
+		"textColorPickerAria": "Text- und QR-Farbe mit der Farbauswahl wählen",
+		"textColorHexAria": "HEX-Code der Text- und QR-Farbe eingeben",
+		"accentColorPickerAria": "Farbe des goldenen Rahmens mit der Farbauswahl wählen",
+		"accentColorHexAria": "HEX-Code der Farbe des goldenen Rahmens eingeben"
 	},
 	"OwnerPanel": {
 		"gdriveSuccess": "Google Drive wurde erfolgreich mit der Galerie verbunden!",
@@ -322,5 +334,15 @@
 		"waitingForFirstPhoto": "Warten auf das erste Foto...",
 		"uploaderPrefix": "Hinzugefügt von:",
 		"qrHint": "Scannen, um eigene Fotos hinzuzufügen"
+	},
+	"Offline": {
+		"title": "Keine Internetverbindung",
+		"heading": "Sie sind offline",
+		"description": "Es sieht so aus, als hätten Sie die Netzwerkverbindung verloren. Falls Sie Dateien hochgeladen haben, keine Sorge - der Upload wird automatisch fortgesetzt, sobald Sie wieder online sind.",
+		"refreshBtn": "Neu laden"
+	},
+	"Meta": {
+		"title": "WeddingDrop - Hochzeitsfotos und -videos",
+		"description": "Teilen Sie Hochzeitsfotos und -videos, ohne eine App installieren zu müssen."
 	}
 }

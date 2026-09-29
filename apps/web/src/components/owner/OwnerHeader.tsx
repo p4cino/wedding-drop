@@ -2,6 +2,7 @@
 
 import { Download, ExternalLink, QrCode, Tv } from "lucide-react";
 import { useTranslations } from "next-intl";
+import NewTabLabel from "@/components/NewTabLabel";
 import { Link } from "@/i18n/routing";
 
 interface OwnerHeaderProps {
@@ -19,7 +20,7 @@ export function OwnerHeader({
 	coupleNames,
 }: OwnerHeaderProps) {
 	const t = useTranslations("OwnerPanel");
-	const newTab = <span className="sr-only">(otwiera się w nowej karcie)</span>;
+	const newTab = <NewTabLabel />;
 
 	return (
 		<header className="bg-white border-b border-slate-200 px-4 sm:px-8 py-4 sticky top-0 z-30 flex flex-wrap items-center justify-between gap-4">

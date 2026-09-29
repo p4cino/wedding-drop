@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type React from "react";
+import NewTabLabel from "@/components/NewTabLabel";
 import type { GDriveState } from "@/lib/owner-types";
 
 interface GDriveBackupCardProps {
@@ -111,7 +112,7 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 								>
 									<ArrowUpRight className="w-4 h-4" aria-hidden="true" />
 									<span>{t("openFolder")}</span>
-									<span className="sr-only">(otwiera się w nowej karcie)</span>
+									<NewTabLabel />
 								</a>
 							)}
 
@@ -297,7 +298,7 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 								>
 									<ArrowUpRight className="w-4 h-4" aria-hidden="true" />
 									<span>{t("viewGDrive")}</span>
-									<span className="sr-only">(otwiera się w nowej karcie)</span>
+									<NewTabLabel />
 								</a>
 							)}
 						</div>

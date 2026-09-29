@@ -410,7 +410,7 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 		// Zdjęcie z photobooth pojawia się w galerii na tych samych zasadach co zwykły upload
 		await expect(
 			page.getByRole("button", {
-				name: new RegExp(`^Image: ${exactFileName}, `),
+				name: new RegExp(`^Zdjęcie: ${exactFileName}, `),
 			}),
 		).toBeVisible({ timeout: 30000 });
 	});

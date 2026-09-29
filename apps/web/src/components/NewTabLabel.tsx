@@ -1,4 +1,9 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+
 /** Tekst dla czytników ekranu przy linkach otwieranych w nowej karcie. */
 export default function NewTabLabel() {
-	return <span className="sr-only">(otwiera się w nowej karcie)</span>;
+	const t = useTranslations("Common");
+	return <span className="sr-only">{t("opensInNewTab")}</span>;
 }

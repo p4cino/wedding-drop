@@ -5,7 +5,10 @@
 		"termsOfService": "Warunki Korzystania",
 		"loadError": "Nie udało się wczytać galerii",
 		"loadErrorDesc": "Sprawdź połączenie z internetem i spróbuj ponownie.",
-		"retryBtn": "Spróbuj ponownie"
+		"retryBtn": "Spróbuj ponownie",
+		"opensInNewTab": "(otwiera się w nowej karcie)",
+		"backToHome": "Powrót do strony głównej",
+		"footerTagline": "WeddingDrop • Self-Hosted Wedding Gallery Platform"
 	},
 	"Legal": {
 		"privacyTitle": "Polityka Prywatności",
@@ -157,7 +160,11 @@
 		"cameraError": "Nie udało się uruchomić aparatu. Sprawdź uprawnienia przeglądarki lub użyj zwykłego wyboru pliku.",
 		"cameraBackToFiles": "Wróć do wyboru pliku",
 		"cameraCancel": "Zamknij podgląd aparatu",
-		"cameraShutter": "Zrób zdjęcie"
+		"cameraShutter": "Zrób zdjęcie",
+		"lightboxAria": "Podgląd multimediów: {name}",
+		"slideAnnouncement": "Element {current} z {total}: {name}",
+		"imageAria": "Zdjęcie",
+		"videoAria": "Wideo"
 	},
 	"CardPage": {
 		"paletteGoldNavy": "Złoto & Granat",
@@ -182,7 +189,12 @@
 		"headlineLabel": "Nagłówek",
 		"instructionsLabel": "Instrukcja dla gości",
 		"previewFormat": "Format A6 (105 × 148 mm) • Skalowany podgląd 1:1",
-		"qrAlt": "Kod QR do galerii weselnej: "
+		"qrAlt": "Kod QR do galerii weselnej: ",
+		"paletteAria": "Wybierz motyw: {name}",
+		"textColorPickerAria": "Wybierz kolor tekstu i QR z próbnika",
+		"textColorHexAria": "Wpisz kod HEX koloru tekstu i QR",
+		"accentColorPickerAria": "Wybierz kolor złotej ramki z próbnika",
+		"accentColorHexAria": "Wpisz kod HEX koloru złotej ramki"
 	},
 	"OwnerPanel": {
 		"gdriveSuccess": "Dysk Google został pomyślnie podłączony do galerii!",
@@ -322,5 +334,15 @@
 		"waitingForFirstPhoto": "Czekamy na pierwsze zdjęcie...",
 		"uploaderPrefix": "Dodał(a):",
 		"qrHint": "Zeskanuj i dodaj swoje zdjęcia"
+	},
+	"Offline": {
+		"title": "Brak połączenia z internetem",
+		"heading": "Jesteś offline",
+		"description": "Wygląda na to, że straciłeś połączenie z siecią. Jeśli wysyłałeś pliki, nie martw się - wysyłanie zostanie automatycznie wznowione po powrocie internetu.",
+		"refreshBtn": "Spróbuj odświeżyć"
+	},
+	"Meta": {
+		"title": "WeddingDrop - Zdjęcia i Filmy z Wesela",
+		"description": "Dziel się zdjęciami i filmami z wesela bez konieczności instalowania aplikacji."
 	}
 }

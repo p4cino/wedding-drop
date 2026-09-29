@@ -33,7 +33,7 @@ export default function MediaGrid({ items, onItemClick }: MediaGridProps) {
 				const isVideo = item.fileType === "video";
 				const isPhotographer = item.source === "photographer";
 				const uploader = item.uploaderName || t("defaultUploaderName");
-				const ariaLabel = `${isVideo ? "Video" : "Image"}: ${item.originalFileName}, ${t("uploaderLabel")} ${uploader}`;
+				const ariaLabel = `${isVideo ? t("videoAria") : t("imageAria")}: ${item.originalFileName}, ${t("uploaderLabel")} ${uploader}`;
 
 				return (
 					<button
