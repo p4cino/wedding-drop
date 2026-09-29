@@ -3,6 +3,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import UploaderDrawer from "@/components/UploaderDrawer";
+import {
+	removeMediaDevices,
+	stubMediaDevices,
+} from "../../helpers/media-devices";
 import { tusMock } from "../../helpers/tus-mock";
 
 vi.mock("tus-js-client", async () =>
@@ -41,10 +45,7 @@ describe("UploaderDrawer Component", () => {
 	beforeEach(() => {
 		tusMock.reset();
 		// Symulacja obsługi getUserMedia przez przeglądarkę — opcja "Zrób zdjęcie" widoczna
-		Object.defineProperty(navigator, "mediaDevices", {
-			configurable: true,
-			value: { getUserMedia: vi.fn() },
-		});
+		stubMediaDevices();
 	});
 
 	it("nie powinien renderować niczego, gdy isOpen === false", () => {
@@ -359,10 +360,7 @@ describe("UploaderDrawer Component", () => {
 	});
 
 	it("nie powinien pokazywać opcji 'Zrób zdjęcie', gdy przeglądarka nie obsługuje getUserMedia", () => {
-		Object.defineProperty(navigator, "mediaDevices", {
-			configurable: true,
-			value: undefined,
-		});
+		removeMediaDevices();
 
 		render(
 			<UploaderDrawer
@@ -375,5 +373,31 @@ describe("UploaderDrawer Component", () => {
 		expect(
 			screen.queryByRole("button", { name: "cameraOptionBtn" }),
 		).toBeNull();
+	});
+
+	it("trzyma fokus wewnątrz okna (Tab zapętla się) i przywraca go po zamknięciu", () => {
+		const opener = document.createElement("button");
+		document.body.appendChild(opener);
+		opener.focus();
+
+		const { rerender } = render(
+			<UploaderDrawer gallerySlug="kasia" isOpen={true} onClose={vi.fn()} />,
+		);
+		const dialog = screen.getByRole("dialog");
+		const focusables = dialog.querySelectorAll<HTMLElement>(
+			"button:not([disabled]), input:not([disabled])",
+		);
+		expect(dialog.contains(document.activeElement)).toBe(true);
+
+		const last = focusables[focusables.length - 1];
+		last.focus();
+		fireEvent.keyDown(window, { key: "Tab" });
+		expect(document.activeElement).toBe(focusables[0]);
+
+		rerender(
+			<UploaderDrawer gallerySlug="kasia" isOpen={false} onClose={vi.fn()} />,
+		);
+		expect(document.activeElement).toBe(opener);
+		opener.remove();
 	});
 });

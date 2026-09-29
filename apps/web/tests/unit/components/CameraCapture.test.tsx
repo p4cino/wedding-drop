@@ -3,33 +3,24 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import CameraCapture from "@/components/CameraCapture";
+import {
+	createFakeStream,
+	removeMediaDevices,
+	stubMediaDevices,
+} from "../../helpers/media-devices";
 
 const captureFrameToCanvasMock = vi.fn();
 const canvasToJpegFileMock = vi.fn();
 
-vi.mock("@/lib/photobooth", () => ({
+vi.mock("@/lib/photobooth", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@/lib/photobooth")>()),
 	captureFrameToCanvas: (...args: unknown[]) =>
 		captureFrameToCanvasMock(...args),
 	canvasToJpegFile: (...args: unknown[]) => canvasToJpegFileMock(...args),
 }));
 
-function mockGetUserMedia(
-	impl: () => Promise<MediaStream>,
-): ReturnType<typeof vi.fn> {
-	const fn = vi.fn(impl);
-	Object.defineProperty(navigator, "mediaDevices", {
-		configurable: true,
-		value: { getUserMedia: fn },
-	});
-	return fn;
-}
-
-function fakeStream(): MediaStream {
-	const track = { stop: vi.fn() };
-	return {
-		getTracks: () => [track],
-	} as unknown as MediaStream;
-}
+const mockGetUserMedia = stubMediaDevices;
+const fakeStream = () => createFakeStream().stream;
 
 describe("CameraCapture Component", () => {
 	beforeEach(() => {
@@ -73,10 +64,7 @@ describe("CameraCapture Component", () => {
 	});
 
 	it("pokazuje komunikat błędu, gdy przeglądarka nie posiada API getUserMedia", async () => {
-		Object.defineProperty(navigator, "mediaDevices", {
-			configurable: true,
-			value: undefined,
-		});
+		removeMediaDevices();
 
 		render(<CameraCapture onCapture={vi.fn()} onCancel={vi.fn()} />);
 
@@ -152,6 +140,25 @@ describe("CameraCapture Component", () => {
 		unmount();
 
 		const [track] = stream.getTracks();
+		expect(track.stop).toHaveBeenCalled();
+	});
+
+	it("po błędzie zrobienia zdjęcia od razu zatrzymuje strumień kamery (bez czekania na odmontowanie)", async () => {
+		vi.spyOn(console, "error").mockImplementation(() => {});
+		captureFrameToCanvasMock.mockImplementation(() => {
+			throw new Error("canvas");
+		});
+		const { stream, track } = createFakeStream();
+		mockGetUserMedia(async () => stream);
+
+		render(<CameraCapture onCapture={vi.fn()} onCancel={vi.fn()} />);
+		const shutter = await screen.findByRole("button", {
+			name: "cameraShutter",
+		});
+		await waitFor(() => expect(shutter).toBeEnabled());
+
+		fireEvent.click(shutter);
+		expect(await screen.findByText("cameraError")).toBeInTheDocument();
 		expect(track.stop).toHaveBeenCalled();
 	});
 });

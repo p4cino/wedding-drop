@@ -8,7 +8,12 @@ import {
 	DEFAULT_ACCENT_COLOR,
 	DEFAULT_PRIMARY_COLOR,
 	drawPhotoboothFrame,
+	isCameraSupported,
 } from "@/lib/photobooth";
+import {
+	removeMediaDevices,
+	stubMediaDevices,
+} from "../../helpers/media-devices";
 
 describe("computeCaptureDimensions", () => {
 	it("zachowuje faktyczne wymiary strumienia wideo, gdy dłuższy bok mieści się w limicie", () => {
@@ -159,5 +164,14 @@ describe("canvasToJpegFile", () => {
 		canvas.toBlob = vi.fn((callback: BlobCallback) => callback(null));
 
 		await expect(canvasToJpegFile(canvas, "test.jpg")).rejects.toThrow();
+	});
+});
+
+describe("isCameraSupported", () => {
+	it("zwraca true, gdy istnieje getUserMedia, i false bez mediaDevices", () => {
+		stubMediaDevices();
+		expect(isCameraSupported()).toBe(true);
+		removeMediaDevices();
+		expect(isCameraSupported()).toBe(false);
 	});
 });

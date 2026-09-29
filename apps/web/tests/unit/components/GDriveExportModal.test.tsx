@@ -102,4 +102,30 @@ describe("GDriveExportModal Component", () => {
 		fireEvent.keyDown(window, { key: "Escape" });
 		expect(onClose).toHaveBeenCalledTimes(1);
 	});
+
+	it("trzyma fokus wewnątrz modala i przywraca go na element otwierający po zamknięciu", () => {
+		const opener = document.createElement("button");
+		document.body.appendChild(opener);
+		opener.focus();
+
+		const { rerender } = renderModal();
+		const dialog = screen.getByRole("dialog");
+		expect(dialog.contains(document.activeElement)).toBe(true);
+
+		screen.getByRole("button", { name: "startBtn" }).focus();
+		fireEvent.keyDown(window, { key: "Tab" });
+		expect(dialog.contains(document.activeElement)).toBe(true);
+		expect(document.activeElement).not.toBe(opener);
+
+		rerender(
+			<GDriveExportModal
+				isOpen={false}
+				coupleNames="Kasia i Tomek"
+				onClose={vi.fn()}
+				onStartExport={vi.fn()}
+			/>,
+		);
+		expect(document.activeElement).toBe(opener);
+		opener.remove();
+	});
 });

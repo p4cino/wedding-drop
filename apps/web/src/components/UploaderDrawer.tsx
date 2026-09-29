@@ -2,11 +2,14 @@
 
 import { Camera, CheckCircle2, Loader2, Upload, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import CameraCapture from "@/components/CameraCapture";
 import FilePickerDropzone from "@/components/upload/FilePickerDropzone";
 import UploadFileRow from "@/components/upload/UploadFileRow";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { useUploadQueue } from "@/hooks/useUploadQueue";
+import { isCameraSupported } from "@/lib/photobooth";
 
 interface UploaderDrawerProps {
 	gallerySlug: string;
@@ -36,10 +39,7 @@ export default function UploaderDrawer({
 	});
 	const { isUploading, clear: clearQueue } = queue;
 
-	// `getUserMedia` niedostępny (starsza przeglądarka / brak bezpiecznego kontekstu)
-	// -> opcja "Zrób zdjęcie" jest po prostu niedostępna, zwykły wybór pliku pozostaje jedyną opcją.
-	const isCameraSupported =
-		typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
+	const cameraSupported = isCameraSupported();
 
 	const handleClose = () => {
 		if (isUploading) return;
@@ -54,18 +54,10 @@ export default function UploaderDrawer({
 		}
 	}, [isOpen, clearQueue]);
 
-	// Obsługa klawisza Escape
-	useEffect(() => {
-		if (!isOpen) return;
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key === "Escape" && !isUploading) {
-				e.preventDefault();
-				onClose();
-			}
-		};
-		window.addEventListener("keydown", handleKeyDown);
-		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [isOpen, isUploading, onClose]);
+	// Escape zamyka panel (poza trwającą wysyłką); fokus zostaje wewnątrz okna
+	const dialogRef = useRef<HTMLDivElement>(null);
+	useEscapeKey(isOpen && !isUploading, onClose);
+	useFocusTrap(dialogRef, isOpen);
 
 	if (!isOpen) return null;
 
@@ -91,6 +83,7 @@ export default function UploaderDrawer({
 
 	return (
 		<div
+			ref={dialogRef}
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="uploader-drawer-title"
@@ -162,7 +155,7 @@ export default function UploaderDrawer({
 								onFiles={queue.addFiles}
 							/>
 
-							{isCameraSupported && (
+							{cameraSupported && (
 								<button
 									type="button"
 									disabled={isUploading}

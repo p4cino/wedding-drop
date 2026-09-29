@@ -4,8 +4,10 @@ import { createGalleryDto } from "@wedding-drop/db/validators";
 import { Check, ExternalLink, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type React from "react";
-import { useEffect, useReducer, useState } from "react";
+import { useReducer, useRef, useState } from "react";
 import NewTabLabel from "@/components/NewTabLabel";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { Link } from "@/i18n/routing";
 import type { GalleryRow } from "@/lib/admin-types";
 import { GALLERY_LINKS } from "./galleryLinks";
@@ -61,16 +63,9 @@ export function CreateGalleryModal({
 	const [error, setError] = useState("");
 	const [submitting, setSubmitting] = useState(false);
 
-	useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key === "Escape") {
-				e.preventDefault();
-				onClose();
-			}
-		};
-		window.addEventListener("keydown", handleKeyDown);
-		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [onClose]);
+	const dialogRef = useRef<HTMLDivElement>(null);
+	useEscapeKey(true, onClose);
+	useFocusTrap(dialogRef, true);
 
 	const field = (name: keyof CreateGalleryForm) => ({
 		value: form[name],
@@ -102,6 +97,7 @@ export function CreateGalleryModal({
 
 	return (
 		<div
+			ref={dialogRef}
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="admin-create-wedding-title"

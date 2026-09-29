@@ -2,8 +2,12 @@
 
 import { Camera, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useRef, useState } from "react";
-import { canvasToJpegFile, captureFrameToCanvas } from "@/lib/photobooth";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	canvasToJpegFile,
+	captureFrameToCanvas,
+	isCameraSupported,
+} from "@/lib/photobooth";
 
 interface CameraCaptureProps {
 	// Kolory motywu wesela dla dekoracyjnej ramki — brak wartości oznacza użycie
@@ -38,11 +42,18 @@ export default function CameraCapture({
 	const [isCapturing, setIsCapturing] = useState(false);
 	const t = useTranslations("GuestGallery");
 
+	const stopStream = useCallback(() => {
+		for (const track of streamRef.current?.getTracks() ?? []) {
+			track.stop();
+		}
+		streamRef.current = null;
+	}, []);
+
 	useEffect(() => {
 		let cancelled = false;
 
 		async function startCamera() {
-			if (!navigator.mediaDevices?.getUserMedia) {
+			if (!isCameraSupported()) {
 				if (!cancelled) setStatus("error");
 				return;
 			}
@@ -63,10 +74,9 @@ export default function CameraCapture({
 				if (video) {
 					try {
 						video.srcObject = stream;
-						await video.play?.();
+						await video.play();
 					} catch {
-						// Niektóre środowiska (np. jsdom w testach) nie wspierają
-						// odtwarzania wideo — nie blokuje to działania podglądu w realnej przeglądarce.
+						// Odrzucone odtwarzanie (np. polityka autoplay) nie blokuje podglądu
 					}
 				}
 				setStatus("ready");
@@ -82,12 +92,9 @@ export default function CameraCapture({
 
 		return () => {
 			cancelled = true;
-			for (const track of streamRef.current?.getTracks() ?? []) {
-				track.stop();
-			}
-			streamRef.current = null;
+			stopStream();
 		};
-	}, []);
+	}, [stopStream]);
 
 	const handleShutter = async () => {
 		const video = videoRef.current;
@@ -107,6 +114,8 @@ export default function CameraCapture({
 			onCapture(file);
 		} catch (err) {
 			console.error("Nie udało się zrobić zdjęcia w przeglądarce:", err);
+			// Kamera nie może świecić na ekranie błędu — zatrzymujemy strumień od razu
+			stopStream();
 			setStatus("error");
 		} finally {
 			setIsCapturing(false);
