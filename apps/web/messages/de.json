@@ -194,7 +194,8 @@
 		"textColorPickerAria": "Text- und QR-Farbe mit der Farbauswahl wählen",
 		"textColorHexAria": "HEX-Code der Text- und QR-Farbe eingeben",
 		"accentColorPickerAria": "Farbe des goldenen Rahmens mit der Farbauswahl wählen",
-		"accentColorHexAria": "HEX-Code der Farbe des goldenen Rahmens eingeben"
+		"accentColorHexAria": "HEX-Code der Farbe des goldenen Rahmens eingeben",
+		"qrError": "Der QR-Code konnte nicht erzeugt werden"
 	},
 	"OwnerPanel": {
 		"gdriveSuccess": "Google Drive wurde erfolgreich mit der Galerie verbunden!",

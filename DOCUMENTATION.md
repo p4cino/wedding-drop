@@ -290,6 +290,8 @@ Logika klienta wspólna dla wielu stron jest w `apps/web/src/hooks/` i `apps/web
 
 - **Lokalizacja (pl/en/de)** — żaden tekst widoczny lub czytany przez czytniki ekranu nie jest zakodowany na sztywno: etykiety lightboxa i siatki mediów, układ stron prawnych, ekran offline, `sr-only` „otwiera się w nowej karcie" (`NewTabLabel`), `aria-label` edytora karty oraz `metadata` dokumentu (`generateMetadata` z przestrzenią `Meta`). Test `tests/unit/messages-parity.test.ts` wymusza identyczne zbiory kluczy w `pl.json`, `en.json` i `de.json`.
 
+- **Edytor karteczki stołowej** — pobiera dane przez `fetchGalleryData` (rozróżnia 404 i błąd sieci: `GalleryStatusScreen`, brak przykładowego podglądu dla nieistniejącej galerii), generuje QR z anulowaniem starszych wyników i komunikatem błędu, a adres galerii buduje `lib/gallery-url.ts` (`buildGalleryUrl`, wspólne z trybem TV). Domyślne kolory karty to `lib/card-defaults.ts`. Podgląd A6 to `components/CardPreview`.
+
 ## 7. Procedury Kopiowania Zapasowego i Przywracania (Backup)
 
 Wszystkie dane aplikacji znajdują się w dwóch dedykowanych wolumenach Dockera:

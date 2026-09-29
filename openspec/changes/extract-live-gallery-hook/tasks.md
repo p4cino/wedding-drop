@@ -16,7 +16,7 @@
 - [x] 3.1 Dodaj `components/GalleryStatusScreen.tsx` (loading/notFound/error, wariant jasny/ciemny) i zweryfikuj testem renderowania
 - [x] 3.2 Przepisz `g/[slug]/page.tsx` na `useLiveGallery` + `GalleryStatusScreen`, usuwając trzy `setTimeout`; zweryfikuj `pnpm --filter @wedding-drop/web test` i e2e `guest-journey`
 - [x] 3.3 Przepisz `g/[slug]/tv/page.tsx` na `useLiveGallery`, zweryfikuj, że po symulowanym zerwaniu SSE dane są pobierane ponownie (test) oraz że e2e UC9/UC10 TV nadal przechodzą
-- [ ] 3.4 Użyj wspólnego pobrania danych galerii w `card/page.tsx` (bez zmiany zachowania kart; obsługa 404 w `fix-card-page-robustness`)
+- [x] 3.4 Użyj wspólnego pobrania danych galerii w `card/page.tsx` (`fetchGalleryData`; obsługa 404 zrealizowana w `fix-card-page-robustness`)
 
 ## 4. Dokumentacja i weryfikacja
 

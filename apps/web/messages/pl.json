@@ -194,7 +194,8 @@
 		"textColorPickerAria": "Wybierz kolor tekstu i QR z próbnika",
 		"textColorHexAria": "Wpisz kod HEX koloru tekstu i QR",
 		"accentColorPickerAria": "Wybierz kolor złotej ramki z próbnika",
-		"accentColorHexAria": "Wpisz kod HEX koloru złotej ramki"
+		"accentColorHexAria": "Wpisz kod HEX koloru złotej ramki",
+		"qrError": "Nie udało się wygenerować kodu QR"
 	},
 	"OwnerPanel": {
 		"gdriveSuccess": "Dysk Google został pomyślnie podłączony do galerii!",

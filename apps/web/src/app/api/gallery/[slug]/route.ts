@@ -1,6 +1,7 @@
 import { cardSettings, db, galleries } from "@wedding-drop/db";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
+import { DEFAULT_CARD_COLORS } from "@/lib/card-defaults";
 
 export const dynamic = "force-dynamic";
 
@@ -47,8 +48,8 @@ export async function GET(
 			// Kolory motywu wesela (z domyślnymi wartościami generatora winietek A6),
 			// używane przez ramkę photobooth w przeglądarce gościa — reużycie tych
 			// samych, publicznie już czytanych danych co GET .../card/pdf.
-			primaryColor: card?.primaryColor || "#1E293B",
-			accentColor: card?.accentColor || "#D4AF37",
+			primaryColor: card?.primaryColor || DEFAULT_CARD_COLORS.primary,
+			accentColor: card?.accentColor || DEFAULT_CARD_COLORS.accent,
 		});
 	} catch (error) {
 		console.error("Błąd pobierania metadanych galerii:", error);

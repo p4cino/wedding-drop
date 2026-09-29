@@ -194,7 +194,8 @@
 		"textColorPickerAria": "Pick the text and QR colour with the colour picker",
 		"textColorHexAria": "Enter the HEX code of the text and QR colour",
 		"accentColorPickerAria": "Pick the gold border colour with the colour picker",
-		"accentColorHexAria": "Enter the HEX code of the gold border colour"
+		"accentColorHexAria": "Enter the HEX code of the gold border colour",
+		"qrError": "Couldn't generate the QR code"
 	},
 	"OwnerPanel": {
 		"gdriveSuccess": "Google Drive has been successfully connected to the gallery!",

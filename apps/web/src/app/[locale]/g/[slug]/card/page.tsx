@@ -4,73 +4,87 @@ import { ArrowLeft, Check, Download, Printer, Sparkles } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import QRCode from "qrcode";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import CardPreview from "@/components/CardPreview";
+import GalleryStatusScreen from "@/components/GalleryStatusScreen";
 import { Link } from "@/i18n/routing";
+import { DEFAULT_CARD_COLORS } from "@/lib/card-defaults";
+import { fetchGalleryData } from "@/lib/gallery-api";
+import { buildGalleryUrl } from "@/lib/gallery-url";
+
+const PRESET_PALETTES = [
+	{ nameKey: "paletteGoldNavy", primary: "#1E293B", accent: "#D4AF37" },
+	{ nameKey: "paletteGreen", primary: "#1B4332", accent: "#D4AF37" },
+	{ nameKey: "palettePink", primary: "#2D3748", accent: "#E0A899" },
+	{ nameKey: "paletteBlack", primary: "#0F172A", accent: "#475569" },
+] as const;
+
+type LoadStatus = "loading" | "ready" | "notFound" | "error";
 
 export default function CardCustomizerPage() {
 	const params = useParams();
 	const slug = params?.slug as string;
 	const t = useTranslations("CardPage");
 
-	const PRESET_PALETTES = [
-		{ name: t("paletteGoldNavy"), primary: "#1E293B", accent: "#D4AF37" },
-		{ name: t("paletteGreen"), primary: "#1B4332", accent: "#D4AF37" },
-		{ name: t("palettePink"), primary: "#2D3748", accent: "#E0A899" },
-		{ name: t("paletteBlack"), primary: "#0F172A", accent: "#475569" },
-	];
-
 	const [coupleNames, setCoupleNames] = useState("Katarzyna & Tomasz");
 	const [weddingDate, setWeddingDate] = useState("12.09.2026");
 	const [headline, setHeadline] = useState(t("defaultHeadline"));
 	const [instructions, setInstructions] = useState(t("defaultInstructions"));
-	const [primaryColor, setPrimaryColor] = useState("#1E293B");
-	const [accentColor, setAccentColor] = useState("#D4AF37");
+	const [primaryColor, setPrimaryColor] = useState<string>(
+		DEFAULT_CARD_COLORS.primary,
+	);
+	const [accentColor, setAccentColor] = useState<string>(
+		DEFAULT_CARD_COLORS.accent,
+	);
 	const [qrDataUrl, setQrDataUrl] = useState<string>("");
-	const [loading, setLoading] = useState(true);
+	const [qrFailed, setQrFailed] = useState(false);
+	const [status, setStatus] = useState<LoadStatus>("loading");
 
-	// Pobranie danych galerii
-	useEffect(() => {
-		async function loadData() {
-			try {
-				const res = await fetch(`/api/gallery/${slug}`);
-				if (res.ok) {
-					const data = await res.json();
-					setCoupleNames(data.coupleNames || "Katarzyna & Tomasz");
-					setWeddingDate(data.weddingDate || "12.09.2026");
-					if (data.cardSettings) {
-						if (data.cardSettings.headline)
-							setHeadline(data.cardSettings.headline);
-						if (data.cardSettings.customInstructions)
-							setInstructions(data.cardSettings.customInstructions);
-						if (data.cardSettings.primaryColor)
-							setPrimaryColor(data.cardSettings.primaryColor);
-						if (data.cardSettings.accentColor)
-							setAccentColor(data.cardSettings.accentColor);
-					}
-				}
-			} catch (e) {
-				console.error("Błąd pobierania danych karteczki:", e);
-			} finally {
-				setLoading(false);
-			}
+	// Pobranie danych galerii (404 => brak galerii, błąd sieci => stan błędu z ponowieniem)
+	const loadData = useCallback(async () => {
+		setStatus("loading");
+		const result = await fetchGalleryData(slug);
+		if (result.status !== "ready") {
+			setStatus(result.status);
+			return;
 		}
-		loadData();
+		const data = result.gallery;
+		setCoupleNames(data.coupleNames || "Katarzyna & Tomasz");
+		setWeddingDate(data.weddingDate || "12.09.2026");
+		const card = data.cardSettings;
+		if (card?.headline) setHeadline(card.headline);
+		if (card?.customInstructions) setInstructions(card.customInstructions);
+		if (card?.primaryColor) setPrimaryColor(card.primaryColor);
+		if (card?.accentColor) setAccentColor(card.accentColor);
+		setStatus("ready");
 	}, [slug]);
 
-	// Generowanie kodu QR dla podglądu
 	useEffect(() => {
-		const url =
-			typeof window !== "undefined"
-				? `${window.location.origin}/g/${slug}`
-				: `http://localhost:3000/g/${slug}`;
-		QRCode.toDataURL(url, {
+		loadData();
+	}, [loadData]);
+
+	// Generowanie kodu QR dla podglądu; starszy wynik nie może nadpisać nowszego
+	useEffect(() => {
+		let cancelled = false;
+		setQrFailed(false);
+		QRCode.toDataURL(buildGalleryUrl(slug), {
 			margin: 1,
-			color: {
-				dark: primaryColor,
-				light: "#FFFFFF",
-			},
+			color: { dark: primaryColor, light: "#FFFFFF" },
 			errorCorrectionLevel: "H",
-		}).then(setQrDataUrl);
+		})
+			.then((url) => {
+				if (!cancelled) setQrDataUrl(url);
+			})
+			.catch((err) => {
+				console.error("Błąd generowania kodu QR:", err);
+				if (!cancelled) {
+					setQrDataUrl("");
+					setQrFailed(true);
+				}
+			});
+		return () => {
+			cancelled = true;
+		};
 	}, [slug, primaryColor]);
 
 	const handlePrint = () => {
@@ -81,7 +95,11 @@ export default function CardCustomizerPage() {
 		.split("\n")
 		.filter((l) => l.trim().length > 0);
 
-	if (loading) {
+	if (status === "notFound") return <GalleryStatusScreen variant="notFound" />;
+	if (status === "error") {
+		return <GalleryStatusScreen variant="error" onRetry={loadData} />;
+	}
+	if (status === "loading") {
 		return (
 			<div className="min-h-screen flex items-center justify-center bg-[#FAF8F5]">
 				<div className="text-center space-y-3">
@@ -93,6 +111,13 @@ export default function CardCustomizerPage() {
 			</div>
 		);
 	}
+
+	const pdfParams = new URLSearchParams({
+		primaryColor,
+		accentColor,
+		headline,
+		instructions,
+	});
 
 	return (
 		<div className="min-h-screen bg-[#FAF8F5] pb-16">
@@ -116,7 +141,7 @@ export default function CardCustomizerPage() {
 						<span className="hidden sm:inline">{t("printBtn")}</span>
 					</button>
 					<a
-						href={`/api/gallery/${slug}/card/pdf?primaryColor=${encodeURIComponent(primaryColor)}&accentColor=${encodeURIComponent(accentColor)}&headline=${encodeURIComponent(headline)}&instructions=${encodeURIComponent(instructions)}`}
+						href={`/api/gallery/${slug}/card/pdf?${pdfParams}`}
 						download
 						aria-label={t("downloadAria")}
 						className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-amber-600 hover:bg-amber-700 text-white shadow-sm transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
@@ -160,10 +185,10 @@ export default function CardCustomizerPage() {
 									accentColor === palette.accent;
 								return (
 									<button
-										key={palette.name}
+										key={palette.nameKey}
 										type="button"
 										aria-pressed={isActive}
-										aria-label={t("paletteAria", { name: palette.name })}
+										aria-label={t("paletteAria", { name: t(palette.nameKey) })}
 										onClick={() => {
 											setPrimaryColor(palette.primary);
 											setAccentColor(palette.accent);
@@ -185,7 +210,7 @@ export default function CardCustomizerPage() {
 											/>
 										</div>
 										<span className="truncate text-slate-800">
-											{palette.name}
+											{t(palette.nameKey)}
 										</span>
 										{isActive && (
 											<Check
@@ -295,70 +320,16 @@ export default function CardCustomizerPage() {
 						{t("previewFormat")}
 					</div>
 
-					{/* Podgląd wizualny karteczki */}
-					<div
-						id="printable-card"
-						className="w-full max-w-[340px] aspect-[105/148] bg-white rounded-xl shadow-2xl p-4 sm:p-5 flex flex-col justify-between text-center relative overflow-hidden transition-all duration-300"
-						style={{
-							borderColor: accentColor,
-						}}
-					>
-						{/* Ozdobna podwójna ramka */}
-						<div
-							className="absolute inset-3 border-2 pointer-events-none rounded-lg"
-							style={{ borderColor: accentColor }}
-						/>
-						<div
-							className="absolute inset-4 border pointer-events-none rounded-md opacity-60"
-							style={{ borderColor: accentColor }}
-						/>
-
-						{/* Górna sekcja - Imiona Pary */}
-						<div className="relative z-10 pt-3">
-							<h3
-								className="font-serif-luxury text-xl sm:text-2xl font-bold tracking-tight"
-								style={{ color: primaryColor }}
-							>
-								{coupleNames}
-							</h3>
-							<p
-								className="text-[11px] font-serif-luxury italic tracking-widest mt-0.5"
-								style={{ color: accentColor }}
-							>
-								{weddingDate}
-							</p>
-						</div>
-
-						{/* Środkowa sekcja - Kod QR */}
-						<div className="relative z-10 my-auto flex flex-col items-center">
-							<div className="p-2.5 bg-white rounded-2xl shadow-xs border border-slate-100">
-								{qrDataUrl ? (
-									<img
-										src={qrDataUrl}
-										alt={`${t("qrAlt")} ${coupleNames}`}
-										className="w-36 h-36 sm:w-40 sm:h-40 object-contain"
-									/>
-								) : (
-									<div className="w-36 h-36 bg-slate-100 animate-pulse rounded-lg" />
-								)}
-							</div>
-						</div>
-
-						{/* Dolna sekcja - Instrukcja */}
-						<div className="relative z-10 pb-2">
-							<p
-								className="font-bold text-xs uppercase tracking-wider mb-1.5"
-								style={{ color: primaryColor }}
-							>
-								{headline}
-							</p>
-							<div className="space-y-0.5 text-[9.5px] leading-relaxed text-slate-600 max-w-[240px] mx-auto">
-								{instructionLines.map((line) => (
-									<p key={line}>{line}</p>
-								))}
-							</div>
-						</div>
-					</div>
+					<CardPreview
+						coupleNames={coupleNames}
+						weddingDate={weddingDate}
+						headline={headline}
+						lines={instructionLines}
+						primaryColor={primaryColor}
+						accentColor={accentColor}
+						qrDataUrl={qrDataUrl}
+						qrFailed={qrFailed}
+					/>
 				</div>
 			</main>
 		</div>
