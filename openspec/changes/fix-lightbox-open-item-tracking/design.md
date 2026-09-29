@@ -17,9 +17,9 @@ Dziś `page.tsx` trzyma `lightboxIndex: number | null` i przy każdym zdarzeniu 
 
 - **`lightboxId: string | null` zamiast indeksu.** Indeks liczony przy renderze: `const index = lightboxId ? items.findIndex(i => i.id === lightboxId) : -1`. `findIndex` na liście rzędu setek/tysięcy elementów jest tanie i uruchamia się tylko przy otwartym lightboxie.
 - **Sąsiad po usunięciu w czystym efekcie, nie w updaterze.** `useEffect` (lub pochodna wartość) sprawdza, czy `lightboxId` nadal jest na liście; jeśli nie, wybiera element o tym samym położeniu z poprzedniej listy (`prevItemsRef`) lub poprzedni, a gdy lista jest pusta — `null`. Alternatywa: reducer z `extract-live-gallery-hook` zwraca `removedNeighborId`; wybieramy najprostsze, co działa w obu kolejnościach wdrożenia.
-- **Kontrakt `LightboxModal`:** propsy `currentId`, `onNavigate(id)`; nawigacja prev/next wyznacza sąsiada z `items` wewnątrz komponentu. Testy `LightboxModal.test.tsx` przechodzą na `id`.
+- **Kontrakt `LightboxModal` bez zmian** (`currentIndex`, `onNavigate(index)`): logika śledzenia po `id` mieszka w hooku `useLightboxSelection(items)` (`apps/web/src/hooks/`), który przekazuje komponentowi wyliczony indeks. Dzięki temu nie zmieniamy testów i propsów lightboxa (decyzja z implementacji, prostsza niż planowane `currentId`).
 
 ## Risks / Trade-offs
 
 - [Ryzyko: efekt korygujący powoduje jedno dodatkowe renderowanie po usunięciu] → Mitigacja: renderowanie jednego lightboxa jest tanie; alternatywa (reducer) usuwa to, gdy `extract-live-gallery-hook` jest wdrożony.
-- [Ryzyko: zmiana publicznego kontraktu komponentu] → Mitigacja: komponent jest używany tylko na stronie `/g/[slug]` i w testach; kompilator (`check-types`) wskaże wszystkie miejsca.
+- [Ryzyko: efekt korygujący uruchamia się przy każdej zmianie listy] → Mitigacja: efekt wychodzi natychmiast, gdy element nadal istnieje (`findIndex` na liście rzędu setek elementów).

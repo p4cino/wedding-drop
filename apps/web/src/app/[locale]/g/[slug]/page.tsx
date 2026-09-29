@@ -17,6 +17,7 @@ import LightboxModal from "@/components/LightboxModal";
 import MediaGrid from "@/components/MediaGrid";
 import UploaderDrawer from "@/components/UploaderDrawer";
 import WishesBook from "@/components/WishesBook";
+import { useLightboxSelection } from "@/hooks/useLightboxSelection";
 import { useLiveGallery } from "@/hooks/useLiveGallery";
 
 export default function GuestGalleryPage() {
@@ -35,7 +36,7 @@ export default function GuestGalleryPage() {
 	} = useLiveGallery(slug);
 	const [activeTab, setActiveTab] = useState<"photos" | "wishes">("photos");
 	const [isUploaderOpen, setIsUploaderOpen] = useState(false);
-	const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+	const lightbox = useLightboxSelection(items);
 	const t = useTranslations("GuestGallery");
 	const tWishes = useTranslations("Wishes");
 
@@ -170,10 +171,7 @@ export default function GuestGalleryPage() {
 			{/* Siatka galerii lub księga życzeń */}
 			<main className="max-w-6xl mx-auto px-4 sm:px-6 pt-6">
 				{activeTab === "photos" ? (
-					<MediaGrid
-						items={items}
-						onItemClick={(index) => setLightboxIndex(index)}
-					/>
+					<MediaGrid items={items} onItemClick={lightbox.open} />
 				) : (
 					<WishesBook wishes={wishes} onSubmit={handleAddWish} />
 				)}
@@ -214,9 +212,9 @@ export default function GuestGalleryPage() {
 			{/* Pełnoekranowy Lightbox */}
 			<LightboxModal
 				items={items}
-				currentIndex={lightboxIndex}
-				onClose={() => setLightboxIndex(null)}
-				onNavigate={(newIndex) => setLightboxIndex(newIndex)}
+				currentIndex={lightbox.index}
+				onClose={lightbox.close}
+				onNavigate={lightbox.navigate}
 				allowDownloads={gallery.allowGuestDownloads}
 			/>
 
