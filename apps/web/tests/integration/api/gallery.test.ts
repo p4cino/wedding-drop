@@ -26,6 +26,7 @@ vi.mock("archiver", () => {
 		return {
 			pipe: vi.fn(),
 			file: vi.fn(),
+			append: vi.fn(),
 			finalize: vi.fn(),
 			on: vi.fn(),
 		};
@@ -36,12 +37,22 @@ vi.mock("archiver", () => {
 	};
 });
 
+// `createGalleryZipStream` samo w sobie jest już pokryte testami jednostkowymi
+// w packages/media/tests/zip-streamer.test.ts (weryfikacja realnych bajtów ZIP
+// zawierających zyczenia.txt). Tutaj, na poziomie integracyjnym trasy API,
+// interesuje nas wyłącznie to, JAKI `wishesText` trasa zip przekazuje dalej —
+// stąd `vi.spyOn` z zachowaniem prawdziwej implementacji (call-through).
+import * as mediaModule from "@wedding-drop/media";
+
+const createZipSpy = vi.spyOn(mediaModule, "createGalleryZipStream");
+
 let mockGalleries: Record<string, unknown>[] = [];
 let mockCards: Record<string, unknown>[] = [];
 let mockMedia: Record<string, unknown>[] = [];
+let mockWishesForZip: Record<string, unknown>[] = [];
 let dbShouldThrow = false;
 
-import { cardSettings, galleries } from "@wedding-drop/db";
+import { cardSettings, galleries, wishes } from "@wedding-drop/db";
 
 vi.mock("@wedding-drop/db", async (importOriginal) => {
 	const actual = await importOriginal<Record<string, unknown>>();
@@ -54,6 +65,7 @@ vi.mock("@wedding-drop/db", async (importOriginal) => {
 					let targetData = mockMedia;
 					if (table === galleries) targetData = mockGalleries;
 					else if (table === cardSettings) targetData = mockCards;
+					else if (table === wishes) targetData = mockWishesForZip;
 
 					return {
 						where: vi.fn(() => {
@@ -82,6 +94,7 @@ describe("Gallery API Routes", () => {
 		vi.clearAllMocks();
 		mockExists = true;
 		dbShouldThrow = false;
+		mockWishesForZip = [];
 		mockGalleries = [
 			{
 				id: "gal-1",
@@ -145,6 +158,40 @@ describe("Gallery API Routes", () => {
 			expect(res.status).toBe(200);
 			const data = await res.json();
 			expect(data.cardSettings).toBeNull();
+		});
+
+		it("powinien zwrócić kolory motywu z card_settings, gdy galeria ma zapisane ustawienia (dla ramki photobooth)", async () => {
+			mockCards = [
+				{
+					id: "card-1",
+					galleryId: "gal-1",
+					headline: "Wspomnienia z wesela",
+					primaryColor: "#112233",
+					accentColor: "#AABBCC",
+				},
+			];
+			const req = new NextRequest("http://localhost/api/gallery/kasia-i-tomek");
+			const res = await getGallery(req, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+
+			expect(res.status).toBe(200);
+			const data = await res.json();
+			expect(data.primaryColor).toBe("#112233");
+			expect(data.accentColor).toBe("#AABBCC");
+		});
+
+		it("powinien zwrócić domyślne kolory motywu, gdy galeria nie ma zapisanych ustawień winietki", async () => {
+			mockCards = [];
+			const req = new NextRequest("http://localhost/api/gallery/kasia-i-tomek");
+			const res = await getGallery(req, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+
+			expect(res.status).toBe(200);
+			const data = await res.json();
+			expect(data.primaryColor).toBe("#1E293B");
+			expect(data.accentColor).toBe("#D4AF37");
 		});
 
 		it("powinien zwrócić 404, gdy galeria nie istnieje", async () => {
@@ -391,6 +438,78 @@ describe("Gallery API Routes", () => {
 			});
 
 			expect(res.status).toBe(500);
+		});
+
+		it("powinien dołączyć plik z życzeniami do archiwum, gdy galeria ma widoczne życzenia", async () => {
+			mockWishesForZip = [
+				{
+					id: "wish-1",
+					galleryId: "gal-1",
+					guestName: "Ciocia Kasia",
+					message: "Sto lat!",
+					status: "ready",
+					createdAt: new Date().toISOString(),
+				},
+			];
+
+			const req = new NextRequest(
+				"http://localhost/api/gallery/kasia-i-tomek/zip",
+			);
+			const res = await getZip(req, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+
+			expect(res.status).toBe(200);
+			expect(createZipSpy).toHaveBeenCalledWith(
+				expect.any(Array),
+				expect.any(String),
+				expect.stringContaining("Sto lat!"),
+			);
+		});
+
+		it("powinien zezwolić na pobranie ZIP zawierającego wyłącznie życzenia, gdy brak zdjęć", async () => {
+			mockMedia = [];
+			mockWishesForZip = [
+				{
+					id: "wish-1",
+					galleryId: "gal-1",
+					guestName: null,
+					message: "Wszystkiego najlepszego!",
+					status: "ready",
+					createdAt: new Date().toISOString(),
+				},
+			];
+
+			const req = new NextRequest(
+				"http://localhost/api/gallery/kasia-i-tomek/zip",
+			);
+			const res = await getZip(req, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+
+			expect(res.status).toBe(200);
+			expect(createZipSpy).toHaveBeenCalledWith(
+				expect.any(Array),
+				expect.any(String),
+				expect.stringContaining("Wszystkiego najlepszego!"),
+			);
+		});
+
+		it("nie powinien przekazać wishesText, gdy galeria nie ma żadnych widocznych życzeń", async () => {
+			mockWishesForZip = [];
+			const req = new NextRequest(
+				"http://localhost/api/gallery/kasia-i-tomek/zip",
+			);
+			const res = await getZip(req, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+
+			expect(res.status).toBe(200);
+			expect(createZipSpy).toHaveBeenCalledWith(
+				expect.any(Array),
+				expect.any(String),
+				undefined,
+			);
 		});
 	});
 

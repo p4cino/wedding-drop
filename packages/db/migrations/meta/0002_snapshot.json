@@ -1,5 +1,5 @@
 {
-	"id": "8b02c7fb-25e2-4c59-b407-d0663bff1c76",
+	"id": "359f2085-9015-4a7c-a3d4-521aa5e410bd",
 	"prevId": "6dc781af-7d17-4866-8e42-f067d76df630",
 	"version": "7",
 	"dialect": "postgresql",
@@ -379,13 +379,6 @@
 					"notNull": true,
 					"default": "'Gość weselny'"
 				},
-				"source": {
-					"name": "source",
-					"type": "text",
-					"primaryKey": false,
-					"notNull": true,
-					"default": "'guest'"
-				},
 				"file_type": {
 					"name": "file_type",
 					"type": "text",
@@ -515,6 +508,96 @@
 				"media_items_gallery_id_galleries_id_fk": {
 					"name": "media_items_gallery_id_galleries_id_fk",
 					"tableFrom": "media_items",
+					"tableTo": "galleries",
+					"columnsFrom": ["gallery_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.wishes": {
+			"name": "wishes",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"gallery_id": {
+					"name": "gallery_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"guest_name": {
+					"name": "guest_name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"message": {
+					"name": "message",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"status": {
+					"name": "status",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'ready'"
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {
+				"idx_wishes_gallery_status_created": {
+					"name": "idx_wishes_gallery_status_created",
+					"columns": [
+						{
+							"expression": "gallery_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "status",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "created_at",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"wishes_gallery_id_galleries_id_fk": {
+					"name": "wishes_gallery_id_galleries_id_fk",
+					"tableFrom": "wishes",
 					"tableTo": "galleries",
 					"columnsFrom": ["gallery_id"],
 					"columnsTo": ["id"],

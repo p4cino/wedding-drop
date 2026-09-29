@@ -64,6 +64,59 @@ describe("ZipStreamer Service", () => {
 		expect(result.stream).toBeInstanceOf(PassThrough);
 	});
 
+	it("powinien dołączyć plik zyczenia.txt do archiwum, gdy podano wishesText", async () => {
+		const existsSpy = vi.spyOn(fs, "existsSync").mockReturnValue(true);
+
+		const items = [
+			{ storagePath: "kasia/photo1.jpg", originalFileName: "zdjecie.jpg" },
+		];
+
+		const result = createGalleryZipStream(
+			items,
+			"/mock/data",
+			"Ciocia Kasia: Sto lat!\n\nWujek Michał: Wszystkiego najlepszego!",
+		);
+
+		const chunks: Buffer[] = [];
+		await new Promise<void>((resolve, reject) => {
+			result.stream.on("data", (chunk) => chunks.push(chunk));
+			result.stream.on("end", () => resolve());
+			result.stream.on("error", reject);
+		});
+
+		const zipBuffer = Buffer.concat(chunks);
+		expect(zipBuffer.toString("latin1")).toContain("zyczenia.txt");
+
+		existsSpy.mockRestore();
+	});
+
+	it("powinien sfinalizować archiwum zawierające wyłącznie życzenia (brak plików mediów)", async () => {
+		const result = createGalleryZipStream(
+			[],
+			"/mock/data",
+			"Jedyne życzenie w galerii",
+		);
+
+		expect(result.addedCount).toBe(0);
+
+		const chunks: Buffer[] = [];
+		await new Promise<void>((resolve, reject) => {
+			result.stream.on("data", (chunk) => chunks.push(chunk));
+			result.stream.on("end", () => resolve());
+			result.stream.on("error", reject);
+		});
+
+		const zipBuffer = Buffer.concat(chunks);
+		expect(zipBuffer.toString("latin1")).toContain("zyczenia.txt");
+	});
+
+	it("nie powinien finalizować archiwum, gdy brak zarówno plików jak i wishesText", () => {
+		const result = createGalleryZipStream([], "/mock/data", undefined);
+
+		expect(result.addedCount).toBe(0);
+		expect(result.stream.destroyed).toBe(false);
+	});
+
 	it("powinien obsłużyć błąd obiektu Error w archiwizerze i zniszczyć strumień PassThrough", () => {
 		const consoleErrorSpy = vi
 			.spyOn(console, "error")

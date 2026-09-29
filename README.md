@@ -7,8 +7,8 @@
 [![Turborepo](https://img.shields.io/badge/Turborepo-Monorepo-EF4444?style=flat-square&logo=turborepo&logoColor=white)](turbo.json)
 [![pnpm](https://img.shields.io/badge/pnpm-12.4.1-F69220?style=flat-square&logo=pnpm&logoColor=white)](pnpm-lock.yaml)
 [![Biome](https://img.shields.io/badge/Biome-v2.5.13-60A5FA?style=flat-square&logo=biome&logoColor=white)](biome.json)
-[![Vitest](https://img.shields.io/badge/Vitest-80%20passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](package.json)
-[![Playwright](https://img.shields.io/badge/Playwright-96%20E2E%20passing-2EAD33?style=flat-square&logo=playwright&logoColor=white)](package.json)
+[![Vitest](https://img.shields.io/badge/Vitest-241%20passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](package.json)
+[![Playwright](https://img.shields.io/badge/Playwright-108%20E2E%20passing-2EAD33?style=flat-square&logo=playwright&logoColor=white)](package.json)
 [![Hardware](https://img.shields.io/badge/Hardware-Intel%20N100%20Optimized-0071C5?style=flat-square&logo=intel&logoColor=white)](#-optymalizacje-pod-procesor-intel-n100)
 
 Kompletna, samoobsługowa aplikacja internetowa do zbierania zdjęć i filmów z wesel, zaprojektowana z myślą o serwerach domowych i mini-PC (np. z procesorem **Intel N100**). Działa w 100% w środowisku **Docker**, bez żadnych płatnych planów i bez limitów.
@@ -56,18 +56,22 @@ Szybki podgląd wszystkich ślubów, zarządzanie przestrzenią dyskową oraz b�
    - Brak logowania, rejestracji i instalowania aplikacji ze sklepów.
    - **Progressive Web App (PWA)**: Możliwość instalacji na ekranie głównym (dodaj do ekranu głównego) oraz strona awaryjna (Offline Fallback) informująca o braku sieci.
    - Wrzucanie zdjęć i filmów prosto z rolki aparatu.
+   - **Photobooth w przeglądarce**: opcja "Zrób zdjęcie" w drawerze uploadu otwiera podgląd z kamery urządzenia (`getUserMedia`) bezpośrednio w przeglądarce — bez aplikacji aparatu systemowego. Zdjęcie jest komponowane na `<canvas>` z dekoracyjną ramką w kolorach motywu danej pary (te same `primaryColor`/`accentColor` co generator winietek) i trafia do dokładnie tego samego potoku TUS, co zwykły upload z galerii telefonu. Gdy przeglądarka/urządzenie nie udzieli dostępu do kamery, opcja jest po prostu niedostępna — zwykły wybór pliku pozostaje działającym fallbackiem.
    - Opcjonalny podpis ("np. Wujek Janusz i Ciocia Halinka").
    - **Wznawialny upload (TUS Protocol 1.0.0)**: Jeśli na sali weselnej na chwilę zerwie się zasięg Wi-Fi lub LTE, upload wznowi się automatycznie bez utraty przesłanych danych.
    - **Galeria na żywo (SSE)**: Nowe zdjęcia pojawiają się w telefonach gości w czasie rzeczywistym bez przeładowywania widoku.
    - **Pełnoekranowa przeglądarka (Lightbox)**: Natywna obsługa gestów dotykowych **Swipe** (przesuwanie palcem lewo/prawo na smartfonach) oraz klawiatury na desktopie.
    - **Odporność na napływ zdjęć**: Przeglądanie zdjęcia w powiększeniu nie ulega zresetowaniu, gdy w tle pojawiają się nowe zdjęcia od innych gości.
+   - **Księga Życzeń**: Oddzielna zakładka "Życzenia" obok galerii zdjęć — gość może zostawić tekstowe życzenia dla Pary Młodej (opcjonalne imię/nazwisko + treść) bez logowania i bez konieczności wgrywania żadnego pliku. Nowe wpisy pojawiają się na żywo (SSE) u wszystkich gości przeglądających galerię w tym samym czasie.
+   - **Ranking najaktywniejszych gości (TOP 3)**: Niewielki widget nad galerią pokazuje trzech gości z największą liczbą wgranych zdjęć/filmów wraz z odznakami miejsc (🥇🥈🥉) — prosty "społeczny dowód słuszności", który zachęca do dalszego dodawania zdjęć. Ranking liczy się w całości po stronie przeglądarki (bez dodatkowego zapytania do serwera) na podstawie listy zdjęć, którą galeria już wczytała, więc aktualizuje się na żywo razem z resztą galerii (SSE). Uwzględnia wyłącznie widoczne materiały (ukryte/skasowane nigdy nie liczą się na korzyść gościa), a drobne różnice w zapisie podpisu (wielkość liter, spacje) grupują się w jedną pozycję. Widget jest niewidoczny, dopóki nikt jeszcze nic nie wgrał.
 
 2. **Dla Pary Młodej (Właściciela Galerii)**:
    - Panel zarządzania dostępny pod `/owner/[slug]`.
    - Podgląd liczby zdjęć, filmów oraz sumarycznego zajętego miejsca na dysku.
    - **Import materiałów fotografa/kamerzysty**: masowy, wznawialny import profesjonalnych zdjęć i filmów (ten sam protokół TUS co upload gości) do tej samej galerii i chronologii — dostępny wyłącznie po zalogowaniu właściciela. Zaimportowane pliki są oznaczone w siatce galerii odróżniającą odznaką "Fotograf" i przechodzą przez dokładnie tę samą, ograniczoną kolejkę przetwarzania (`p-queue` concurrency: 2) co uploady gości — bez priorytetu ani osobnego limitu. Jeśli administrator ustawił limit pojemności galerii (`maxStorageBytes`), import fotografa go respektuje i odrzuci pojedyncze pliki przekraczające limit (nie wpływając na pozostałe pliki tej samej paczki importu).
-   - **Pobieranie całej galerii jako jeden plik ZIP**: Generowanie strumieniowe w locie (`archiver`) bez obciążania pamięci RAM serwera (z uwzględnieniem zdjęć ukrytych po podaniu hasła).
+   - **Pobieranie całej galerii jako jeden plik ZIP**: Generowanie strumieniowe w locie (`archiver`) bez obciążania pamięci RAM serwera (z uwzględnieniem zdjęć ukrytych po podaniu hasła). Jeśli galeria zawiera życzenia, ZIP zawiera dodatkowo plik tekstowy `zyczenia.txt` z treścią i autorami wszystkich widocznych wpisów.
    - **Moderacja na żywo**: Szybkie ukrywanie zdjęć niepożądanych jednym kliknięciem oraz usuwanie — zmiana statusu natychmiast synchronizuje się ze wszystkimi telefonami na sali weselnej przez SSE (`media-updated`).
+   - **Moderacja Księgi Życzeń**: Ten sam mechanizm ukrywania/trwałego usuwania dostępny również dla wpisów w księdze życzeń (SSE `wish-updated`), z filtrowaniem po statusie (wszystkie/widoczne/ukryte).
    - Bezpośredni dostęp do generatora winietki na stolik.
 
 3. **Generator Karteczek na Stoły (Format A6 / 300 DPI)**:
@@ -188,14 +192,14 @@ Aby aplikacja działała na Twojej publicznej domenie z darmowym certyfikatem Le
  
 ### 1. Testy Jednostkowe i Integracyjne (Vitest)
 ```bash
-# Uruchomienie 80 testów jednostkowych i integracyjnych w monorepo
+# Uruchomienie 241 testów jednostkowych i integracyjnych w monorepo
 pnpm turbo run test
 # lub w kontenerze Docker (Node 24 Alpine)
 docker run --rm -v "${PWD}:/app" -w /app node:24-alpine sh -c "corepack enable && pnpm -r test"
 ```
 
 ### 2. Testy End-to-End (Playwright)
-Pakiet **32 unikalnych scenariuszy testowych (łącznie 96 testów)** uruchamianych w profilach Desktop Chromium, Mobile Chrome oraz Mobile Safari (WebKit):
+Pakiet **36 unikalnych scenariuszy testowych (łącznie 108 testów)** uruchamianych w profilach Desktop Chromium, Mobile Chrome oraz Mobile Safari (WebKit):
 ```bash
 # Uruchomienie pełnego zestawu Playwright E2E
 pnpm --filter @wedding-drop/web test:e2e

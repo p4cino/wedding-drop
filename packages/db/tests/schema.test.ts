@@ -1,7 +1,13 @@
 import { getTableColumns } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import * as dbExports from "../src/index";
-import { admins, cardSettings, galleries, mediaItems } from "../src/schema";
+import {
+	admins,
+	cardSettings,
+	galleries,
+	mediaItems,
+	wishes,
+} from "../src/schema";
 
 describe("Database Schema Definitions", () => {
 	it("powinien poprawnie eksportować wszystkie tabele i obiekty z index", () => {
@@ -9,6 +15,7 @@ describe("Database Schema Definitions", () => {
 		expect(dbExports.cardSettings).toBeDefined();
 		expect(dbExports.mediaItems).toBeDefined();
 		expect(dbExports.admins).toBeDefined();
+		expect(dbExports.wishes).toBeDefined();
 		expect(dbExports.client).toBeDefined();
 		expect(dbExports.db).toBeDefined();
 		expect(dbExports.initDatabase).toBeDefined();
@@ -97,6 +104,20 @@ describe("Database Schema Definitions", () => {
 		expect(cols.source.default).toBe("guest");
 	});
 
+	it("powinien definiować tabelę wishes z polami księgi życzeń", () => {
+		const cols = getTableColumns(wishes);
+		expect(cols.id).toBeDefined();
+		expect(cols.galleryId).toBeDefined();
+		expect(cols.guestName).toBeDefined();
+		expect(cols.message).toBeDefined();
+		expect(cols.status).toBeDefined();
+		expect(cols.createdAt).toBeDefined();
+
+		expect(cols.status.default).toBe("ready");
+		expect(cols.message.notNull).toBe(true);
+		expect(cols.guestName.notNull).toBe(false);
+	});
+
 	it("powinien definiować tabelę admins dla konta administratora", () => {
 		const cols = getTableColumns(admins);
 		expect(cols.id).toBeDefined();
@@ -128,6 +149,21 @@ describe("Database Schema Definitions", () => {
 		if (mediaFksSymbol) {
 			const fks = (mediaItems as unknown as Record<symbol, unknown[]>)[
 				mediaFksSymbol
+			];
+			for (const fk of fks || []) {
+				const foreignTable = (
+					fk as { reference?: () => { foreignTable?: unknown } }
+				)?.reference?.();
+				expect(foreignTable).toBeDefined();
+			}
+		}
+
+		const wishesFksSymbol = Object.getOwnPropertySymbols(wishes).find(
+			(s) => s.description === "drizzle:PgInlineForeignKeys",
+		);
+		if (wishesFksSymbol) {
+			const fks = (wishes as unknown as Record<symbol, unknown[]>)[
+				wishesFksSymbol
 			];
 			for (const fk of fks || []) {
 				const foreignTable = (

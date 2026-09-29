@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+	addWishDto,
 	adminLoginDto,
 	createGalleryDto,
 	insertCardSettingsSchema,
 	insertGallerySchema,
 	insertMediaItemSchema,
+	insertWishSchema,
 	ownerLoginDto,
 	selectGallerySchema,
+	selectWishSchema,
 	tusUploadMetadataDto,
 	updateCardSettingsDto,
 } from "../src/validators";
@@ -17,6 +20,8 @@ describe("Validators - Drizzle Generated Schemas", () => {
 		expect(selectGallerySchema).toBeDefined();
 		expect(insertCardSettingsSchema).toBeDefined();
 		expect(insertMediaItemSchema).toBeDefined();
+		expect(insertWishSchema).toBeDefined();
+		expect(selectWishSchema).toBeDefined();
 	});
 });
 
@@ -190,6 +195,50 @@ describe("Validators - tusUploadMetadataDto", () => {
 		const result = tusUploadMetadataDto.safeParse({
 			gallerySlug: "ania-i-michal",
 			source: "ktos-inny",
+		});
+		expect(result.success).toBe(false);
+	});
+});
+
+describe("Validators - addWishDto", () => {
+	it("akceptuje poprawne życzenie z imieniem i treścią", () => {
+		const result = addWishDto.safeParse({
+			guestName: "Ciocia Kasia",
+			message: "Sto lat i samych szczęśliwych dni!",
+		});
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.guestName).toBe("Ciocia Kasia");
+			expect(result.data.message).toBe("Sto lat i samych szczęśliwych dni!");
+		}
+	});
+
+	it("akceptuje życzenie bez podanego imienia (anonimowe)", () => {
+		const result = addWishDto.safeParse({
+			message: "Wszystkiego najlepszego!",
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("odrzuca pustą treść życzenia", () => {
+		const result = addWishDto.safeParse({
+			guestName: "Gość",
+			message: "",
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("odrzuca zbyt długą treść życzenia (powyżej 500 znaków)", () => {
+		const result = addWishDto.safeParse({
+			message: "a".repeat(501),
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("odrzuca zbyt długie imię i nazwisko gościa (powyżej 60 znaków)", () => {
+		const result = addWishDto.safeParse({
+			guestName: "a".repeat(61),
+			message: "Życzenia",
 		});
 		expect(result.success).toBe(false);
 	});

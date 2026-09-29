@@ -1,9 +1,9 @@
 import path from "node:path";
 import { Readable } from "node:stream";
 import { compare } from "@node-rs/bcrypt";
-import { db, galleries, mediaItems } from "@wedding-drop/db";
+import { db, galleries, mediaItems, wishes } from "@wedding-drop/db";
 import { createGalleryZipStream } from "@wedding-drop/media";
-import { and, eq, ne } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -69,21 +69,43 @@ export async function GET(
 
 		const items = await db.select().from(mediaItems).where(statusCondition);
 
-		if (items.length === 0) {
+		// Życzenia podlegają dokładnie tym samym zasadom widoczności co media
+		// (właściciel widzi też ukryte, gość wyłącznie "ready")
+		const wishesCondition = isOwner
+			? and(eq(wishes.galleryId, gallery.id), ne(wishes.status, "deleted"))
+			: and(eq(wishes.galleryId, gallery.id), eq(wishes.status, "ready"));
+		const wishItems = await db
+			.select()
+			.from(wishes)
+			.where(wishesCondition)
+			.orderBy(desc(wishes.createdAt));
+
+		if (items.length === 0 && wishItems.length === 0) {
 			return NextResponse.json(
 				{ error: "Brak zdjęć do pobrania w tej galerii" },
 				{ status: 400 },
 			);
 		}
 
+		const wishesText =
+			wishItems.length > 0
+				? wishItems
+						.map(
+							(w) =>
+								`${w.guestName?.trim() || "Anonimowy gość"}:\n${w.message}\n`,
+						)
+						.join("\n---\n\n")
+				: undefined;
+
 		const dataDir = process.env.DATA_DIR || path.join(process.cwd(), "data");
 
 		const { stream: passThrough, addedCount } = createGalleryZipStream(
 			items,
 			dataDir,
+			wishesText,
 		);
 
-		if (addedCount === 0) {
+		if (addedCount === 0 && !wishesText) {
 			return NextResponse.json(
 				{ error: "Pliki fizyczne nie zostały znalezione na dysku" },
 				{ status: 404 },

@@ -20,6 +20,17 @@ class SSEBus extends EventEmitter {
 	notifyGDriveProgress(gallerySlug: string, progress: unknown) {
 		this.emit(`gdrive-progress:${gallerySlug}`, progress);
 	}
+
+	notifyNewWish(gallerySlug: string, wish: unknown) {
+		this.emit(`new-wish:${gallerySlug}`, wish);
+	}
+
+	notifyWishUpdated(
+		gallerySlug: string,
+		update: { wishId: string; status: string },
+	) {
+		this.emit(`wish-updated:${gallerySlug}`, update);
+	}
 }
 
 declare global {

@@ -134,7 +134,18 @@
 		"notFoundDesc": "Stellen Sie sicher, dass die URL oder der QR-Code korrekt ist.",
 		"homeBtn": "Startseite",
 		"addPhotosAria": "Fügen Sie Fotos und Videos zur Galerie hinzu",
-		"photographerBadge": "Fotograf"
+		"photographerBadge": "Fotograf",
+		"tabsAria": "Zwischen Fotos und Wünschen wechseln",
+		"tabPhotos": "Fotos und Videos",
+		"leaderboardTitle": "Aktivste Gäste",
+		"leaderboardRankAria": "Platz {rank}",
+		"leaderboardCount": "{count} Beiträge",
+		"cameraOptionBtn": "Foto aufnehmen",
+		"cameraStarting": "Kamera wird gestartet...",
+		"cameraError": "Die Kamera konnte nicht gestartet werden. Überprüfen Sie die Browserberechtigungen oder verwenden Sie die normale Dateiauswahl.",
+		"cameraBackToFiles": "Zurück zur Dateiauswahl",
+		"cameraCancel": "Kameravorschau schließen",
+		"cameraShutter": "Foto aufnehmen"
 	},
 	"CardPage": {
 		"paletteGoldNavy": "Gold & Marineblau",
@@ -261,5 +272,31 @@
 		"importError": "Importfehler (Autorisierung oder Speicherlimit der Galerie prüfen)",
 		"importUploadingBtn": "Dateien werden importiert...",
 		"importSubmitBtn": "In Galerie importieren ({count})"
+	},
+	"Wishes": {
+		"tabWishes": "Wünsche ({count})",
+		"formTitle": "Hinterlassen Sie einen Wunsch für das Brautpaar",
+		"nameLabel": "Ihr Name (optional)",
+		"namePlaceholder": "z. B. Tante Kate und Onkel Mike",
+		"messageLabel": "Ihr Wunsch",
+		"messagePlaceholder": "Schreiben Sie ein paar warme Worte für das Brautpaar...",
+		"messageRequired": "Der Wunschtext ist erforderlich",
+		"submitError": "Der Wunsch konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
+		"sending": "Wird gesendet...",
+		"submitBtn": "Wunsch senden",
+		"noWishes": "Das Wunschbuch wartet auf die ersten Einträge",
+		"beFirstWish": "Seien Sie der Erste, der dem Brautpaar ein warmes Wort hinterlässt!",
+		"anonymousGuest": "Anonymer Gast",
+		"moderationTitle": "Filter:",
+		"moderationFilterAria": "Wünsche filtern",
+		"filterAll": "Alle ({count})",
+		"filterVisible": "Sichtbar ({count})",
+		"filterHidden": "Versteckt ({count})",
+		"noWishesOwner": "Keine Wünsche in dieser Kategorie.",
+		"hiddenOverlay": "Versteckt",
+		"hideAction": "Vor Gästen verbergen",
+		"showAction": "Im Wunschbuch anzeigen",
+		"deleteAction": "Unwiderruflich löschen",
+		"deleteConfirm": "Sind Sie sicher, dass Sie diesen Wunsch unwiderruflich löschen möchten?"
 	}
 }

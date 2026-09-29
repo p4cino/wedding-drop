@@ -1,4 +1,4 @@
-import type { MediaItem } from "@wedding-drop/db";
+import type { MediaItem, Wish } from "@wedding-drop/db";
 import { sseBus } from "@wedding-drop/media";
 import type { NextRequest } from "next/server";
 
@@ -47,6 +47,8 @@ export async function GET(
 			const eventName = `new-media:${slug}`;
 			const updateEventName = `media-updated:${slug}`;
 			const gdriveEventName = `gdrive-progress:${slug}`;
+			const newWishEventName = `new-wish:${slug}`;
+			const wishUpdatedEventName = `wish-updated:${slug}`;
 
 			const onMediaUpdated = (update: { mediaId: string; status: string }) => {
 				try {
@@ -75,9 +77,44 @@ export async function GET(
 				}
 			};
 
+			const onNewWish = (wish: Wish) => {
+				try {
+					const payload = JSON.stringify({
+						type: "new-wish",
+						wish: {
+							id: wish.id,
+							guestName: wish.guestName,
+							message: wish.message,
+							status: wish.status,
+							createdAt: wish.createdAt,
+						},
+					});
+					controller.enqueue(encoder.encode(`data: ${payload}\n\n`));
+				} catch (err) {
+					console.error("Błąd wysyłania SSE new-wish:", err);
+				}
+			};
+
+			const onWishUpdated = (update: { wishId: string; status: string }) => {
+				try {
+					const payload = JSON.stringify({
+						type: "wish-updated",
+						update: {
+							wishId: update.wishId,
+							status: update.status,
+						},
+					});
+					controller.enqueue(encoder.encode(`data: ${payload}\n\n`));
+				} catch (err) {
+					console.error("Błąd wysyłania SSE wish-updated:", err);
+				}
+			};
+
 			sseBus.on(eventName, onNewMedia);
 			sseBus.on(updateEventName, onMediaUpdated);
 			sseBus.on(gdriveEventName, onGDriveProgress);
+			sseBus.on(newWishEventName, onNewWish);
+			sseBus.on(wishUpdatedEventName, onWishUpdated);
 
 			// Heartbeat / ping co 25s, by zapobiec zamykaniu połączenia przez proxy sieci komórkowych
 			const pingInterval = setInterval(() => {
@@ -94,6 +131,8 @@ export async function GET(
 				sseBus.off(eventName, onNewMedia);
 				sseBus.off(updateEventName, onMediaUpdated);
 				sseBus.off(gdriveEventName, onGDriveProgress);
+				sseBus.off(newWishEventName, onNewWish);
+				sseBus.off(wishUpdatedEventName, onWishUpdated);
 				try {
 					controller.close();
 				} catch (_e) {}

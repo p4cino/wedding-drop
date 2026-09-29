@@ -134,7 +134,18 @@
 		"notFoundDesc": "Make sure the URL or QR code is correct.",
 		"homeBtn": "Home",
 		"addPhotosAria": "Add photos and videos to the gallery",
-		"photographerBadge": "Photographer"
+		"photographerBadge": "Photographer",
+		"tabsAria": "Switch between photos and wishes",
+		"tabPhotos": "Photos and videos",
+		"leaderboardTitle": "Most active guests",
+		"leaderboardRankAria": "Rank {rank}",
+		"leaderboardCount": "{count} uploads",
+		"cameraOptionBtn": "Take a photo",
+		"cameraStarting": "Starting camera...",
+		"cameraError": "Couldn't start the camera. Check your browser permissions or use the regular file picker instead.",
+		"cameraBackToFiles": "Back to file picker",
+		"cameraCancel": "Close camera preview",
+		"cameraShutter": "Take photo"
 	},
 	"CardPage": {
 		"paletteGoldNavy": "Gold & Navy",
@@ -261,5 +272,31 @@
 		"importError": "Import error (check authorization or gallery storage limit)",
 		"importUploadingBtn": "Importing files...",
 		"importSubmitBtn": "Import to gallery ({count})"
+	},
+	"Wishes": {
+		"tabWishes": "Wishes ({count})",
+		"formTitle": "Leave a wish for the couple",
+		"nameLabel": "Your name (optional)",
+		"namePlaceholder": "e.g. Aunt Kate and Uncle Mike",
+		"messageLabel": "Your wish",
+		"messagePlaceholder": "Write a few warm words for the couple...",
+		"messageRequired": "Wish text is required",
+		"submitError": "Failed to send the wish. Please try again.",
+		"sending": "Sending...",
+		"submitBtn": "Send wish",
+		"noWishes": "The wishes book is waiting for its first entries",
+		"beFirstWish": "Be the first to leave a warm word for the couple!",
+		"anonymousGuest": "Anonymous guest",
+		"moderationTitle": "Filter:",
+		"moderationFilterAria": "Wish filtering",
+		"filterAll": "All ({count})",
+		"filterVisible": "Visible ({count})",
+		"filterHidden": "Hidden ({count})",
+		"noWishesOwner": "No wishes in this category.",
+		"hiddenOverlay": "Hidden",
+		"hideAction": "Hide from guests",
+		"showAction": "Show in the book",
+		"deleteAction": "Delete permanently",
+		"deleteConfirm": "Are you sure you want to permanently delete this wish?"
 	}
 }

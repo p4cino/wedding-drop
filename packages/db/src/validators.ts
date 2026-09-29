@@ -6,6 +6,7 @@ import {
 	galleries,
 	galleryGdriveExports,
 	mediaItems,
+	wishes,
 } from "./schema";
 
 // --- Podstawowe schematy generowane z tabel Drizzle ---
@@ -17,6 +18,9 @@ export const selectCardSettingsSchema = createSelectSchema(cardSettings);
 
 export const insertMediaItemSchema = createInsertSchema(mediaItems);
 export const selectMediaItemSchema = createSelectSchema(mediaItems);
+
+export const insertWishSchema = createInsertSchema(wishes);
+export const selectWishSchema = createSelectSchema(wishes);
 
 export const insertAdminSchema = createInsertSchema(admins);
 export const selectAdminSchema = createSelectSchema(admins);
@@ -151,3 +155,21 @@ export const tusUploadMetadataDto = z.object({
 	ownerToken: z.string().trim().optional(),
 });
 export type TusUploadMetadataInput = z.infer<typeof tusUploadMetadataDto>;
+
+/**
+ * Walidacja dodania życzenia do księgi gości (bez pliku, tylko tekst)
+ */
+export const addWishDto = z.object({
+	guestName: z
+		.string()
+		.trim()
+		.max(60, "Imię i nazwisko nie może przekraczać 60 znaków")
+		.optional()
+		.or(z.literal("")),
+	message: z
+		.string()
+		.trim()
+		.min(1, "Treść życzenia jest wymagana")
+		.max(500, "Treść życzenia nie może przekraczać 500 znaków"),
+});
+export type AddWishInput = z.infer<typeof addWishDto>;
