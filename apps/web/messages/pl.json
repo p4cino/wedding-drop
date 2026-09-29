@@ -275,7 +275,8 @@
 		"importError": "Błąd importu (sprawdź autoryzację lub limit pojemności galerii)",
 		"importUploadingBtn": "Importowanie plików...",
 		"importSubmitBtn": "Importuj do galerii ({count})",
-		"openTvBtn": "Otwórz tryb TV"
+		"openTvBtn": "Otwórz tryb TV",
+		"actionError": "Operacja nie powiodła się. Spróbuj ponownie."
 	},
 	"Wishes": {
 		"tabWishes": "Życzenia ({count})",

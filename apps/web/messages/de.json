@@ -275,7 +275,8 @@
 		"importError": "Importfehler (Autorisierung oder Speicherlimit der Galerie prüfen)",
 		"importUploadingBtn": "Dateien werden importiert...",
 		"importSubmitBtn": "In Galerie importieren ({count})",
-		"openTvBtn": "TV-Modus öffnen"
+		"openTvBtn": "TV-Modus öffnen",
+		"actionError": "Der Vorgang ist fehlgeschlagen. Bitte versuchen Sie es erneut."
 	},
 	"Wishes": {
 		"tabWishes": "Wünsche ({count})",

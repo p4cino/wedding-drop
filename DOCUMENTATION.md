@@ -284,6 +284,8 @@ Logika klienta wspólna dla wielu stron jest w `apps/web/src/hooks/` i `apps/web
 - **Upload plików (TUS)** — `lib/tus-upload.ts` (`uploadFileViaTus`: jedyne miejsce ze stałymi klienta TUS — chunk 5 MB, `retryDelays`, endpoint względny, ograniczanie częstości raportowania postępu), hook `useUploadQueue` (sekwencyjna kolejka; po wysyłce udane pliki znikają, nieudane zostają z komunikatem błędu; callback sukcesu tylko gdy ≥ 1 plik się powiódł) oraz komponenty `components/upload/UploadFileRow` i `FilePickerDropzone`. Współdzielone przez `UploaderDrawer` (gość) i `PhotographerImportPanel` (import fotografa — dodatkowe metadane `source: "photographer"` i `ownerToken`).
 - **Lightbox** — `useLightboxSelection` śledzi otwarty element po `id`, więc zdarzenia na żywo (nowe/ukryte zdjęcia) nie przesuwają oglądanego materiału.
 
+- **Panel Pary Młodej** — `lib/owner-api.ts` (`ownerRequest`: jedyne miejsce dokładające nagłówek `x-owner-token`; nie rzuca wyjątków, błąd sieci to `status: 0`) i hook `useOwnerApi`; `useGDriveExport` trzyma cały stan Google Drive jako jeden obiekt `GDriveState` aktualizowany atomowo z trzech źródeł (logowanie/sesja, SSE `gdrive-progress`, polling co 3 s w trakcie eksportu; mapowania w `lib/gdrive-state.ts`). Strona składa widok z `OwnerLoginForm`, `OwnerHeader`, `Toast`; nieudane operacje pokazują komunikat błędu zamiast być połykane.
+
 ## 7. Procedury Kopiowania Zapasowego i Przywracania (Backup)
 
 Wszystkie dane aplikacji znajdują się w dwóch dedykowanych wolumenach Dockera:

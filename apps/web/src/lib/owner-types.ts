@@ -6,6 +6,17 @@ export type GDriveExportStatus =
 	| "failed"
 	| "interrupted";
 
+/** Kompletny stan Google Drive w panelu właściciela (aktualizowany atomowo). */
+export interface GDriveState {
+	isConfigured: boolean;
+	connected: boolean;
+	email: string | null;
+	status: GDriveExportStatus;
+	progress: GDriveProgress | null;
+	folderId: string | null;
+	exportedAt: string | null;
+}
+
 export interface GDriveProgress {
 	totalFiles?: number;
 	processedFiles?: number;
@@ -24,7 +35,7 @@ export interface OwnerPanelGallery {
 	allowVideos?: boolean;
 	hasGDrive?: boolean;
 	gdriveAccountEmail?: string | null;
-	gdriveExportStatus?: string | null;
+	gdriveExportStatus?: GDriveExportStatus | null;
 	gdriveExportProgress?: GDriveProgress | null;
 	gdriveExportedAt?: string | null;
 	gdriveRootFolderId?: string | null;
@@ -41,3 +52,9 @@ export interface OwnerPanelData {
 export interface OwnerAuthResponse extends OwnerPanelData {
 	ownerToken: string;
 }
+
+/** Ładunek zdarzenia SSE `gdrive-progress`. */
+export type GDriveSseProgress = GDriveProgress & {
+	status?: GDriveExportStatus;
+	rootFolderId?: string;
+};

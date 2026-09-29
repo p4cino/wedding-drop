@@ -1,4 +1,5 @@
 import type { MediaItemData, WishItemData } from "@/lib/gallery-types";
+import type { GDriveSseProgress } from "@/lib/owner-types";
 
 export interface LiveGalleryState {
 	items: MediaItemData[];
@@ -11,6 +12,8 @@ export interface LiveEvent {
 	media?: MediaItemData;
 	wish?: WishItemData;
 	update?: { mediaId?: string; wishId?: string; status?: string };
+	/** Tylko `gdrive-progress` (panel właściciela). */
+	progress?: GDriveSseProgress;
 }
 
 export type LiveGalleryAction =

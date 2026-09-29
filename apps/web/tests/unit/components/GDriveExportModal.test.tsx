@@ -1,133 +1,105 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { GDriveExportModal } from "@/components/owner/GDriveExportModal";
 
+const renderModal = (
+	over: Partial<React.ComponentProps<typeof GDriveExportModal>> = {},
+) =>
+	render(
+		<GDriveExportModal
+			isOpen={true}
+			coupleNames="Kasia i Tomek"
+			onClose={vi.fn()}
+			onStartExport={vi.fn().mockResolvedValue(true)}
+			{...over}
+		/>,
+	);
+
 describe("GDriveExportModal Component", () => {
 	it("nie powinien renderować niczego, gdy isOpen jest równe false", () => {
-		const { container } = render(
-			<GDriveExportModal
-				isOpen={false}
-				coupleNames="Kasia i Tomek"
-				includeHidden={false}
-				setIncludeHidden={vi.fn()}
-				exportLoading={false}
-				onClose={vi.fn()}
-				onStartExport={vi.fn()}
-			/>,
-		);
-
+		const { container } = renderModal({ isOpen: false });
 		expect(container.firstChild).toBeNull();
 	});
 
-	it("powinien wyświetlić modal, przełączyć zakres eksportu i wywołać akcje", () => {
-		const setIncludeHiddenMock = vi.fn();
-		const onCloseMock = vi.fn();
-		const onStartExportMock = vi.fn();
-
-		render(
-			<GDriveExportModal
-				isOpen={true}
-				coupleNames="Kasia i Tomek"
-				includeHidden={false}
-				setIncludeHidden={setIncludeHiddenMock}
-				exportLoading={false}
-				onClose={onCloseMock}
-				onStartExport={onStartExportMock}
-			/>,
-		);
+	it("powinien wyświetlić modal i anulować przez przycisk", () => {
+		const onClose = vi.fn();
+		renderModal({ onClose });
 
 		expect(screen.getByText("modalTitle")).toBeInTheDocument();
 		expect(screen.getByText("WeddingDrop - Kasia i Tomek")).toBeInTheDocument();
 
-		// Kliknięcie radio "Prześlij wszystko"
-		const radioAll = screen.getByLabelText("scopeAll", { exact: false });
-		fireEvent.click(radioAll);
-		expect(setIncludeHiddenMock).toHaveBeenCalledWith(true);
-
-		// Kliknięcie "Rozpocznij eksport"
-		const exportBtn = screen.getByRole("button", {
-			name: "startBtn",
-		});
-		fireEvent.click(exportBtn);
-		expect(onStartExportMock).toHaveBeenCalledTimes(1);
-
-		// Kliknięcie "Anuluj"
-		const cancelBtn = screen.getByRole("button", { name: "cancelBtn" });
-		fireEvent.click(cancelBtn);
-		expect(onCloseMock).toHaveBeenCalledTimes(1);
+		fireEvent.click(screen.getByRole("button", { name: "cancelBtn" }));
+		expect(onClose).toHaveBeenCalledTimes(1);
 	});
 
-	it("powinien pokazać wskaźnik ładowania, gdy exportLoading jest równe true", () => {
-		render(
-			<GDriveExportModal
-				isOpen={true}
-				coupleNames="Kasia i Tomek"
-				includeHidden={true}
-				setIncludeHidden={vi.fn()}
-				exportLoading={true}
-				onClose={vi.fn()}
-				onStartExport={vi.fn()}
-			/>,
-		);
+	it("domyślnie eksportuje wszystko (z ukrytymi) i po sukcesie zamyka modal", async () => {
+		const onStartExport = vi.fn().mockResolvedValue(true);
+		const onClose = vi.fn();
+		renderModal({ onStartExport, onClose });
 
-		expect(screen.getByText("initBtn")).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "initBtn" })).toBeDisabled();
+		fireEvent.click(screen.getByRole("button", { name: "startBtn" }));
+		await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+		expect(onStartExport).toHaveBeenCalledWith(true);
 	});
 
-	it("powinien przełączyć na tylko widoczne multimedia", () => {
-		const setIncludeHiddenMock = vi.fn();
-		render(
-			<GDriveExportModal
-				isOpen={true}
-				coupleNames="Kasia i Tomek"
-				includeHidden={true}
-				setIncludeHidden={setIncludeHiddenMock}
-				exportLoading={false}
-				onClose={vi.fn()}
-				onStartExport={vi.fn()}
-			/>,
-		);
+	it("po przełączeniu na tylko widoczne przekazuje includeHidden=false", async () => {
+		const onStartExport = vi.fn().mockResolvedValue(true);
+		renderModal({ onStartExport });
 
-		const radioVisibleOnly = screen.getByLabelText("scopeVisible", {
-			exact: false,
-		});
-		fireEvent.click(radioVisibleOnly);
-		expect(setIncludeHiddenMock).toHaveBeenCalledWith(false);
+		fireEvent.click(screen.getByLabelText("scopeVisible", { exact: false }));
+		fireEvent.click(screen.getByRole("button", { name: "startBtn" }));
+		await waitFor(() => expect(onStartExport).toHaveBeenCalledWith(false));
+
+		fireEvent.click(screen.getByLabelText("scopeAll", { exact: false }));
+		fireEvent.click(screen.getByRole("button", { name: "startBtn" }));
+		await waitFor(() => expect(onStartExport).toHaveBeenLastCalledWith(true));
 	});
 
-	it("powinien zamykać się po wciśnięciu Escape tylko gdy nie trwa eksport", () => {
-		const onCloseMock = vi.fn();
-		const { rerender } = render(
-			<GDriveExportModal
-				isOpen={true}
-				coupleNames="Kasia i Tomek"
-				includeHidden={false}
-				setIncludeHidden={vi.fn()}
-				exportLoading={false}
-				onClose={onCloseMock}
-				onStartExport={vi.fn()}
-			/>,
+	it("po nieudanym starcie eksportu modal pozostaje otwarty", async () => {
+		const onStartExport = vi.fn().mockResolvedValue(false);
+		const onClose = vi.fn();
+		renderModal({ onStartExport, onClose });
+
+		fireEvent.click(screen.getByRole("button", { name: "startBtn" }));
+		await waitFor(() => expect(onStartExport).toHaveBeenCalled());
+		await waitFor(() =>
+			expect(screen.getByRole("button", { name: "startBtn" })).toBeEnabled(),
 		);
+		expect(onClose).not.toHaveBeenCalled();
+	});
+
+	it("pokazuje wskaźnik ładowania i blokuje Escape oraz Anuluj w trakcie eksportu", async () => {
+		let resolveExport: (ok: boolean) => void = () => {};
+		const onStartExport = vi.fn(
+			() =>
+				new Promise<boolean>((resolve) => {
+					resolveExport = resolve;
+				}),
+		);
+		const onClose = vi.fn();
+		renderModal({ onStartExport, onClose });
+
+		fireEvent.click(screen.getByRole("button", { name: "startBtn" }));
+		expect(
+			await screen.findByRole("button", { name: "initBtn" }),
+		).toBeDisabled();
+		expect(screen.getByRole("button", { name: "cancelBtn" })).toBeDisabled();
 
 		fireEvent.keyDown(window, { key: "Escape" });
-		expect(onCloseMock).toHaveBeenCalledTimes(1);
+		expect(onClose).not.toHaveBeenCalled();
 
-		// Gdy trwa eksport (exportLoading = true)
-		rerender(
-			<GDriveExportModal
-				isOpen={true}
-				coupleNames="Kasia i Tomek"
-				includeHidden={false}
-				setIncludeHidden={vi.fn()}
-				exportLoading={true}
-				onClose={onCloseMock}
-				onStartExport={vi.fn()}
-			/>,
+		resolveExport(false);
+		await waitFor(() =>
+			expect(screen.getByRole("button", { name: "startBtn" })).toBeEnabled(),
 		);
+	});
 
+	it("zamyka się po wciśnięciu Escape, gdy nie trwa eksport", () => {
+		const onClose = vi.fn();
+		renderModal({ onClose });
 		fireEvent.keyDown(window, { key: "Escape" });
-		expect(onCloseMock).toHaveBeenCalledTimes(1); // nadal 1, nie wzrosło
+		expect(onClose).toHaveBeenCalledTimes(1);
 	});
 });

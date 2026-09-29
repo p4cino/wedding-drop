@@ -275,7 +275,8 @@
 		"importError": "Import error (check authorization or gallery storage limit)",
 		"importUploadingBtn": "Importing files...",
 		"importSubmitBtn": "Import to gallery ({count})",
-		"openTvBtn": "Open TV Mode"
+		"openTvBtn": "Open TV Mode",
+		"actionError": "The operation failed. Please try again."
 	},
 	"Wishes": {
 		"tabWishes": "Wishes ({count})",

@@ -3,28 +3,35 @@
 import { Cloud, Loader2, Play } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type React from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface GDriveExportModalProps {
 	isOpen: boolean;
 	coupleNames: string;
-	includeHidden: boolean;
-	setIncludeHidden: (val: boolean) => void;
-	exportLoading: boolean;
 	onClose: () => void;
-	onStartExport: () => void;
+	/** Uruchamia eksport; zwraca `true` po sukcesie (wtedy modal się zamyka). */
+	onStartExport: (includeHidden: boolean) => Promise<boolean>;
 }
 
 export const GDriveExportModal: React.FC<GDriveExportModalProps> = ({
 	isOpen,
 	coupleNames,
-	includeHidden,
-	setIncludeHidden,
-	exportLoading,
 	onClose,
 	onStartExport,
 }) => {
 	const t = useTranslations("OwnerPanel");
+	const [includeHidden, setIncludeHidden] = useState(true);
+	const [exportLoading, setExportLoading] = useState(false);
+
+	const handleStart = async () => {
+		setExportLoading(true);
+		try {
+			if (await onStartExport(includeHidden)) onClose();
+		} finally {
+			setExportLoading(false);
+		}
+	};
+
 	// Obsługa klawisza Escape
 	useEffect(() => {
 		if (!isOpen) return;
@@ -126,7 +133,7 @@ export const GDriveExportModal: React.FC<GDriveExportModalProps> = ({
 					</button>
 					<button
 						type="button"
-						onClick={onStartExport}
+						onClick={handleStart}
 						disabled={exportLoading}
 						className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
 					>
