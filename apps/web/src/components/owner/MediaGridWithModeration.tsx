@@ -1,12 +1,13 @@
 "use client";
 
-import { Eye, EyeOff, Trash2 } from "lucide-react";
+import { Camera, Eye, EyeOff, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type React from "react";
 
 export interface OwnerMediaItem {
 	id: string;
 	uploaderName: string;
+	source?: "guest" | "photographer";
 	fileType: "image" | "video";
 	originalFileName: string;
 	fileSize: number;
@@ -111,6 +112,18 @@ export const MediaGridWithModeration: React.FC<
 							{item.status === "hidden" && (
 								<div className="absolute inset-0 bg-red-950/40 flex items-center justify-center text-white text-[10px] font-bold uppercase tracking-wider">
 									{t("hiddenOverlay")}
+								</div>
+							)}
+
+							{item.source === "photographer" && (
+								<div
+									className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-full bg-amber-500/90 backdrop-blur-md flex items-center gap-1 text-white shadow-sm"
+									aria-label={t("photographerBadge")}
+								>
+									<Camera className="w-2.5 h-2.5" aria-hidden="true" />
+									<span className="text-[9px] font-semibold uppercase tracking-wide">
+										{t("photographerBadge")}
+									</span>
 								</div>
 							)}
 						</div>

@@ -11,6 +11,8 @@ import { sseBus } from "../src/sse-bus.js";
 
 let mockGalleryResult: unknown[] = [{ id: "mock-gal-id" }];
 
+let lastInsertedValues: Record<string, unknown> | null = null;
+
 vi.mock("@wedding-drop/db", () => ({
 	db: {
 		select: vi.fn(() => ({
@@ -23,9 +25,12 @@ vi.mock("@wedding-drop/db", () => ({
 			})),
 		})),
 		insert: vi.fn(() => ({
-			values: vi.fn(() => ({
-				returning: vi.fn().mockResolvedValue([{ id: "mock-media-id" }]),
-			})),
+			values: vi.fn((values: Record<string, unknown>) => {
+				lastInsertedValues = values;
+				return {
+					returning: vi.fn().mockResolvedValue([{ id: "mock-media-id" }]),
+				};
+			}),
 		})),
 	},
 	galleries: {},
@@ -109,6 +114,7 @@ describe("media-processor service", () => {
 		mockSpawnExitCode = 0;
 		mockSpawnError = null;
 		mockSpawnHangs = false;
+		lastInsertedValues = null;
 	});
 
 	it("powinien mieć skonfigurowaną kolejkę z limitem concurrency = 2 dla Intel N100", () => {
@@ -300,6 +306,73 @@ describe("media-processor service", () => {
 			expect.any(Error),
 		);
 		consoleErrorSpy.mockRestore();
+	});
+
+	it("powinien zapisać source: guest domyślnie, gdy zadanie go nie podaje", async () => {
+		const task: ProcessTask = {
+			uploadId: "upl-source-default",
+			tempFilePath: "/tmp/fake-file.jpg",
+			gallerySlug: "kasia-i-tomek",
+			uploaderName: "Gość",
+			originalName: "foto.jpg",
+			fileType: "image",
+			mimeType: "image/jpeg",
+			fileSize: 5000,
+			dataDir: "/tmp/data",
+		};
+
+		await scheduleMediaProcessing(task);
+		expect(lastInsertedValues).toMatchObject({ source: "guest" });
+	});
+
+	it("powinien zapisać source: photographer w media_items dla importu fotografa", async () => {
+		const task: ProcessTask = {
+			uploadId: "upl-source-photographer",
+			tempFilePath: "/tmp/fake-file.jpg",
+			gallerySlug: "kasia-i-tomek",
+			uploaderName: "Fotograf Jan Kowalski",
+			originalName: "sesja.jpg",
+			fileType: "image",
+			mimeType: "image/jpeg",
+			fileSize: 5000,
+			dataDir: "/tmp/data",
+			source: "photographer",
+		};
+
+		await scheduleMediaProcessing(task);
+		expect(lastInsertedValues).toMatchObject({ source: "photographer" });
+		expect(sseBus.notifyNewMedia).toHaveBeenCalledWith(
+			"kasia-i-tomek",
+			expect.objectContaining({ id: "mock-media-id" }),
+		);
+	});
+
+	it("powinien przetworzyć plik fotografa przez tę samą kolejkę p-queue(2) i watchdog FFmpeg bez wyjątków", async () => {
+		const task: ProcessTask = {
+			uploadId: "upl-photog-video",
+			tempFilePath: "/tmp/fake-video.mp4",
+			gallerySlug: "kasia-i-tomek",
+			uploaderName: "Kamerzysta",
+			originalName: "ceremonia.mp4",
+			fileType: "video",
+			mimeType: "video/mp4",
+			fileSize: 50_000_000,
+			dataDir: "/tmp/data",
+			source: "photographer",
+		};
+
+		expect(mediaQueue.concurrency).toBe(2);
+		await scheduleMediaProcessing(task);
+
+		expect(spawn).toHaveBeenCalledWith(
+			"ffmpeg",
+			expect.arrayContaining([
+				"-i",
+				expect.stringContaining("upl-photog-video.mp4"),
+			]),
+		);
+		expect(lastInsertedValues).toMatchObject({ source: "photographer" });
+		expect(sseBus.notifyNewMedia).toHaveBeenCalled();
 	});
 
 	it("powinien ubić proces FFmpeg przez SIGKILL przy przekroczeniu limitu czasu watchdog", async () => {

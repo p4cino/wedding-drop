@@ -96,10 +96,12 @@ describe("Database Schema Definitions", () => {
 		expect(cols.duration).toBeDefined();
 		expect(cols.status).toBeDefined();
 		expect(cols.gdriveFileId).toBeDefined();
+		expect(cols.source).toBeDefined();
 		expect(cols.createdAt).toBeDefined();
 
 		expect(cols.uploaderName.default).toBe("Gość weselny");
 		expect(cols.status.default).toBe("ready");
+		expect(cols.source.default).toBe("guest");
 	});
 
 	it("powinien definiować tabelę wishes z polami księgi życzeń", () => {

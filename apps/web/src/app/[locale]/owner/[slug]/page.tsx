@@ -24,6 +24,7 @@ import {
 	type OwnerMediaItem,
 } from "@/components/owner/MediaGridWithModeration";
 import { OwnerStatsGrid } from "@/components/owner/OwnerStatsGrid";
+import { PhotographerImportPanel } from "@/components/owner/PhotographerImportPanel";
 import {
 	type OwnerWishItem,
 	WishesModeration,
@@ -628,6 +629,13 @@ export default function OwnerDashboardPage() {
 					onConnect={handleConnectGDrive}
 					onDisconnect={handleDisconnectGDrive}
 					onOpenExportModal={() => setShowExportModal(true)}
+				/>
+
+				{/* Import materiałów od profesjonalnego fotografa/kamerzysty */}
+				<PhotographerImportPanel
+					gallerySlug={slug}
+					ownerToken={ownerToken}
+					onImportSuccess={() => loadMedia()}
 				/>
 
 				{/* Siatka moderacji */}

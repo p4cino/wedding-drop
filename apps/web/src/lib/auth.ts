@@ -104,6 +104,18 @@ export function verifyOwnerToken(
 	}
 }
 
+/**
+ * Adapter wstrzykiwany do `initTusServer` (packages/media/src/tus-server.ts) w `apps/web/server.ts`,
+ * reużywający istniejący `verifyOwnerToken` bez przenoszenia logiki HMAC poza `apps/web`
+ * i bez odwracania kierunku zależności monorepo (packages/media nigdy nie importuje z apps/web).
+ */
+export function verifyOwnerCredentialsForTus(
+	gallerySlug: string,
+	ownerToken: string | undefined,
+): boolean {
+	return verifyOwnerToken(ownerToken, gallerySlug);
+}
+
 export async function authenticateOwner(
 	req: NextRequest,
 	slug: string,

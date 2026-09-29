@@ -161,6 +161,8 @@ describe("Validators - tusUploadMetadataDto", () => {
 			expect(result.data.uploaderName).toBe("Gość weselny");
 			expect(result.data.originalName).toBe("plik");
 			expect(result.data.fileType).toBe("image/jpeg");
+			expect(result.data.source).toBe("guest");
+			expect(result.data.ownerToken).toBeUndefined();
 		}
 	});
 
@@ -172,6 +174,27 @@ describe("Validators - tusUploadMetadataDto", () => {
 	it("odrzuca gallerySlug zawierający znaki specjalne lub spacje", () => {
 		const result = tusUploadMetadataDto.safeParse({
 			gallerySlug: "wesele ania michal",
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("akceptuje metadane importu fotografa z source i ownerToken", () => {
+		const result = tusUploadMetadataDto.safeParse({
+			gallerySlug: "ania-i-michal",
+			source: "photographer",
+			ownerToken: "owner_1234_abc_deadbeef",
+		});
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.source).toBe("photographer");
+			expect(result.data.ownerToken).toBe("owner_1234_abc_deadbeef");
+		}
+	});
+
+	it("odrzuca metadane z niepoprawną wartością source", () => {
+		const result = tusUploadMetadataDto.safeParse({
+			gallerySlug: "ania-i-michal",
+			source: "ktos-inny",
 		});
 		expect(result.success).toBe(false);
 	});

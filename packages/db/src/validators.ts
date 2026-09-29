@@ -151,6 +151,8 @@ export const tusUploadMetadataDto = z.object({
 		.optional()
 		.default("plik"),
 	fileType: z.string().trim().optional().default("image/jpeg"),
+	source: z.enum(["guest", "photographer"]).optional().default("guest"),
+	ownerToken: z.string().trim().optional(),
 });
 export type TusUploadMetadataInput = z.infer<typeof tusUploadMetadataDto>;
 
