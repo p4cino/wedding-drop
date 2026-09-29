@@ -63,11 +63,9 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 		});
 
 		await page.goto("/g/kasia-i-tomek");
+		await expect(page.getByText("Brak zdjęć w tej galerii")).toBeVisible();
 		await expect(
-			page.getByText("Galeria czeka na pierwsze zdjęcia!"),
-		).toBeVisible();
-		await expect(
-			page.getByText("Bądź pierwszą osobą, która uwieczni ten wyjątkowy dzień"),
+			page.getByText("Bądź pierwszą osobą, która coś doda!"),
 		).toBeVisible();
 	});
 
@@ -124,8 +122,10 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 		await page.goto("/g/kasia-i-tomek");
 
 		// Weryfikacja kafelków w siatce
-		await expect(page.getByText("Wujek Staszek")).toBeVisible();
-		await expect(page.getByText("Ciocia Halinka")).toBeVisible();
+		await expect(page.locator("main").getByText("Wujek Staszek")).toBeVisible();
+		await expect(
+			page.locator("main").getByText("Ciocia Halinka"),
+		).toBeVisible();
 
 		// Weryfikacja licznika zdjęć w nagłówku
 		await expect(page.getByText("2 zdjęć")).toBeVisible();
@@ -145,7 +145,7 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 		await page.goto("/g/kasia-i-tomek");
 
 		// Kliknięcie pierwszego zdjęcia
-		await page.getByText("Wujek Staszek").click();
+		await page.locator("main").getByText("Wujek Staszek").click();
 
 		// Weryfikacja otwarcia Lightboxa
 		await expect(page.getByText("1 z 2", { exact: true })).toBeVisible();
@@ -182,7 +182,7 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 		});
 
 		await page.goto("/g/kasia-i-tomek");
-		await page.getByText("Wujek Staszek").click();
+		await page.locator("main").getByText("Wujek Staszek").click();
 		await expect(page.getByText("1 z 2", { exact: true })).toBeVisible();
 
 		// 1. Symulacja Swipe w lewo (przesunięcie palca z 300px do 100px -> diff > 45px -> Następne zdjęcie)
@@ -327,7 +327,7 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 		});
 
 		await page.goto("/g/kasia-i-tomek");
-		await page.getByText("Wujek Staszek").click();
+		await page.locator("main").getByText("Wujek Staszek").click();
 
 		// Przycisk pobierania pliku
 		const downloadBtn = page.getByTitle("Pobierz oryginalny plik");
