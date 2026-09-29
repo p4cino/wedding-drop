@@ -11,6 +11,7 @@ import {
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
+import ContributorLeaderboard from "@/components/ContributorLeaderboard";
 import { LegalFooterLinks } from "@/components/LegalFooterLinks";
 import LightboxModal, { type MediaItemData } from "@/components/LightboxModal";
 import MediaGrid from "@/components/MediaGrid";
@@ -26,6 +27,11 @@ interface GalleryData {
 	isActive: boolean;
 	allowGuestDownloads: boolean;
 	allowVideos: boolean;
+	// Kolory motywu wesela (zawsze zwracane przez API, z domyślnymi wartościami
+	// generatora winietek A6, gdy galeria nie ma zapisanych ustawień) — używane
+	// do ramki zdjęcia zrobionego w photobooth przeglądarki.
+	primaryColor?: string;
+	accentColor?: string;
 }
 
 export default function GuestGalleryPage() {
@@ -310,6 +316,13 @@ export default function GuestGalleryPage() {
 				</div>
 			</div>
 
+			{/* Ranking najaktywniejszych gości (TOP 3) — tylko w zakładce zdjęć */}
+			{activeTab === "photos" && (
+				<div className="pt-6">
+					<ContributorLeaderboard items={items} />
+				</div>
+			)}
+
 			{/* Siatka galerii lub księga życzeń */}
 			<main className="max-w-6xl mx-auto px-4 sm:px-6 pt-6">
 				{activeTab === "photos" ? (
@@ -342,6 +355,8 @@ export default function GuestGalleryPage() {
 			{/* Drawer Uploadu */}
 			<UploaderDrawer
 				gallerySlug={slug}
+				primaryColor={gallery.primaryColor}
+				accentColor={gallery.accentColor}
 				isOpen={isUploaderOpen}
 				onClose={() => {
 					setIsUploaderOpen(false);

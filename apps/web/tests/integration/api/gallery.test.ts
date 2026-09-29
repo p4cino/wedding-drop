@@ -160,6 +160,40 @@ describe("Gallery API Routes", () => {
 			expect(data.cardSettings).toBeNull();
 		});
 
+		it("powinien zwrócić kolory motywu z card_settings, gdy galeria ma zapisane ustawienia (dla ramki photobooth)", async () => {
+			mockCards = [
+				{
+					id: "card-1",
+					galleryId: "gal-1",
+					headline: "Wspomnienia z wesela",
+					primaryColor: "#112233",
+					accentColor: "#AABBCC",
+				},
+			];
+			const req = new NextRequest("http://localhost/api/gallery/kasia-i-tomek");
+			const res = await getGallery(req, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+
+			expect(res.status).toBe(200);
+			const data = await res.json();
+			expect(data.primaryColor).toBe("#112233");
+			expect(data.accentColor).toBe("#AABBCC");
+		});
+
+		it("powinien zwrócić domyślne kolory motywu, gdy galeria nie ma zapisanych ustawień winietki", async () => {
+			mockCards = [];
+			const req = new NextRequest("http://localhost/api/gallery/kasia-i-tomek");
+			const res = await getGallery(req, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+
+			expect(res.status).toBe(200);
+			const data = await res.json();
+			expect(data.primaryColor).toBe("#1E293B");
+			expect(data.accentColor).toBe("#D4AF37");
+		});
+
 		it("powinien zwrócić 404, gdy galeria nie istnieje", async () => {
 			mockGalleries = [];
 			const req = new NextRequest("http://localhost/api/gallery/nie-istnieje");

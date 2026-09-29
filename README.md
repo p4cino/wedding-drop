@@ -56,12 +56,14 @@ Szybki podgląd wszystkich ślubów, zarządzanie przestrzenią dyskową oraz b�
    - Brak logowania, rejestracji i instalowania aplikacji ze sklepów.
    - **Progressive Web App (PWA)**: Możliwość instalacji na ekranie głównym (dodaj do ekranu głównego) oraz strona awaryjna (Offline Fallback) informująca o braku sieci.
    - Wrzucanie zdjęć i filmów prosto z rolki aparatu.
+   - **Photobooth w przeglądarce**: opcja "Zrób zdjęcie" w drawerze uploadu otwiera podgląd z kamery urządzenia (`getUserMedia`) bezpośrednio w przeglądarce — bez aplikacji aparatu systemowego. Zdjęcie jest komponowane na `<canvas>` z dekoracyjną ramką w kolorach motywu danej pary (te same `primaryColor`/`accentColor` co generator winietek) i trafia do dokładnie tego samego potoku TUS, co zwykły upload z galerii telefonu. Gdy przeglądarka/urządzenie nie udzieli dostępu do kamery, opcja jest po prostu niedostępna — zwykły wybór pliku pozostaje działającym fallbackiem.
    - Opcjonalny podpis ("np. Wujek Janusz i Ciocia Halinka").
    - **Wznawialny upload (TUS Protocol 1.0.0)**: Jeśli na sali weselnej na chwilę zerwie się zasięg Wi-Fi lub LTE, upload wznowi się automatycznie bez utraty przesłanych danych.
    - **Galeria na żywo (SSE)**: Nowe zdjęcia pojawiają się w telefonach gości w czasie rzeczywistym bez przeładowywania widoku.
    - **Pełnoekranowa przeglądarka (Lightbox)**: Natywna obsługa gestów dotykowych **Swipe** (przesuwanie palcem lewo/prawo na smartfonach) oraz klawiatury na desktopie.
    - **Odporność na napływ zdjęć**: Przeglądanie zdjęcia w powiększeniu nie ulega zresetowaniu, gdy w tle pojawiają się nowe zdjęcia od innych gości.
    - **Księga Życzeń**: Oddzielna zakładka "Życzenia" obok galerii zdjęć — gość może zostawić tekstowe życzenia dla Pary Młodej (opcjonalne imię/nazwisko + treść) bez logowania i bez konieczności wgrywania żadnego pliku. Nowe wpisy pojawiają się na żywo (SSE) u wszystkich gości przeglądających galerię w tym samym czasie.
+   - **Ranking najaktywniejszych gości (TOP 3)**: Niewielki widget nad galerią pokazuje trzech gości z największą liczbą wgranych zdjęć/filmów wraz z odznakami miejsc (🥇🥈🥉) — prosty "społeczny dowód słuszności", który zachęca do dalszego dodawania zdjęć. Ranking liczy się w całości po stronie przeglądarki (bez dodatkowego zapytania do serwera) na podstawie listy zdjęć, którą galeria już wczytała, więc aktualizuje się na żywo razem z resztą galerii (SSE). Uwzględnia wyłącznie widoczne materiały (ukryte/skasowane nigdy nie liczą się na korzyść gościa), a drobne różnice w zapisie podpisu (wielkość liter, spacje) grupują się w jedną pozycję. Widget jest niewidoczny, dopóki nikt jeszcze nic nie wgrał.
 
 2. **Dla Pary Młodej (Właściciela Galerii)**:
    - Panel zarządzania dostępny pod `/owner/[slug]`.

@@ -2,6 +2,7 @@
 
 import {
 	AlertCircle,
+	Camera,
 	CheckCircle2,
 	Image as ImageIcon,
 	Loader2,
@@ -13,12 +14,17 @@ import { useTranslations } from "next-intl";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import * as tus from "tus-js-client";
+import CameraCapture from "@/components/CameraCapture";
 
 interface UploaderDrawerProps {
 	gallerySlug: string;
 	isOpen: boolean;
 	onClose: () => void;
 	onUploadSuccess?: () => void;
+	// Kolory motywu wesela dla ramki zdjęcia z photobooth w przeglądarce (patrz `CameraCapture`).
+	// Opcjonalne — komponent i tak posiada własne domyślne kolory generatora winietek.
+	primaryColor?: string | null;
+	accentColor?: string | null;
 }
 
 interface UploadingFile {
@@ -35,17 +41,26 @@ export default function UploaderDrawer({
 	isOpen,
 	onClose,
 	onUploadSuccess,
+	primaryColor,
+	accentColor,
 }: UploaderDrawerProps) {
 	const [uploaderName, setUploaderName] = useState("");
 	const [files, setFiles] = useState<UploadingFile[]>([]);
 	const [isUploading, setIsUploading] = useState(false);
 	const [justFinished, setJustFinished] = useState(false);
+	const [isCameraMode, setIsCameraMode] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const t = useTranslations("GuestGallery");
+
+	// `getUserMedia` niedostępny (starsza przeglądarka / brak bezpiecznego kontekstu)
+	// -> opcja "Zrób zdjęcie" jest po prostu niedostępna, zwykły wybór pliku pozostaje jedyną opcją.
+	const isCameraSupported =
+		typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
 
 	const resetQueue = () => {
 		setFiles([]);
 		setJustFinished(false);
+		setIsCameraMode(false);
 		if (fileInputRef.current) {
 			fileInputRef.current.value = "";
 		}
@@ -62,6 +77,7 @@ export default function UploaderDrawer({
 		if (!isOpen) {
 			setFiles([]);
 			setJustFinished(false);
+			setIsCameraMode(false);
 		}
 	}, [isOpen]);
 
@@ -80,18 +96,32 @@ export default function UploaderDrawer({
 
 	if (!isOpen) return null;
 
+	const addFileToQueue = (file: File) => {
+		setJustFinished(false);
+		setFiles((prev) => [
+			...prev,
+			{
+				id: Math.random().toString(36).substring(2, 9),
+				file,
+				progress: 0,
+				status: "pending" as const,
+			},
+		]);
+	};
+
 	const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
 		if (!e.target.files?.length) return;
-		setJustFinished(false);
-		const selected = Array.from(e.target.files).map((f) => ({
-			id: Math.random().toString(36).substring(2, 9),
-			file: f,
-			progress: 0,
-			status: "pending" as const,
-		}));
-		setFiles((prev) => [...prev, ...selected]);
+		for (const f of Array.from(e.target.files)) addFileToQueue(f);
 		// Allow selecting the same file again later
 		e.target.value = "";
+	};
+
+	// Zdjęcie zrobione w przeglądarce (`CameraCapture`) trafia do dokładnie tej
+	// samej kolejki `files`/`startUpload` co plik wybrany ręcznie z dysku —
+	// zero rozgałęzień w logice wysyłki TUS poniżej.
+	const handleCameraCapture = (file: File) => {
+		addFileToQueue(file);
+		setIsCameraMode(false);
 	};
 
 	const removeFile = (id: string) => {
@@ -246,30 +276,57 @@ export default function UploaderDrawer({
 						/>
 					</div>
 
-					{/* Strefa wyboru plików */}
-					<button
-						type="button"
-						disabled={isUploading}
-						onClick={() => fileInputRef.current?.click()}
-						aria-label={t("dropzoneTitle")}
-						className="w-full border-2 border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/40 rounded-2xl p-6 text-center cursor-pointer transition group focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-					>
-						<input
-							ref={fileInputRef}
-							type="file"
-							multiple
-							accept="image/*,video/*"
-							onChange={handleFilesSelected}
-							className="hidden"
+					{/* Strefa wyboru plików / aparat w przeglądarce */}
+					{isCameraMode ? (
+						<CameraCapture
+							primaryColor={primaryColor}
+							accentColor={accentColor}
+							disabled={isUploading}
+							onCapture={handleCameraCapture}
+							onCancel={() => setIsCameraMode(false)}
 						/>
-						<div className="w-12 h-12 mx-auto mb-3 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 group-hover:scale-110 transition">
-							<Upload className="w-6 h-6" aria-hidden="true" />
-						</div>
-						<p className="text-sm font-semibold text-slate-800">
-							{t("dropzoneTitle")}
-						</p>
-						<p className="text-xs text-slate-500 mt-1">{t("dropzoneHint")}</p>
-					</button>
+					) : (
+						<>
+							<button
+								type="button"
+								disabled={isUploading}
+								onClick={() => fileInputRef.current?.click()}
+								aria-label={t("dropzoneTitle")}
+								className="w-full border-2 border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/40 rounded-2xl p-6 text-center cursor-pointer transition group focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+							>
+								<input
+									ref={fileInputRef}
+									type="file"
+									multiple
+									accept="image/*,video/*"
+									onChange={handleFilesSelected}
+									className="hidden"
+								/>
+								<div className="w-12 h-12 mx-auto mb-3 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 group-hover:scale-110 transition">
+									<Upload className="w-6 h-6" aria-hidden="true" />
+								</div>
+								<p className="text-sm font-semibold text-slate-800">
+									{t("dropzoneTitle")}
+								</p>
+								<p className="text-xs text-slate-500 mt-1">
+									{t("dropzoneHint")}
+								</p>
+							</button>
+
+							{isCameraSupported && (
+								<button
+									type="button"
+									disabled={isUploading}
+									onClick={() => setIsCameraMode(true)}
+									aria-label={t("cameraOptionBtn")}
+									className="w-full py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+								>
+									<Camera className="w-4 h-4" aria-hidden="true" />
+									{t("cameraOptionBtn")}
+								</button>
+							)}
+						</>
+					)}
 
 					{justFinished && files.length === 0 && (
 						<p

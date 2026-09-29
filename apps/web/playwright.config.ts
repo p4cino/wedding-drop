@@ -10,9 +10,13 @@ export default defineConfig({
 	use: {
 		baseURL: process.env.BASE_URL || "https://localhost",
 		ignoreHTTPSErrors: true, // Dla lokalnego certyfikatu Caddy
-		locale: "pl-PL", // next-intl renderuje wg Accept-Language; testy oczekują polskich napisów
 		trace: "on-first-retry",
 		screenshot: "only-on-failure",
+		// Wymuszenie polskiego locale przeglądarki — next-intl neguje język z nagłówka
+		// Accept-Language, a domyślny "en-US" Playwrighta przebija defaultLocale: "pl"
+		// z i18n/routing.ts, serwując /en/* zamiast /pl/* i psując cały istniejący
+		// (polskojęzyczny) zestaw testów e2e.
+		locale: "pl-PL",
 	},
 	projects: [
 		{
