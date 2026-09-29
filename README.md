@@ -7,7 +7,7 @@
 [![Turborepo](https://img.shields.io/badge/Turborepo-Monorepo-EF4444?style=flat-square&logo=turborepo&logoColor=white)](turbo.json)
 [![pnpm](https://img.shields.io/badge/pnpm-12.4.1-F69220?style=flat-square&logo=pnpm&logoColor=white)](pnpm-lock.yaml)
 [![Biome](https://img.shields.io/badge/Biome-v2.5.13-60A5FA?style=flat-square&logo=biome&logoColor=white)](biome.json)
-[![Vitest](https://img.shields.io/badge/Vitest-323%20passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](package.json)
+[![Vitest](https://img.shields.io/badge/Vitest-464%20passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](package.json)
 [![Playwright](https://img.shields.io/badge/Playwright-114%20E2E%20passing-2EAD33?style=flat-square&logo=playwright&logoColor=white)](package.json)
 [![Hardware](https://img.shields.io/badge/Hardware-Intel%20N100%20Optimized-0071C5?style=flat-square&logo=intel&logoColor=white)](#-optymalizacje-pod-procesor-intel-n100)
 
@@ -200,7 +200,7 @@ Aby aplikacja działała na Twojej publicznej domenie z darmowym certyfikatem Le
  
 ### 1. Testy Jednostkowe i Integracyjne (Vitest)
 ```bash
-# Uruchomienie 323 testów jednostkowych i integracyjnych w monorepo
+# Uruchomienie 464 testów jednostkowych i integracyjnych w monorepo
 pnpm turbo run test
 # lub w kontenerze Docker (Node 24 Alpine)
 docker run --rm -v "${PWD}:/app" -w /app node:24-alpine sh -c "corepack enable && pnpm -r test"

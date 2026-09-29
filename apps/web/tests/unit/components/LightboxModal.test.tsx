@@ -334,4 +334,32 @@ describe("LightboxModal Component", () => {
 		expect(document.activeElement).toBe(triggerButton);
 		document.body.removeChild(triggerButton);
 	});
+
+	it("etykiety dialogu, komunikat slajdu i wideo pochodzą z tłumaczeń (bez twardych tekstów)", () => {
+		const { rerender } = render(
+			<LightboxModal
+				items={mockItems}
+				currentIndex={0}
+				onClose={vi.fn()}
+				onNavigate={vi.fn()}
+			/>,
+		);
+		expect(screen.getByRole("dialog")).toHaveAttribute(
+			"aria-label",
+			"lightboxAria",
+		);
+		expect(screen.getByText("slideAnnouncement")).toBeInTheDocument();
+
+		rerender(
+			<LightboxModal
+				items={mockItems}
+				currentIndex={1}
+				onClose={vi.fn()}
+				onNavigate={vi.fn()}
+			/>,
+		);
+		expect(
+			screen.getByLabelText("videoAria: film1.mp4", { exact: false }),
+		).toBeInTheDocument();
+	});
 });

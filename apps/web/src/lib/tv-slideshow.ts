@@ -2,16 +2,10 @@
  * Czyste, testowalne bez DOM funkcje pomocnicze dla widoku trybu TV (`/g/{slug}/tv`).
  */
 
+import { buildGalleryUrl } from "@/lib/gallery-url";
+
 /**
- * Buduje docelowy adres URL galerii gościa, do którego prowadzi kod QR
- * wyświetlany w rogu ekranu w trybie TV.
- *
- * @param slug - slug galerii weselnej
- * @param origin - opcjonalne origin (protokół + host); gdy pominięte, używa
- *   `window.location.origin` w przeglądarce, w przeciwnym razie zwraca ścieżkę względną.
+ * Adres galerii gościa kodowany w QR w rogu ekranu w trybie TV
+ * (ta sama funkcja co dla karteczki stołowej).
  */
-export function buildTvGalleryQrUrl(slug: string, origin?: string): string {
-	const resolvedOrigin =
-		origin ?? (typeof window !== "undefined" ? window.location.origin : "");
-	return `${resolvedOrigin}/g/${slug}`;
-}
+export const buildTvGalleryQrUrl = buildGalleryUrl;

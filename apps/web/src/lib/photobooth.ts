@@ -6,10 +6,12 @@
  * komponentu / `getUserMedia`.
  */
 
+import { DEFAULT_CARD_COLORS } from "@/lib/card-defaults";
+
 // Te same domyślne kolory co generator winietek A6 (patrz `packages/media/src/pdf-card.ts`
 // i `GET /api/gallery/[slug]/card/pdf`), żeby zachowanie było spójne z resztą aplikacji.
-export const DEFAULT_PRIMARY_COLOR = "#1E293B";
-export const DEFAULT_ACCENT_COLOR = "#D4AF37";
+export const DEFAULT_PRIMARY_COLOR: string = DEFAULT_CARD_COLORS.primary;
+export const DEFAULT_ACCENT_COLOR: string = DEFAULT_CARD_COLORS.accent;
 
 // Maksymalny rozmiar dłuższego boku eksportowanego zdjęcia — ogranicza rozmiar
 // pliku ze zrzutów kamer 4K na nowszych telefonach, patrz design.md „Risks”.
@@ -144,4 +146,14 @@ export function canvasToJpegFile(
 			quality,
 		);
 	});
+}
+
+/**
+ * Czy przeglądarka udostępnia `getUserMedia` (starsza przeglądarka / brak bezpiecznego
+ * kontekstu => opcja „Zrób zdjęcie" jest niedostępna, zostaje zwykły wybór pliku).
+ */
+export function isCameraSupported(): boolean {
+	return (
+		typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia
+	);
 }

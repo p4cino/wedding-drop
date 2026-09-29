@@ -9,6 +9,9 @@ if (typeof window !== "undefined") {
 		disconnect: vi.fn(),
 	}));
 
+	// jsdom nie implementuje odtwarzania mediów — kod produkcyjny woła `video.play()`
+	window.HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined);
+
 	// Polyfill dla URL.createObjectURL i revokeObjectURL
 	window.URL.createObjectURL = vi.fn(() => "blob:mock-url");
 	window.URL.revokeObjectURL = vi.fn();

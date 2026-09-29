@@ -12,13 +12,14 @@ describe("OwnerStatsGrid Component", () => {
 			<OwnerStatsGrid
 				imagesCount={42}
 				videosCount={5}
-				totalMegabytes="128.5"
+				totalBytes={128.5 * 1024 * 1024}
 				onRefresh={onRefreshMock}
 			/>,
 		);
 
 		expect(screen.getByText("42")).toBeInTheDocument();
 		expect(screen.getByText("5")).toBeInTheDocument();
+		// Mock tłumaczeń zwraca sam klucz; rozmiar przekazywany jest jako sformatowane MB
 		expect(screen.getByText("storageUnit")).toBeInTheDocument();
 		expect(screen.getByText("statusActive")).toBeInTheDocument();
 

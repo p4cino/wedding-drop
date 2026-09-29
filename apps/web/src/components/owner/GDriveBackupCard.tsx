@@ -12,41 +12,32 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type React from "react";
-
-export interface GDriveProgressData {
-	totalFiles?: number;
-	processedFiles?: number;
-	totalBytes?: number;
-	processedBytes?: number;
-	currentFile?: string | null;
-	error?: string | null;
-}
+import NewTabLabel from "@/components/NewTabLabel";
+import { formatMegabytes } from "@/lib/format";
+import type { GDriveState } from "@/lib/owner-types";
 
 interface GDriveBackupCardProps {
-	hasGDrive: boolean;
-	gdriveEmail: string | null;
-	gdriveStatus: string;
-	gdriveProgress: GDriveProgressData | null;
-	gdriveFolderId: string | null;
-	gdriveExportedAt: string | null;
-	isGDriveConfigured: boolean;
+	state: GDriveState;
 	onConnect: () => void;
 	onDisconnect: () => void;
 	onOpenExportModal: () => void;
 }
 
 export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
-	hasGDrive,
-	gdriveEmail,
-	gdriveStatus,
-	gdriveProgress,
-	gdriveFolderId,
-	gdriveExportedAt,
-	isGDriveConfigured,
+	state,
 	onConnect,
 	onDisconnect,
 	onOpenExportModal,
 }) => {
+	const {
+		connected: hasGDrive,
+		email: gdriveEmail,
+		status: gdriveStatus,
+		progress: gdriveProgress,
+		folderId: gdriveFolderId,
+		exportedAt: gdriveExportedAt,
+		isConfigured: isGDriveConfigured,
+	} = state;
 	const progressPercent =
 		gdriveProgress?.totalFiles && gdriveProgress?.totalFiles > 0
 			? Math.min(
@@ -58,12 +49,8 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 				)
 			: 0;
 
-	const processedMB = gdriveProgress?.processedBytes
-		? (gdriveProgress.processedBytes / (1024 * 1024)).toFixed(1)
-		: "0";
-	const totalProgMB = gdriveProgress?.totalBytes
-		? (gdriveProgress.totalBytes / (1024 * 1024)).toFixed(1)
-		: "0";
+	const processedMB = formatMegabytes(gdriveProgress?.processedBytes ?? 0);
+	const totalProgMB = formatMegabytes(gdriveProgress?.totalBytes ?? 0);
 	const t = useTranslations("OwnerPanel");
 
 	return (
@@ -122,7 +109,7 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 								>
 									<ArrowUpRight className="w-4 h-4" aria-hidden="true" />
 									<span>{t("openFolder")}</span>
-									<span className="sr-only">(otwiera się w nowej karcie)</span>
+									<NewTabLabel />
 								</a>
 							)}
 
@@ -290,7 +277,7 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 									<p className="text-xs text-emerald-700">
 										{gdriveExportedAt
 											? t("lastExport", {
-													date: new Date(gdriveExportedAt!).toLocaleString(
+													date: new Date(gdriveExportedAt).toLocaleString(
 														"pl-PL",
 													),
 												})
@@ -308,7 +295,7 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 								>
 									<ArrowUpRight className="w-4 h-4" aria-hidden="true" />
 									<span>{t("viewGDrive")}</span>
-									<span className="sr-only">(otwiera się w nowej karcie)</span>
+									<NewTabLabel />
 								</a>
 							)}
 						</div>
@@ -322,7 +309,7 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 							{gdriveExportedAt && (
 								<span className="text-[11px] text-slate-400">
 									{t("idleLastExport", {
-										date: new Date(gdriveExportedAt!).toLocaleString("pl-PL"),
+										date: new Date(gdriveExportedAt).toLocaleString("pl-PL"),
 									})}
 								</span>
 							)}

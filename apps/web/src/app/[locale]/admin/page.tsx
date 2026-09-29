@@ -1,34 +1,20 @@
 "use client";
 
-import { adminLoginDto, createGalleryDto } from "@wedding-drop/db/validators";
-import {
-	Calendar,
-	Check,
-	ExternalLink,
-	HardDrive,
-	Plus,
-	QrCode,
-	ShieldCheck,
-	Trash2,
-	Users,
-	X,
-} from "lucide-react";
+import { adminLoginDto } from "@wedding-drop/db/validators";
+import { Plus, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type React from "react";
-import { useEffect, useState } from "react";
-import { Link } from "@/i18n/routing";
-
-interface GalleryRow {
-	id: string;
-	slug: string;
-	coupleNames: string;
-	weddingDate: string;
-	ownerEmail: string;
-	isActive: boolean;
-	totalFiles: number;
-	totalBytes: number;
-	createdAt: string;
-}
+import { useCallback, useEffect, useState } from "react";
+import { AdminLoginForm } from "@/components/admin/AdminLoginForm";
+import { AdminStats } from "@/components/admin/AdminStats";
+import {
+	type CreateGalleryForm,
+	CreateGalleryModal,
+	type CreateGalleryResult,
+} from "@/components/admin/CreateGalleryModal";
+import { GalleryTable } from "@/components/admin/GalleryTable";
+import { useAdminApi } from "@/hooks/useAdminApi";
+import type { GalleryRow } from "@/lib/admin-types";
 
 export default function AdminDashboardPage() {
 	const t = useTranslations("AdminPanel");
@@ -39,30 +25,34 @@ export default function AdminDashboardPage() {
 	const [loading, setLoading] = useState(false);
 
 	const [galleries, setGalleries] = useState<GalleryRow[]>([]);
+	const [notice, setNotice] = useState("");
 	const [isModalOpen, setIsModalOpen] = useState(false);
 
-	// Formularz nowego wesela
-	const [coupleNames, setCoupleNames] = useState("");
-	const [weddingDate, setWeddingDate] = useState(
-		new Date().toISOString().slice(0, 10),
-	);
-	const [ownerEmail, setOwnerEmail] = useState("");
-	const [ownerPassword, setOwnerPassword] = useState("");
-	const [customSlug, setCustomSlug] = useState("");
-	const [createdGallery, setCreatedGallery] = useState<GalleryRow | null>(null);
+	// Wygasły token (401) wraca do logowania z komunikatem, zamiast udawać pustą listę
+	const handleUnauthorized = useCallback(() => {
+		setToken(null);
+		setGalleries([]);
+		setIsModalOpen(false);
+		setError(t("sessionExpired"));
+	}, [t]);
+	const request = useAdminApi(token, handleUnauthorized);
 
-	// Obsługa klawisza Escape dla modala
+	const loadGalleries = useCallback(async () => {
+		const res = await request<{ galleries: GalleryRow[] }>(
+			"GET",
+			"/api/admin/galleries",
+		);
+		if (res.ok) {
+			setNotice("");
+			setGalleries(res.data?.galleries || []);
+		} else if (res.status !== 401) {
+			setNotice(t("loadError"));
+		}
+	}, [request, t]);
+
 	useEffect(() => {
-		if (!isModalOpen) return;
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key === "Escape") {
-				e.preventDefault();
-				setIsModalOpen(false);
-			}
-		};
-		window.addEventListener("keydown", handleKeyDown);
-		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [isModalOpen]);
+		if (token) loadGalleries();
+	}, [token, loadGalleries]);
 
 	const handleLogin = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -75,22 +65,18 @@ export default function AdminDashboardPage() {
 		}
 
 		setLoading(true);
-
 		try {
 			const res = await fetch("/api/admin/auth", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(valResult.data),
 			});
-
 			const data = await res.json();
 			if (!res.ok) {
 				setError(data.error || t("loginError"));
 				return;
 			}
-
 			setToken(data.adminToken);
-			loadGalleries(data.adminToken);
 		} catch (_err) {
 			setError(t("loginNetworkError"));
 		} finally {
@@ -98,181 +84,54 @@ export default function AdminDashboardPage() {
 		}
 	};
 
-	const loadGalleries = async (adminToken: string) => {
-		try {
-			const res = await fetch("/api/admin/galleries", {
-				method: "GET",
-				headers: {
-					"x-admin-token": adminToken,
-				},
-			});
-			if (res.ok) {
-				const data = await res.json();
-				setGalleries(data.galleries || []);
-			}
-		} catch (e) {
-			console.error(e);
+	const handleCreate = async (
+		form: CreateGalleryForm,
+	): Promise<CreateGalleryResult> => {
+		const res = await request<{ gallery: GalleryRow; error?: string }>(
+			"POST",
+			"/api/admin/galleries",
+			form,
+		);
+		if (res.ok && res.data?.gallery) {
+			loadGalleries();
+			return { ok: true, gallery: res.data.gallery };
 		}
+		return {
+			ok: false,
+			error:
+				res.status === 0
+					? t("connectionError")
+					: res.data?.error || t("createError"),
+		};
 	};
 
-	const handleCreate = async (e: React.FormEvent) => {
-		e.preventDefault();
-		if (!token) return;
-
-		const valResult = createGalleryDto.safeParse({
-			coupleNames,
-			weddingDate,
-			ownerEmail,
-			ownerPassword,
-			customSlug,
-		});
-
-		if (!valResult.success) {
-			alert(
-				valResult.error.issues[0]?.message || "Nieprawidłowe dane formularza",
-			);
-			return;
-		}
-
-		try {
-			const res = await fetch("/api/admin/galleries", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					"x-admin-token": token,
-				},
-				body: JSON.stringify(valResult.data),
-			});
-
-			const data = await res.json();
-			if (res.ok) {
-				setCreatedGallery(data.gallery);
-				loadGalleries(token);
-				// Reset formularza
-				setCoupleNames("");
-				setOwnerEmail("");
-				setOwnerPassword("");
-				setCustomSlug("");
-			} else {
-				alert(data.error || "Nie udało się utworzyć galerii");
-			}
-		} catch (_e) {
-			alert("Błąd połączenia");
-		}
-	};
-
-	const handleDelete = async (galleryId: string, slug: string) => {
-		if (
-			!confirm(
-				`Czy na pewno chcesz bezpowrotnie usunąć galerię "${slug}" wraz ze wszystkimi zdjęciami?`,
-			)
-		)
-			return;
-		if (!token) return;
-
-		try {
-			const res = await fetch(`/api/admin/galleries/${galleryId}`, {
-				method: "DELETE",
-				headers: {
-					"x-admin-token": token,
-				},
-			});
-			if (res.ok) {
-				setGalleries((prev) => prev.filter((g) => g.id !== galleryId));
-			}
-		} catch (e) {
-			console.error(e);
+	const handleDelete = async (gallery: GalleryRow) => {
+		if (!confirm(t("deleteConfirm", { slug: gallery.slug }))) return;
+		const res = await request("DELETE", `/api/admin/galleries/${gallery.id}`);
+		if (res.ok) {
+			setNotice("");
+			setGalleries((prev) => prev.filter((g) => g.id !== gallery.id));
+		} else if (res.status !== 401) {
+			setNotice(t("deleteError"));
 		}
 	};
 
 	if (!token) {
 		return (
-			<div className="min-h-screen flex items-center justify-center bg-[#FAF8F5] p-4">
-				<div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-200/80">
-					<div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white mx-auto mb-4">
-						<ShieldCheck className="w-6 h-6" aria-hidden="true" />
-					</div>
-					<h2 className="font-serif-luxury text-2xl font-bold text-center text-slate-900 mb-1">
-						{t("loginTitle")}
-					</h2>
-					<p className="text-xs text-center text-slate-500 mb-6">
-						{t("loginDesc")}
-					</p>
-
-					<form onSubmit={handleLogin} className="space-y-4">
-						{error && (
-							<div
-								id="admin-login-error"
-								role="alert"
-								aria-live="assertive"
-								className="p-3 text-xs bg-red-50 text-red-700 rounded-xl border border-red-200"
-							>
-								{error}
-							</div>
-						)}
-						<div>
-							<label
-								htmlFor="admin-username-input"
-								className="block text-xs font-semibold text-slate-700 mb-1"
-							>
-								{t("usernameLabel")}
-							</label>
-							<input
-								id="admin-username-input"
-								type="text"
-								required
-								aria-invalid={Boolean(error)}
-								aria-describedby={error ? "admin-login-error" : undefined}
-								value={username}
-								onChange={(e) => setUsername(e.target.value)}
-								className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900/30 focus-visible:ring-2 focus-visible:ring-slate-900"
-							/>
-						</div>
-						<div>
-							<label
-								htmlFor="admin-password-input"
-								className="block text-xs font-semibold text-slate-700 mb-1"
-							>
-								{t("passwordLabel")}
-							</label>
-							<input
-								id="admin-password-input"
-								type="password"
-								required
-								aria-invalid={Boolean(error)}
-								aria-describedby={error ? "admin-login-error" : undefined}
-								value={password}
-								onChange={(e) => setPassword(e.target.value)}
-								className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900/30 focus-visible:ring-2 focus-visible:ring-slate-900"
-							/>
-						</div>
-
-						<button
-							type="submit"
-							disabled={loading}
-							className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition shadow-sm focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
-						>
-							{loading ? t("loginBtnLoading") : t("loginBtn")}
-						</button>
-					</form>
-				</div>
-			</div>
+			<AdminLoginForm
+				username={username}
+				password={password}
+				error={error}
+				loading={loading}
+				onUsernameChange={setUsername}
+				onPasswordChange={setPassword}
+				onSubmit={handleLogin}
+			/>
 		);
 	}
 
-	const totalGlobalFiles = galleries.reduce(
-		(acc, g) => acc + (g.totalFiles || 0),
-		0,
-	);
-	const totalGlobalBytes = galleries.reduce(
-		(acc, g) => acc + Number(g.totalBytes || 0),
-		0,
-	);
-	const totalGlobalMb = (totalGlobalBytes / (1024 * 1024)).toFixed(1);
-
 	return (
 		<div className="min-h-screen bg-[#FAF8F5] pb-20">
-			{/* Pasek nawigacyjny */}
 			<header className="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-30 flex items-center justify-between">
 				<div className="flex items-center gap-3">
 					<div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-white">
@@ -290,10 +149,7 @@ export default function AdminDashboardPage() {
 					type="button"
 					aria-haspopup="dialog"
 					aria-expanded={isModalOpen}
-					onClick={() => {
-						setCreatedGallery(null);
-						setIsModalOpen(true);
-					}}
+					onClick={() => setIsModalOpen(true)}
 					className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-sm transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
 				>
 					<Plus className="w-4 h-4" aria-hidden="true" />
@@ -302,369 +158,23 @@ export default function AdminDashboardPage() {
 			</header>
 
 			<main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-				{/* Statystyki globalne */}
-				<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-					<div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-						<div className="flex items-center gap-2 text-slate-600 text-xs font-medium mb-1">
-							<Users className="w-4 h-4 text-amber-600" aria-hidden="true" />
-							<span>{t("statsWeddings")}</span>
-						</div>
-						<p className="text-3xl font-bold text-slate-900">
-							{galleries.length}
-						</p>
+				{notice && (
+					<div
+						role="alert"
+						className="p-3 text-xs bg-red-50 text-red-700 rounded-xl border border-red-200"
+					>
+						{notice}
 					</div>
-
-					<div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-						<div className="flex items-center gap-2 text-slate-600 text-xs font-medium mb-1">
-							<Calendar className="w-4 h-4 text-amber-600" aria-hidden="true" />
-							<span>{t("statsFiles")}</span>
-						</div>
-						<p className="text-3xl font-bold text-slate-900">
-							{totalGlobalFiles}
-						</p>
-					</div>
-
-					<div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-						<div className="flex items-center gap-2 text-slate-600 text-xs font-medium mb-1">
-							<HardDrive
-								className="w-4 h-4 text-amber-600"
-								aria-hidden="true"
-							/>
-							<span>{t("statsDisk")}</span>
-						</div>
-						<p className="text-3xl font-bold text-slate-900">
-							{totalGlobalMb} MB
-						</p>
-					</div>
-				</div>
-
-				{/* Tabela ślubów */}
-				<div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-					<div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-						<h3 className="font-bold text-slate-800 text-sm">
-							{t("tableTitle")}
-						</h3>
-						<span className="text-xs text-slate-500">
-							{t("tableRecords", { count: galleries.length })}
-						</span>
-					</div>
-
-					<div className="overflow-x-auto">
-						<table
-							className="w-full text-left text-xs"
-							aria-label="Aktywne Galerie Weselne"
-						>
-							<thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-100">
-								<tr>
-									<th scope="col" className="px-6 py-3">
-										{t("thCouple")}
-									</th>
-									<th scope="col" className="px-6 py-3">
-										{t("thDate")}
-									</th>
-									<th scope="col" className="px-6 py-3">
-										{t("thSlug")}
-									</th>
-									<th scope="col" className="px-6 py-3">
-										{t("thEmail")}
-									</th>
-									<th scope="col" className="px-6 py-3">
-										{t("thFiles")}
-									</th>
-									<th scope="col" className="px-6 py-3">
-										{t("thSize")}
-									</th>
-									<th scope="col" className="px-6 py-3 text-right">
-										{t("thActions")}
-									</th>
-								</tr>
-							</thead>
-							<tbody className="divide-y divide-slate-100">
-								{galleries.map((g) => {
-									const mb = (
-										Number(g.totalBytes || 0) /
-										(1024 * 1024)
-									).toFixed(1);
-									return (
-										<tr key={g.id} className="hover:bg-slate-50/80 transition">
-											<td className="px-6 py-3.5 font-bold text-slate-900">
-												{g.coupleNames}
-											</td>
-											<td className="px-6 py-3.5 text-slate-600">
-												{g.weddingDate}
-											</td>
-											<td className="px-6 py-3.5 font-mono text-amber-700">
-												{g.slug}
-											</td>
-											<td className="px-6 py-3.5 text-slate-600">
-												{g.ownerEmail}
-											</td>
-											<td className="px-6 py-3.5 font-medium">
-												{g.totalFiles}
-											</td>
-											<td className="px-6 py-3.5 font-medium text-slate-600">
-												{mb} MB
-											</td>
-											<td className="px-6 py-3.5 text-right space-x-2">
-												<Link
-													href={`/g/${g.slug}`}
-													target="_blank"
-													title={t("actionGuest")}
-													aria-label={`${t("actionGuest")} (${g.slug})`}
-													className="inline-block p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
-												>
-													<ExternalLink
-														className="w-4 h-4"
-														aria-hidden="true"
-													/>
-													<span className="sr-only">
-														(otwiera się w nowej karcie)
-													</span>
-												</Link>
-												<Link
-													href={`/g/${g.slug}/card`}
-													target="_blank"
-													title={t("actionPrint")}
-													aria-label={`${t("actionPrint")} (${g.slug})`}
-													className="inline-block p-1.5 rounded-lg text-amber-600 hover:text-amber-800 hover:bg-amber-50 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
-												>
-													<QrCode className="w-4 h-4" aria-hidden="true" />
-													<span className="sr-only">
-														(otwiera się w nowej karcie)
-													</span>
-												</Link>
-												<Link
-													href={`/owner/${g.slug}`}
-													target="_blank"
-													title={t("actionOwner")}
-													aria-label={`${t("actionOwner")} (${g.slug})`}
-													className="inline-block p-1.5 rounded-lg text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition font-medium focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
-												>
-													Panel
-													<span className="sr-only">
-														(otwiera się w nowej karcie)
-													</span>
-												</Link>
-												<button
-													type="button"
-													onClick={() => handleDelete(g.id, g.slug)}
-													title={t("actionDelete")}
-													aria-label={`${t("actionDelete")} (${g.slug})`}
-													className="inline-block p-1.5 rounded-lg text-slate-600 hover:text-red-600 hover:bg-red-50 transition focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
-												>
-													<Trash2 className="w-4 h-4" aria-hidden="true" />
-												</button>
-											</td>
-										</tr>
-									);
-								})}
-							</tbody>
-						</table>
-					</div>
-				</div>
+				)}
+				<AdminStats galleries={galleries} />
+				<GalleryTable galleries={galleries} onDelete={handleDelete} />
 			</main>
 
-			{/* Modal tworzenia nowej galerii */}
 			{isModalOpen && (
-				<div
-					role="dialog"
-					aria-modal="true"
-					aria-labelledby="admin-create-wedding-title"
-					className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-				>
-					<div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto">
-						<button
-							type="button"
-							onClick={() => setIsModalOpen(false)}
-							aria-label="Zamknij okno tworzenia wesela"
-							title="Zamknij okno tworzenia wesela"
-							className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-600 rounded-full focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
-						>
-							<X className="w-5 h-5" aria-hidden="true" />
-						</button>
-
-						<h3
-							id="admin-create-wedding-title"
-							className="font-serif-luxury text-xl font-bold text-slate-900 mb-1"
-						>
-							{t("modalTitle")}
-						</h3>
-						<p className="text-xs text-slate-500 mb-5">{t("modalDesc")}</p>
-
-						{createdGallery ? (
-							<div className="space-y-4">
-								<div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 space-y-2">
-									<div className="flex items-center gap-1.5 font-bold">
-										<Check className="w-4 h-4" aria-hidden="true" />{" "}
-										{t("modalSuccess")}
-									</div>
-									<p>
-										<strong>{t("modalSuccessCouple")}</strong>{" "}
-										{createdGallery.coupleNames}
-									</p>
-									<p>
-										<strong>{t("modalSuccessSlug")}</strong>{" "}
-										{createdGallery.slug}
-									</p>
-								</div>
-
-								<div className="space-y-2 pt-2">
-									<Link
-										href={`/g/${createdGallery.slug}`}
-										target="_blank"
-										className="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
-									>
-										<span>{t("modalLinkGuest")}</span>
-										<ExternalLink
-											className="w-4 h-4 text-slate-400"
-											aria-hidden="true"
-										/>
-										<span className="sr-only">
-											(otwiera się w nowej karcie)
-										</span>
-									</Link>
-
-									<Link
-										href={`/g/${createdGallery.slug}/card`}
-										target="_blank"
-										className="flex items-center justify-between p-3 rounded-xl border border-amber-200 bg-amber-50/50 hover:bg-amber-100/50 text-xs font-semibold text-amber-900 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
-									>
-										<span>{t("modalLinkPrint")}</span>
-										<QrCode
-											className="w-4 h-4 text-amber-700"
-											aria-hidden="true"
-										/>
-										<span className="sr-only">
-											(otwiera się w nowej karcie)
-										</span>
-									</Link>
-
-									<Link
-										href={`/owner/${createdGallery.slug}`}
-										target="_blank"
-										className="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
-									>
-										<span>{t("modalLinkOwner")}</span>
-										<ExternalLink
-											className="w-4 h-4 text-slate-400"
-											aria-hidden="true"
-										/>
-										<span className="sr-only">
-											(otwiera się w nowej karcie)
-										</span>
-									</Link>
-								</div>
-
-								<button
-									type="button"
-									onClick={() => setIsModalOpen(false)}
-									className="w-full mt-4 py-3 bg-slate-900 text-white rounded-xl text-xs font-semibold focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
-								>
-									{t("modalCloseBtn")}
-								</button>
-							</div>
-						) : (
-							<form onSubmit={handleCreate} className="space-y-3 text-xs">
-								<div>
-									<label
-										htmlFor="admin-couple-names"
-										className="block font-semibold text-slate-700 mb-1"
-									>
-										{t("formCouple")}
-									</label>
-									<input
-										id="admin-couple-names"
-										type="text"
-										required
-										placeholder={t("formCouplePlaceholder")}
-										value={coupleNames}
-										onChange={(e) => setCoupleNames(e.target.value)}
-										className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500"
-									/>
-								</div>
-
-								<div className="grid grid-cols-2 gap-3">
-									<div>
-										<label
-											htmlFor="admin-wedding-date"
-											className="block font-semibold text-slate-700 mb-1"
-										>
-											{t("formDate")}
-										</label>
-										<input
-											id="admin-wedding-date"
-											type="date"
-											required
-											value={weddingDate}
-											onChange={(e) => setWeddingDate(e.target.value)}
-											className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500"
-										/>
-									</div>
-
-									<div>
-										<label
-											htmlFor="admin-custom-slug"
-											className="block font-semibold text-slate-700 mb-1"
-										>
-											{t("formSlug")}
-										</label>
-										<input
-											id="admin-custom-slug"
-											type="text"
-											placeholder={t("formSlugPlaceholder")}
-											value={customSlug}
-											onChange={(e) => setCustomSlug(e.target.value)}
-											className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500"
-										/>
-									</div>
-								</div>
-
-								<div>
-									<label
-										htmlFor="admin-owner-email"
-										className="block font-semibold text-slate-700 mb-1"
-									>
-										{t("formEmail")}
-									</label>
-									<input
-										id="admin-owner-email"
-										type="email"
-										required
-										placeholder="kontakt@kasiaitomek.pl"
-										value={ownerEmail}
-										onChange={(e) => setOwnerEmail(e.target.value)}
-										className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500"
-									/>
-								</div>
-
-								<div>
-									<label
-										htmlFor="admin-owner-password"
-										className="block font-semibold text-slate-700 mb-1"
-									>
-										{t("formPassword")}
-									</label>
-									<input
-										id="admin-owner-password"
-										type="password"
-										required
-										placeholder={t("formPasswordPlaceholder")}
-										value={ownerPassword}
-										onChange={(e) => setOwnerPassword(e.target.value)}
-										className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500"
-									/>
-								</div>
-
-								<button
-									type="submit"
-									className="w-full mt-4 py-3 bg-gradient-to-r from-amber-600 to-amber-500 text-white rounded-xl font-semibold shadow-md focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
-								>
-									{t("formSubmit")}
-								</button>
-							</form>
-						)}
-					</div>
-				</div>
+				<CreateGalleryModal
+					onClose={() => setIsModalOpen(false)}
+					onCreate={handleCreate}
+				/>
 			)}
 		</div>
 	);

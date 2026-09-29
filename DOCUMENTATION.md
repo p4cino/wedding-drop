@@ -228,6 +228,7 @@ Indeks `idx_wishes_gallery_status_created` na `(gallery_id, status, created_at)`
 
 ### Panel Pary Młodej (RESTful API)
 - `POST /api/owner/:slug/auth` – Logowanie hasłem właściciela, wydanie podpisanego tokenu HMAC-SHA256, zwrócenie statystyk galerii, stanu Google Drive i konfiguracji winietki.
+- `GET /api/owner/:slug/session` – Odtworzenie sesji panelu tokenem właściciela (nagłówek `x-owner-token`) bez ponownego podawania hasła; zwraca ten sam ładunek co logowanie, ale bez nowego tokenu. Przeglądarka przechowuje w `sessionStorage` wyłącznie token — hasło nigdy nie jest zapisywane.
 - Import materiałów fotografa/kamerzysty (`PhotographerImportPanel.tsx`) nie ma osobnego endpointu REST — korzysta z tego samego `ANY /api/upload/tus/*` co upload gościa, przekazując dodatkowo `ownerToken` z logowania właściciela oraz `source: "photographer"` w metadanych TUS (patrz sekcja 3.1 i 5 wyżej).
 - `PATCH /api/owner/:slug/media/:id/status` – Zmiana widoczności zdjęcia (`ready` <-> `hidden`) autoryzowana tokenem HMAC, wraz z natychmiastową emisją SSE `media-updated`.
 - `DELETE /api/owner/:slug/media/:id` – Fizyczne usunięcie pliku źródłowego i miniatury z dysku oraz bazy danych z powiadomieniem SSE.
@@ -273,6 +274,27 @@ Indeks `idx_wishes_gallery_status_created` na `(gallery_id, status, created_at)`
    - Link "Otwórz tryb TV" w panelu Pary Młodej (`/owner/[slug]`) otwiera trasę w nowej karcie.
 
 ---
+
+### 6.1. Architektura klienta: hooki i biblioteki współdzielone
+
+Logika klienta wspólna dla wielu stron jest w `apps/web/src/hooks/` i `apps/web/src/lib/`, a nie kopiowana między stronami:
+
+- **Galeria na żywo** — `useGalleryEvents` (jedyne miejsce tworzące `EventSource` na `/api/gallery/[slug]/live`, flaga `isLive`, `onReconnect`) oraz `useLiveGallery` (metadane, media i życzenia + czysty reducer `lib/live-gallery.ts`). Używane przez galerię gościa i tryb TV. Po zerwaniu i wznowieniu SSE dane są pobierane ponownie; ciche odświeżenie zakończone błędem nie zamienia działającej galerii w błąd. Stany: `loading`, `ready`, `notFound` (404), `error` (sieć/5xx) — ekran `GalleryStatusScreen`. Typy publicznego API: `lib/gallery-types.ts`.
+
+- **Upload plików (TUS)** — `lib/tus-upload.ts` (`uploadFileViaTus`: jedyne miejsce ze stałymi klienta TUS — chunk 5 MB, `retryDelays`, endpoint względny, ograniczanie częstości raportowania postępu), hook `useUploadQueue` (sekwencyjna kolejka; po wysyłce udane pliki znikają, nieudane zostają z komunikatem błędu; callback sukcesu tylko gdy ≥ 1 plik się powiódł) oraz komponenty `components/upload/UploadFileRow` i `FilePickerDropzone`. Współdzielone przez `UploaderDrawer` (gość) i `PhotographerImportPanel` (import fotografa — dodatkowe metadane `source: "photographer"` i `ownerToken`).
+- **Lightbox** — `useLightboxSelection` śledzi otwarty element po `id`, więc zdarzenia na żywo (nowe/ukryte zdjęcia) nie przesuwają oglądanego materiału.
+
+- **Panel Pary Młodej** — `lib/owner-api.ts` (`ownerRequest`: jedyne miejsce dokładające nagłówek `x-owner-token`; nie rzuca wyjątków, błąd sieci to `status: 0`) i hook `useOwnerApi`; `useGDriveExport` trzyma cały stan Google Drive jako jeden obiekt `GDriveState` aktualizowany atomowo z trzech źródeł (logowanie/sesja, SSE `gdrive-progress`, polling co 3 s w trakcie eksportu; mapowania w `lib/gdrive-state.ts`). Strona składa widok z `OwnerLoginForm`, `OwnerHeader`, `Toast`; nieudane operacje pokazują komunikat błędu zamiast być połykane.
+
+- **Panel administratora** — `lib/api-request.ts` (`authedRequest`, wspólna nierzucająca warstwa `fetch` dla paneli) i `useAdminApi` (nagłówek `x-admin-token`; odpowiedź 401 wraca do logowania z komunikatem „sesja wygasła" zamiast pustej tabeli). Strona składa widok z `components/admin/*` (`AdminLoginForm`, `AdminStats`, `GalleryTable`, `CreateGalleryModal` z formularzem na `useReducer`); trzy linki do galerii (gość, wydruk karty, panel pary) pochodzą z jednej tablicy `GALLERY_LINKS`. Błędy tworzenia/usuwania są pokazywane inline (bez `alert()`).
+
+- **Lokalizacja (pl/en/de)** — żaden tekst widoczny lub czytany przez czytniki ekranu nie jest zakodowany na sztywno: etykiety lightboxa i siatki mediów, układ stron prawnych, ekran offline, `sr-only` „otwiera się w nowej karcie" (`NewTabLabel`), `aria-label` edytora karty oraz `metadata` dokumentu (`generateMetadata` z przestrzenią `Meta`). Test `tests/unit/messages-parity.test.ts` wymusza identyczne zbiory kluczy w `pl.json`, `en.json` i `de.json`.
+
+- **Edytor karteczki stołowej** — pobiera dane przez `fetchGalleryData` (rozróżnia 404 i błąd sieci: `GalleryStatusScreen`, brak przykładowego podglądu dla nieistniejącej galerii), generuje QR z anulowaniem starszych wyników i komunikatem błędu, a adres galerii buduje `lib/gallery-url.ts` (`buildGalleryUrl`, wspólne z trybem TV). Domyślne kolory karty to `lib/card-defaults.ts`. Podgląd A6 to `components/CardPreview`.
+
+- **Dostępność okien modalnych** — hooki `useEscapeKey`, `useFocusTrap` (zapamiętanie i przywrócenie fokusu, pętla Tab/Shift+Tab liczona przy każdym Tab, więc działa z dynamiczną zawartością) i `useSwipe`. Stosowane w lightboxie, panelu dodawania zdjęć, modalu eksportu na Dysk Google i modalu tworzenia galerii w panelu administratora. `CameraCapture` zatrzymuje strumień kamery natychmiast po błędzie (dioda kamery nie świeci na ekranie błędu); wsparcie `getUserMedia` sprawdza jedna funkcja `isCameraSupported()`.
+
+- **Wspólne prymitywy** — moderacja zdjęć i życzeń używa `ModerationFilterBar`, `ModerationActions` i typów z `lib/moderation.ts` (`ModerationStatus`, `filterByStatus`; stan filtra jest lokalny w komponentach), rozmiar plików formatuje jedna funkcja `lib/format.ts:formatMegabytes`, puste listy to `EmptyState`, a kafelki statystyk panelu `StatTile`. Sanityzacja sluga (`^[a-z0-9_-]*$`) ma jedną definicję — `sanitizeSlug` w `packages/db/src/slug.ts` (import `@wedding-drop/db/slug` w kliencie), używaną przez stronę główną (pusty wynik nie nawiguje do `/g/`) i trasę tworzenia galerii; test tabelaryczny gwarantuje wynik identyczny z dotychczasowym wyrażeniem.
 
 ## 7. Procedury Kopiowania Zapasowego i Przywracania (Backup)
 
@@ -347,10 +369,10 @@ Projekt objęty jest dwupoziomową piramidą testów automatycznych oraz standar
    - Weryfikacja typów TypeScript w całym monorepo: `pnpm -r check-types`.
 
 2. **Testy Jednostkowe i Integracyjne (Vitest)**:
-   - Liczba testów: **323 testy** w 32 plikach.
-   - `packages/db/tests/`: 38 testów schematu Drizzle, walidatorów Zod (w tym `wishes`/`addWishDto`) i klienta bazy.
+   - Liczba testów: **464 testy** w 53 plikach.
+   - `packages/db/tests/`: 55 testów schematu Drizzle, walidatorów Zod (w tym `wishes`/`addWishDto`) i klienta bazy.
    - `packages/media/tests/`: 81 testów potoku przetwarzania mediów, integracji Google Drive, wznawialnego serwera TUS, event-busa SSE (w tym `new-wish`/`wish-updated`) i strumienia ZIP (w tym dołączanie `zyczenia.txt`).
-   - `apps/web/tests/`: 204 testy integracyjnych tras API (`admin`, `gallery`, `owner`, w tym księga życzeń) oraz komponentów UI (`LightboxModal`, `MediaGrid`, `UploaderDrawer`).
+   - `apps/web/tests/`: 328 testów integracyjnych tras API (`admin`, `gallery`, `owner`, w tym księga życzeń i sesja właściciela), hooków (`useLiveGallery`, `useUploadQueue`, `useGDriveExport`, hooków dostępności modali), bibliotek (`lib/*`) oraz komponentów i stron UI.
    - Uruchomienie: `pnpm turbo run test` lub `docker run --rm -v "${PWD}:/app" -w /app node:24-alpine sh -c "corepack enable && pnpm -r test"`
 
 3. **Testy End-to-End (Playwright)**:

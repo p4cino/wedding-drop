@@ -2,7 +2,13 @@
 	"Common": {
 		"loading": "Wczytywanie...",
 		"privacyPolicy": "Polityka Prywatności",
-		"termsOfService": "Warunki Korzystania"
+		"termsOfService": "Warunki Korzystania",
+		"loadError": "Nie udało się wczytać galerii",
+		"loadErrorDesc": "Sprawdź połączenie z internetem i spróbuj ponownie.",
+		"retryBtn": "Spróbuj ponownie",
+		"opensInNewTab": "(otwiera się w nowej karcie)",
+		"backToHome": "Powrót do strony głównej",
+		"footerTagline": "WeddingDrop • Self-Hosted Wedding Gallery Platform"
 	},
 	"Legal": {
 		"privacyTitle": "Polityka Prywatności",
@@ -78,7 +84,16 @@
 		"formEmail": "E-mail Pary Młodej *",
 		"formPassword": "Hasło dostępu dla Pary Młodej *",
 		"formPasswordPlaceholder": "Hasło do moderacji i pobierania ZIP",
-		"formSubmit": "Utwórz wesele"
+		"formSubmit": "Utwórz wesele",
+		"sessionExpired": "Sesja wygasła. Zaloguj się ponownie.",
+		"createError": "Nie udało się utworzyć galerii",
+		"deleteError": "Nie udało się usunąć galerii",
+		"loadError": "Nie udało się wczytać listy galerii",
+		"connectionError": "Błąd połączenia",
+		"invalidForm": "Nieprawidłowe dane formularza",
+		"closeModal": "Zamknij okno tworzenia wesela",
+		"ownerPanelLink": "Panel",
+		"tableAria": "Aktywne Galerie Weselne"
 	},
 	"LandingPage": {
 		"adminPanel": "Panel Administratora",
@@ -94,7 +109,8 @@
 		"feature2Desc": "Protokół TUS gwarantuje, że zerwane połączenie Wi-Fi/LTE na sali wznowi się bez utraty danych.",
 		"feature3Title": "Pobieranie ZIP w locie",
 		"feature3Desc": "Para młoda pobiera wszystkie zdjęcia jednym kliknięciem bez czekania na kompresję i bez zapychania RAMu.",
-		"footerText": "WeddingDrop • Self-Hosted Wedding Gallery Platform • Zoptymalizowano pod Intel N100"
+		"footerText": "WeddingDrop • Self-Hosted Wedding Gallery Platform • Zoptymalizowano pod Intel N100",
+		"slugInvalid": "Podaj poprawny identyfikator galerii (małe litery, cyfry, - i _)."
 	},
 	"GuestGallery": {
 		"title": "Galeria: {names}",
@@ -145,7 +161,11 @@
 		"cameraError": "Nie udało się uruchomić aparatu. Sprawdź uprawnienia przeglądarki lub użyj zwykłego wyboru pliku.",
 		"cameraBackToFiles": "Wróć do wyboru pliku",
 		"cameraCancel": "Zamknij podgląd aparatu",
-		"cameraShutter": "Zrób zdjęcie"
+		"cameraShutter": "Zrób zdjęcie",
+		"lightboxAria": "Podgląd multimediów: {name}",
+		"slideAnnouncement": "Element {current} z {total}: {name}",
+		"imageAria": "Zdjęcie",
+		"videoAria": "Wideo"
 	},
 	"CardPage": {
 		"paletteGoldNavy": "Złoto & Granat",
@@ -170,7 +190,13 @@
 		"headlineLabel": "Nagłówek",
 		"instructionsLabel": "Instrukcja dla gości",
 		"previewFormat": "Format A6 (105 × 148 mm) • Skalowany podgląd 1:1",
-		"qrAlt": "Kod QR do galerii weselnej: "
+		"qrAlt": "Kod QR do galerii weselnej: ",
+		"paletteAria": "Wybierz motyw: {name}",
+		"textColorPickerAria": "Wybierz kolor tekstu i QR z próbnika",
+		"textColorHexAria": "Wpisz kod HEX koloru tekstu i QR",
+		"accentColorPickerAria": "Wybierz kolor złotej ramki z próbnika",
+		"accentColorHexAria": "Wpisz kod HEX koloru złotej ramki",
+		"qrError": "Nie udało się wygenerować kodu QR"
 	},
 	"OwnerPanel": {
 		"gdriveSuccess": "Dysk Google został pomyślnie podłączony do galerii!",
@@ -272,7 +298,8 @@
 		"importError": "Błąd importu (sprawdź autoryzację lub limit pojemności galerii)",
 		"importUploadingBtn": "Importowanie plików...",
 		"importSubmitBtn": "Importuj do galerii ({count})",
-		"openTvBtn": "Otwórz tryb TV"
+		"openTvBtn": "Otwórz tryb TV",
+		"actionError": "Operacja nie powiodła się. Spróbuj ponownie."
 	},
 	"Wishes": {
 		"tabWishes": "Życzenia ({count})",
@@ -309,5 +336,15 @@
 		"waitingForFirstPhoto": "Czekamy na pierwsze zdjęcie...",
 		"uploaderPrefix": "Dodał(a):",
 		"qrHint": "Zeskanuj i dodaj swoje zdjęcia"
+	},
+	"Offline": {
+		"title": "Brak połączenia z internetem",
+		"heading": "Jesteś offline",
+		"description": "Wygląda na to, że straciłeś połączenie z siecią. Jeśli wysyłałeś pliki, nie martw się - wysyłanie zostanie automatycznie wznowione po powrocie internetu.",
+		"refreshBtn": "Spróbuj odświeżyć"
+	},
+	"Meta": {
+		"title": "WeddingDrop - Zdjęcia i Filmy z Wesela",
+		"description": "Dziel się zdjęciami i filmami z wesela bez konieczności instalowania aplikacji."
 	}
 }

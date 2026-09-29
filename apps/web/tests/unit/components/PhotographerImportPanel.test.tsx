@@ -3,35 +3,11 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PhotographerImportPanel } from "@/components/owner/PhotographerImportPanel";
+import { tusMock } from "../../helpers/tus-mock";
 
-let failFileNames = new Set<string>();
-let capturedMetadata: Record<string, string>[] = [];
-
-interface TusMockOptions {
-	metadata: Record<string, string>;
-	onError: (err: Error) => void;
-	onProgress: (bytesUploaded: number, bytesTotal: number) => void;
-	onSuccess: () => void;
-}
-
-vi.mock("tus-js-client", () => {
-	class MockUpload {
-		options: TusMockOptions;
-		constructor(_file: unknown, options: TusMockOptions) {
-			this.options = options;
-		}
-		start() {
-			capturedMetadata.push(this.options.metadata);
-			if (failFileNames.has(this.options.metadata.originalName)) {
-				this.options.onError(new Error("Błąd sieci"));
-				return;
-			}
-			this.options.onProgress(50, 100);
-			this.options.onSuccess();
-		}
-	}
-	return { Upload: MockUpload };
-});
+vi.mock("tus-js-client", async () =>
+	(await import("../../helpers/tus-mock")).createTusMock(),
+);
 
 function selectFiles(container: HTMLElement, files: File[]) {
 	const input = container.querySelector(
@@ -45,8 +21,7 @@ const video = () => new File(["b"], "film.mp4", { type: "video/mp4" });
 
 describe("PhotographerImportPanel Component", () => {
 	beforeEach(() => {
-		failFileNames = new Set();
-		capturedMetadata = [];
+		tusMock.reset();
 		vi.spyOn(console, "error").mockImplementation(() => {});
 	});
 
@@ -94,20 +69,19 @@ describe("PhotographerImportPanel Component", () => {
 		fireEvent.click(screen.getByRole("button", { name: /importSubmitBtn/ }));
 
 		await waitFor(() => expect(onImportSuccess).toHaveBeenCalledTimes(1));
-		expect(capturedMetadata).toHaveLength(2);
-		for (const meta of capturedMetadata) {
+		expect(tusMock.metadata).toHaveLength(2);
+		for (const meta of tusMock.metadata) {
 			expect(meta.gallerySlug).toBe("kasia-i-tomek");
 			expect(meta.source).toBe("photographer");
 			expect(meta.ownerToken).toBe("owner-tok");
 		}
 		expect(screen.getByText(/importAllUploaded/)).toBeInTheDocument();
-		for (const bar of screen.getAllByRole("progressbar")) {
-			expect(bar).toHaveAttribute("aria-valuenow", "100");
-		}
+		// Po pełnym sukcesie kolejka jest czyszczona (jak w drawerze gościa)
+		expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
 	});
 
 	it("oznacza plik jako błędny, ale kontynuuje import pozostałych", async () => {
-		failFileNames = new Set(["foto.jpg"]);
+		tusMock.failNames = new Set(["foto.jpg"]);
 		const onImportSuccess = vi.fn();
 		const { container } = render(
 			<PhotographerImportPanel
@@ -121,7 +95,7 @@ describe("PhotographerImportPanel Component", () => {
 
 		await waitFor(() => expect(onImportSuccess).toHaveBeenCalled());
 		expect(screen.getByText("importError")).toBeInTheDocument();
-		expect(capturedMetadata).toHaveLength(2);
+		expect(tusMock.metadata).toHaveLength(2);
 	});
 
 	it("nie uruchamia importu bez tokenu właściciela", () => {
@@ -132,27 +106,49 @@ describe("PhotographerImportPanel Component", () => {
 		const submit = screen.getByRole("button", { name: /importSubmitBtn/ });
 		expect(submit).toBeDisabled();
 		fireEvent.click(submit);
-		expect(capturedMetadata).toHaveLength(0);
+		expect(tusMock.metadata).toHaveLength(0);
 	});
 
 	it("pomija już zaimportowane pliki przy ponownym uruchomieniu importu", async () => {
-		failFileNames = new Set(["foto.jpg"]);
+		tusMock.failNames = new Set(["foto.jpg"]);
 		const { container } = render(
 			<PhotographerImportPanel gallerySlug="s" ownerToken="tok" />,
 		);
 		selectFiles(container, [photo(), video()]);
 		fireEvent.click(screen.getByRole("button", { name: /importSubmitBtn/ }));
-		await waitFor(() => expect(capturedMetadata).toHaveLength(2));
+		await waitFor(() => expect(tusMock.metadata).toHaveLength(2));
 		await waitFor(() =>
 			expect(
 				screen.getByRole("button", { name: /importSubmitBtn/ }),
 			).toBeEnabled(),
 		);
 
-		failFileNames = new Set();
-		capturedMetadata = [];
+		tusMock.failNames = new Set();
+		tusMock.metadata = [];
 		fireEvent.click(screen.getByRole("button", { name: /importSubmitBtn/ }));
-		await waitFor(() => expect(capturedMetadata).toHaveLength(1));
-		expect(capturedMetadata[0].originalName).toBe("foto.jpg");
+		await waitFor(() => expect(tusMock.metadata).toHaveLength(1));
+		expect(tusMock.metadata[0].originalName).toBe("foto.jpg");
+	});
+
+	it("po całkowitej porażce nie woła callbacku sukcesu, nie pokazuje 'wszystko wysłane' i zostawia pliki z błędem", async () => {
+		tusMock.failAll = true;
+		const onImportSuccess = vi.fn();
+		const { container } = render(
+			<PhotographerImportPanel
+				gallerySlug="s"
+				ownerToken="tok"
+				onImportSuccess={onImportSuccess}
+			/>,
+		);
+		selectFiles(container, [photo(), video()]);
+		fireEvent.click(screen.getByRole("button", { name: /importSubmitBtn/ }));
+
+		await waitFor(() => expect(tusMock.metadata).toHaveLength(2));
+		await waitFor(() =>
+			expect(screen.getAllByText("importError")).toHaveLength(2),
+		);
+		expect(onImportSuccess).not.toHaveBeenCalled();
+		expect(screen.queryByText(/importAllUploaded/)).not.toBeInTheDocument();
+		expect(screen.getAllByRole("progressbar")).toHaveLength(2);
 	});
 });

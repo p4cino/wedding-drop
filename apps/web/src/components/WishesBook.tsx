@@ -4,13 +4,10 @@ import { Heart, Loader2, MessageCircleHeart, Send } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type React from "react";
 import { useState } from "react";
+import EmptyState from "@/components/EmptyState";
+import type { WishItemData } from "@/lib/gallery-types";
 
-export interface WishItemData {
-	id: string;
-	guestName: string | null;
-	message: string;
-	createdAt: string;
-}
+export type { WishItemData };
 
 interface WishesBookProps {
 	wishes: WishItemData[];
@@ -125,17 +122,11 @@ export default function WishesBook({ wishes, onSubmit }: WishesBookProps) {
 
 			{/* Lista życzeń */}
 			{wishes.length === 0 ? (
-				<div className="text-center py-16 px-4 bg-white/60 backdrop-blur-sm rounded-3xl border border-dashed border-slate-300">
-					<div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-50 flex items-center justify-center text-amber-700">
-						<Heart className="w-8 h-8" aria-hidden="true" />
-					</div>
-					<h4 className="font-serif-luxury text-xl font-bold text-slate-800">
-						{t("noWishes")}
-					</h4>
-					<p className="text-sm text-slate-500 max-w-sm mx-auto mt-1.5">
-						{t("beFirstWish")}
-					</p>
-				</div>
+				<EmptyState
+					icon={<Heart className="w-8 h-8" aria-hidden="true" />}
+					title={t("noWishes")}
+					hint={t("beFirstWish")}
+				/>
 			) : (
 				<ul className="space-y-3">
 					{wishes.map((wish) => (

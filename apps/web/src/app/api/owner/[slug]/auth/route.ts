@@ -1,16 +1,14 @@
 import { compare } from "@node-rs/bcrypt";
 import {
-	cardSettings,
 	db,
 	galleries,
 	galleryGdriveExports,
-	mediaItems,
 	ownerLoginDto,
 } from "@wedding-drop/db";
-import { isGoogleDriveConfigured } from "@wedding-drop/media";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { generateOwnerToken } from "@/lib/auth";
+import { buildOwnerPanelPayload } from "@/lib/owner-panel-payload";
 
 export const dynamic = "force-dynamic";
 
@@ -60,43 +58,10 @@ export async function POST(
 			);
 		}
 
-		// Pobieranie statystyk
-		const stats = await db
-			.select({
-				totalFiles: sql<number>`count(*)`,
-				totalBytes: sql<number>`COALESCE(sum(${mediaItems.fileSize}), 0)`,
-			})
-			.from(mediaItems)
-			.where(eq(mediaItems.galleryId, gallery.id));
-
-		const card = await db
-			.select()
-			.from(cardSettings)
-			.where(eq(cardSettings.galleryId, gallery.id))
-			.limit(1);
-
-		const progressParsed = gdrive?.exportProgress || null;
-
+		const payload = await buildOwnerPanelPayload(gallery, gdrive);
 		return NextResponse.json({
-			success: true,
+			...payload,
 			ownerToken: generateOwnerToken(slug),
-			gallery: {
-				id: gallery.id,
-				slug: gallery.slug,
-				coupleNames: gallery.coupleNames,
-				weddingDate: gallery.weddingDate,
-				allowGuestDownloads: gallery.allowGuestDownloads,
-				allowVideos: gallery.allowVideos,
-				hasGDrive: Boolean(gdrive?.refreshToken),
-				gdriveAccountEmail: gdrive?.accountEmail,
-				gdriveExportStatus: gdrive?.exportStatus,
-				gdriveExportProgress: progressParsed,
-				gdriveExportedAt: gdrive?.exportedAt,
-				gdriveRootFolderId: gdrive?.rootFolderId,
-			},
-			stats: stats[0] || { totalFiles: 0, totalBytes: 0 },
-			cardSettings: card[0] || null,
-			isGDriveConfigured: isGoogleDriveConfigured(),
 		});
 	} catch (error) {
 		console.error("Błąd w endpoint owner auth:", error);

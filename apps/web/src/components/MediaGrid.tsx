@@ -2,7 +2,8 @@
 
 import { Camera, Image as ImageIcon, Play, User } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { MediaItemData } from "./LightboxModal";
+import EmptyState from "@/components/EmptyState";
+import type { MediaItemData } from "@/lib/gallery-types";
 
 interface MediaGridProps {
 	items: MediaItemData[];
@@ -13,17 +14,12 @@ export default function MediaGrid({ items, onItemClick }: MediaGridProps) {
 	const t = useTranslations("GuestGallery");
 	if (items.length === 0) {
 		return (
-			<div className="text-center py-20 px-4 bg-white/60 backdrop-blur-sm rounded-3xl border border-dashed border-slate-300">
-				<div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-50 flex items-center justify-center text-amber-700">
-					<ImageIcon className="w-8 h-8" aria-hidden="true" />
-				</div>
-				<h4 className="font-serif-luxury text-xl font-bold text-slate-800">
-					{t("noPhotos")}
-				</h4>
-				<p className="text-sm text-slate-500 max-w-sm mx-auto mt-1.5">
-					{t("beFirst")}
-				</p>
-			</div>
+			<EmptyState
+				className="py-20"
+				icon={<ImageIcon className="w-8 h-8" aria-hidden="true" />}
+				title={t("noPhotos")}
+				hint={t("beFirst")}
+			/>
 		);
 	}
 
@@ -33,7 +29,7 @@ export default function MediaGrid({ items, onItemClick }: MediaGridProps) {
 				const isVideo = item.fileType === "video";
 				const isPhotographer = item.source === "photographer";
 				const uploader = item.uploaderName || t("defaultUploaderName");
-				const ariaLabel = `${isVideo ? "Video" : "Image"}: ${item.originalFileName}, ${t("uploaderLabel")} ${uploader}`;
+				const ariaLabel = `${isVideo ? t("videoAria") : t("imageAria")}: ${item.originalFileName}, ${t("uploaderLabel")} ${uploader}`;
 
 				return (
 					<button

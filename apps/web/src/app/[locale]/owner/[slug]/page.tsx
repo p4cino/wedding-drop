@@ -1,36 +1,32 @@
 "use client";
 
 import { ownerLoginDto } from "@wedding-drop/db/validators";
-import {
-	AlertCircle,
-	CheckCircle2,
-	Download,
-	ExternalLink,
-	Loader2,
-	Lock,
-	QrCode,
-	Tv,
-} from "lucide-react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-	GDriveBackupCard,
-	type GDriveProgressData,
-} from "@/components/owner/GDriveBackupCard";
+import { GDriveBackupCard } from "@/components/owner/GDriveBackupCard";
 import { GDriveExportModal } from "@/components/owner/GDriveExportModal";
 import {
 	MediaGridWithModeration,
 	type OwnerMediaItem,
 } from "@/components/owner/MediaGridWithModeration";
+import { OwnerHeader } from "@/components/owner/OwnerHeader";
+import { OwnerLoginForm } from "@/components/owner/OwnerLoginForm";
 import { OwnerStatsGrid } from "@/components/owner/OwnerStatsGrid";
 import { PhotographerImportPanel } from "@/components/owner/PhotographerImportPanel";
 import {
 	type OwnerWishItem,
 	WishesModeration,
 } from "@/components/owner/WishesModeration";
-import { Link } from "@/i18n/routing";
+import Toast, { type ToastMessage } from "@/components/Toast";
+import { useGalleryEvents } from "@/hooks/useGalleryEvents";
+import { useGDriveExport } from "@/hooks/useGDriveExport";
+import { useOwnerApi } from "@/hooks/useOwnerApi";
+import { parseGDriveReturn } from "@/lib/gdrive-state";
+import { type ModerationStatus, toggledStatus } from "@/lib/moderation";
+import { ownerRequest } from "@/lib/owner-api";
+import type { OwnerPanelData, OwnerPanelGallery } from "@/lib/owner-types";
 
 export default function OwnerDashboardPage() {
 	const t = useTranslations("OwnerPanel");
@@ -44,82 +40,62 @@ export default function OwnerDashboardPage() {
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
 
-	const [galleryInfo, setGalleryInfo] = useState<{
-		coupleNames?: string;
-		[key: string]: unknown;
-	} | null>(null);
-	const [stats, setStats] = useState<{
-		totalFiles: number;
-		totalBytes: number;
-	}>({ totalFiles: 0, totalBytes: 0 });
+	const [galleryInfo, setGalleryInfo] = useState<OwnerPanelGallery | null>(
+		null,
+	);
+	const [stats, setStats] = useState({ totalFiles: 0, totalBytes: 0 });
 	const [mediaList, setMediaList] = useState<OwnerMediaItem[]>([]);
-	const [filter, setFilter] = useState<"all" | "ready" | "hidden">("all");
 	const [wishesList, setWishesList] = useState<OwnerWishItem[]>([]);
-	const [wishesFilter, setWishesFilter] = useState<"all" | "ready" | "hidden">(
-		"all",
+	const [showExportModal, setShowExportModal] = useState(false);
+	const [toast, setToast] = useState<ToastMessage | null>(null);
+
+	const api = useOwnerApi(ownerToken);
+	const gdrive = useGDriveExport(slug, ownerToken);
+	const { loadFromPanel, applySseProgress } = gdrive;
+
+	const showError = useCallback(
+		() => setToast({ type: "error", text: t("actionError") }),
+		[t],
 	);
 
-	// Google Drive state
-	const [isGDriveConfigured, setIsGDriveConfigured] = useState(true);
-	const [hasGDrive, setHasGDrive] = useState(false);
-	const [gdriveEmail, setGDriveEmail] = useState<string | null>(null);
-	const [gdriveStatus, setGDriveStatus] = useState<string>("idle");
-	const [gdriveProgress, setGDriveProgress] =
-		useState<GDriveProgressData | null>(null);
-	const [gdriveFolderId, setGDriveFolderId] = useState<string | null>(null);
-	const [gdriveExportedAt, setGDriveExportedAt] = useState<string | null>(null);
-	const [showExportModal, setShowExportModal] = useState(false);
-	const [includeHiddenInExport, setIncludeHiddenInExport] = useState(true);
-	const [exportLoading, setExportLoading] = useState(false);
-	const [gdriveToast, setGDriveToast] = useState<{
-		type: "success" | "error";
-		text: string;
-	} | null>(null);
-
+	// Listy pobierane z jawnym tokenem: tuż po logowaniu stan `ownerToken` nie jest jeszcze ustawiony
 	const loadMedia = useCallback(
 		async (token = ownerToken) => {
-			try {
-				const headers: Record<string, string> = {};
-				if (token) headers["x-owner-token"] = token;
-
-				const res = await fetch(
-					`/api/gallery/${slug}/media?includeHidden=true`,
-					{
-						headers,
-					},
-				);
-				if (res.ok) {
-					const data = await res.json();
-					setMediaList(data.media || []);
-				}
-			} catch (e) {
-				console.error(e);
-			}
+			const res = await ownerRequest<{ media: OwnerMediaItem[] }>(
+				token,
+				"GET",
+				`/api/gallery/${slug}/media?includeHidden=true`,
+			);
+			if (res.ok) setMediaList(res.data?.media || []);
+			else showError();
 		},
-		[ownerToken, slug],
+		[ownerToken, slug, showError],
 	);
 
 	const loadWishes = useCallback(
 		async (token = ownerToken) => {
-			try {
-				const headers: Record<string, string> = {};
-				if (token) headers["x-owner-token"] = token;
-
-				const res = await fetch(
-					`/api/gallery/${slug}/wishes?includeHidden=true`,
-					{
-						headers,
-					},
-				);
-				if (res.ok) {
-					const data = await res.json();
-					setWishesList(data.wishes || []);
-				}
-			} catch (e) {
-				console.error(e);
-			}
+			const res = await ownerRequest<{ wishes: OwnerWishItem[] }>(
+				token,
+				"GET",
+				`/api/gallery/${slug}/wishes?includeHidden=true`,
+			);
+			if (res.ok) setWishesList(res.data?.wishes || []);
+			else showError();
 		},
-		[ownerToken, slug],
+		[ownerToken, slug, showError],
+	);
+
+	// Wspólne wypełnienie stanu panelu danymi z logowania lub odtworzenia sesji
+	const applyPanelData = useCallback(
+		(data: OwnerPanelData, token: string) => {
+			setIsAuthenticated(true);
+			setGalleryInfo(data.gallery);
+			setStats(data.stats);
+			loadFromPanel(data);
+			loadMedia(token);
+			loadWishes(token);
+		},
+		[loadFromPanel, loadMedia, loadWishes],
 	);
 
 	const doLogin = useCallback(
@@ -133,270 +109,147 @@ export default function OwnerDashboardPage() {
 			}
 
 			setLoading(true);
-
 			try {
 				const res = await fetch(`/api/owner/${slug}/auth`, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify(valResult.data),
 				});
-
 				const data = await res.json();
 				if (!res.ok) {
 					setError(data.error || t("invalidPwd"));
-					sessionStorage.removeItem(`owner_pwd_${slug}`);
-					sessionStorage.removeItem(`owner_token_${slug}`);
 					return;
 				}
 
-				if (data.ownerToken) {
-					setOwnerToken(data.ownerToken);
-					sessionStorage.setItem(`owner_token_${slug}`, data.ownerToken);
-				}
-				sessionStorage.setItem(`owner_pwd_${slug}`, pwd);
-				setIsAuthenticated(true);
-				setGalleryInfo(data.gallery);
-				setStats(data.stats);
-				setIsGDriveConfigured(data.isGDriveConfigured ?? true);
-				setHasGDrive(Boolean(data.gallery?.hasGDrive));
-				setGDriveEmail(data.gallery?.gdriveAccountEmail || null);
-				setGDriveStatus(data.gallery?.gdriveExportStatus || "idle");
-				setGDriveProgress(data.gallery?.gdriveExportProgress || null);
-				setGDriveFolderId(data.gallery?.gdriveRootFolderId || null);
-				setGDriveExportedAt(data.gallery?.gdriveExportedAt || null);
-
-				loadMedia(data.ownerToken);
-				loadWishes(data.ownerToken);
+				setOwnerToken(data.ownerToken);
+				sessionStorage.setItem(`owner_token_${slug}`, data.ownerToken);
+				applyPanelData(data, data.ownerToken);
 			} catch (_err) {
 				setError(t("connError"));
 			} finally {
 				setLoading(false);
 			}
 		},
-		[slug, loadMedia, loadWishes, t],
+		[slug, applyPanelData, t],
 	);
 
-	const handleLogin = async (e: React.FormEvent) => {
-		e.preventDefault();
-		doLogin(password);
-	};
-
-	const hasInitialized = useRef(false);
-
-	// Sprawdzanie parametrów powrotnych z Google OAuth i pamięci sesji
-	useEffect(() => {
-		if (hasInitialized.current) return;
-
-		if (typeof window !== "undefined") {
-			hasInitialized.current = true;
-			const urlParams = new URLSearchParams(window.location.search);
-			if (urlParams.get("gdrive") === "connected") {
-				setGDriveToast({
-					type: "success",
-					text: t("gdriveSuccess"),
-				});
-				window.history.replaceState(
-					{},
-					document.title,
-					window.location.pathname,
-				);
-			} else if (urlParams.get("gdrive_error")) {
-				setGDriveToast({
-					type: "error",
-					text: t("gdriveError", {
-						error: urlParams.get("gdrive_error") || "",
-					}),
-				});
-				window.history.replaceState(
-					{},
-					document.title,
-					window.location.pathname,
-				);
-			}
-
-			const savedToken = sessionStorage.getItem(`owner_token_${slug}`);
-			const savedPwd = sessionStorage.getItem(`owner_pwd_${slug}`);
-			if (savedToken) {
-				setOwnerToken(savedToken);
-			}
-			if (savedPwd) {
-				setPassword(savedPwd);
-				doLogin(savedPwd);
-			}
-		}
-	}, [slug, doLogin, t]);
-
-	// Nasłuch zdarzeń SSE na żywo (nowe pliki oraz postęp Google Drive)
-	useEffect(() => {
-		if (!isAuthenticated || !slug) return;
-
-		const es = new EventSource(`/api/gallery/${slug}/live`);
-		es.onmessage = (event) => {
+	// Odtworzenie sesji z zapisanego tokenu (bez hasła); 401 => powrót do logowania
+	const restoreSession = useCallback(
+		async (token: string) => {
+			setLoading(true);
 			try {
-				const data = JSON.parse(event.data);
-				if (data.type === "new-media") {
-					loadMedia();
-				} else if (data.type === "new-wish" || data.type === "wish-updated") {
-					loadWishes();
-				} else if (data.type === "gdrive-progress") {
-					if (data.progress) {
-						setGDriveProgress(data.progress);
-						if (data.progress.status) {
-							setGDriveStatus(data.progress.status);
-						}
-						if (data.progress.rootFolderId) {
-							setGDriveFolderId(data.progress.rootFolderId);
-						}
-					}
-				}
-			} catch (_e) {}
-		};
-
-		return () => {
-			es.close();
-		};
-	}, [isAuthenticated, slug, loadMedia, loadWishes]);
-
-	// Fallbackowe odpytywanie statusu eksportu, gdy jest 'running'
-	useEffect(() => {
-		if (!isAuthenticated || gdriveStatus !== "running") return;
-
-		const interval = setInterval(async () => {
-			try {
-				const headers: Record<string, string> = {};
-				if (ownerToken) headers["x-owner-token"] = ownerToken;
-
-				const res = await fetch(`/api/owner/${slug}/gdrive`, {
-					method: "GET",
-					headers,
-				});
-				if (res.ok) {
-					const data = await res.json();
-					setGDriveStatus(data.gdriveExportStatus);
-					if (data.gdriveExportProgress) {
-						setGDriveProgress(data.gdriveExportProgress);
-					}
-					if (data.gdriveRootFolderId) {
-						setGDriveFolderId(data.gdriveRootFolderId);
-					}
-					if (data.gdriveExportedAt) {
-						setGDriveExportedAt(data.gdriveExportedAt);
-					}
-				}
-			} catch (_err) {}
-		}, 3000);
-
-		return () => clearInterval(interval);
-	}, [isAuthenticated, gdriveStatus, slug, ownerToken]);
-
-	const toggleStatus = async (mediaId: string, currentStatus: string) => {
-		const newStatus = currentStatus === "ready" ? "hidden" : "ready";
-		try {
-			const headers: Record<string, string> = {
-				"Content-Type": "application/json",
-			};
-			if (ownerToken) headers["x-owner-token"] = ownerToken;
-
-			const res = await fetch(`/api/owner/${slug}/media/${mediaId}/status`, {
-				method: "PATCH",
-				headers,
-				body: JSON.stringify({
-					newStatus,
-					token: ownerToken,
-				}),
-			});
-			if (res.ok) {
-				setMediaList((prev) =>
-					prev.map((m) =>
-						m.id === mediaId
-							? { ...m, status: newStatus as "ready" | "hidden" }
-							: m,
-					),
+				const res = await ownerRequest<OwnerPanelData>(
+					token,
+					"GET",
+					`/api/owner/${slug}/session`,
 				);
+				if (!res.ok || !res.data) {
+					sessionStorage.removeItem(`owner_token_${slug}`);
+					if (res.status === 0) setError(t("connError"));
+					return;
+				}
+				setOwnerToken(token);
+				applyPanelData(res.data, token);
+			} finally {
+				setLoading(false);
 			}
-		} catch (e) {
-			console.error(e);
+		},
+		[slug, applyPanelData, t],
+	);
+
+	// Jednorazowa inicjalizacja per slug: powrót z Google OAuth i odtworzenie sesji tokenem
+	const initializedSlug = useRef<string | null>(null);
+	useEffect(() => {
+		if (initializedSlug.current === slug) return;
+		initializedSlug.current = slug;
+
+		const gdriveReturn = parseGDriveReturn(window.location.search);
+		if (gdriveReturn) {
+			setToast(
+				gdriveReturn.type === "success"
+					? { type: "success", text: t("gdriveSuccess") }
+					: {
+							type: "error",
+							text: t("gdriveError", { error: gdriveReturn.error }),
+						},
+			);
+			window.history.replaceState({}, document.title, window.location.pathname);
 		}
+
+		// Sprzątanie po poprzedniej wersji, która zapisywała hasło w sessionStorage
+		sessionStorage.removeItem(`owner_pwd_${slug}`);
+
+		const savedToken = sessionStorage.getItem(`owner_token_${slug}`);
+		if (savedToken) restoreSession(savedToken);
+	}, [slug, restoreSession, t]);
+
+	// Zdarzenia na żywo: nowe pliki/życzenia oraz postęp Google Drive
+	useGalleryEvents(isAuthenticated ? slug : undefined, {
+		onEvent: (event) => {
+			if (event.type === "new-media") loadMedia();
+			else if (event.type === "new-wish" || event.type === "wish-updated")
+				loadWishes();
+			else if (event.type === "gdrive-progress")
+				applySseProgress(event.progress);
+		},
+	});
+
+	const toggleStatus = async (
+		mediaId: string,
+		currentStatus: ModerationStatus,
+	) => {
+		const newStatus = toggledStatus(currentStatus);
+		const res = await api(
+			"PATCH",
+			`/api/owner/${slug}/media/${mediaId}/status`,
+			{
+				newStatus,
+			},
+		);
+		if (!res.ok) return showError();
+		setMediaList((prev) =>
+			prev.map((m) => (m.id === mediaId ? { ...m, status: newStatus } : m)),
+		);
 	};
 
 	const deleteMedia = async (mediaId: string) => {
 		if (!confirm(t("deleteConfirm"))) return;
-		try {
-			const headers: Record<string, string> = {
-				"Content-Type": "application/json",
-			};
-			if (ownerToken) headers["x-owner-token"] = ownerToken;
-
-			const res = await fetch(`/api/owner/${slug}/media/${mediaId}`, {
-				method: "DELETE",
-				headers,
-				body: JSON.stringify({
-					token: ownerToken,
-				}),
-			});
-			if (res.ok) {
-				setMediaList((prev) => prev.filter((m) => m.id !== mediaId));
-			}
-		} catch (e) {
-			console.error(e);
-		}
+		const res = await api("DELETE", `/api/owner/${slug}/media/${mediaId}`);
+		if (!res.ok) return showError();
+		setMediaList((prev) => prev.filter((m) => m.id !== mediaId));
 	};
 
-	const toggleWishStatus = async (wishId: string, currentStatus: string) => {
-		const newStatus = currentStatus === "ready" ? "hidden" : "ready";
-		try {
-			const headers: Record<string, string> = {
-				"Content-Type": "application/json",
-			};
-			if (ownerToken) headers["x-owner-token"] = ownerToken;
-
-			const res = await fetch(`/api/owner/${slug}/wishes/${wishId}/status`, {
-				method: "PATCH",
-				headers,
-				body: JSON.stringify({
-					newStatus,
-					token: ownerToken,
-				}),
-			});
-			if (res.ok) {
-				setWishesList((prev) =>
-					prev.map((w) =>
-						w.id === wishId
-							? { ...w, status: newStatus as "ready" | "hidden" }
-							: w,
-					),
-				);
-			}
-		} catch (e) {
-			console.error(e);
-		}
+	const toggleWishStatus = async (
+		wishId: string,
+		currentStatus: ModerationStatus,
+	) => {
+		const newStatus = toggledStatus(currentStatus);
+		const res = await api(
+			"PATCH",
+			`/api/owner/${slug}/wishes/${wishId}/status`,
+			{
+				newStatus,
+			},
+		);
+		if (!res.ok) return showError();
+		setWishesList((prev) =>
+			prev.map((w) => (w.id === wishId ? { ...w, status: newStatus } : w)),
+		);
 	};
 
 	const deleteWish = async (wishId: string) => {
 		if (!confirm(tWishes("deleteConfirm"))) return;
-		try {
-			const headers: Record<string, string> = {
-				"Content-Type": "application/json",
-			};
-			if (ownerToken) headers["x-owner-token"] = ownerToken;
-
-			const res = await fetch(`/api/owner/${slug}/wishes/${wishId}/status`, {
-				method: "PATCH",
-				headers,
-				body: JSON.stringify({
-					newStatus: "deleted",
-					token: ownerToken,
-				}),
-			});
-			if (res.ok) {
-				setWishesList((prev) => prev.filter((w) => w.id !== wishId));
-			}
-		} catch (e) {
-			console.error(e);
-		}
+		const res = await api(
+			"PATCH",
+			`/api/owner/${slug}/wishes/${wishId}/status`,
+			{
+				newStatus: "deleted",
+			},
+		);
+		if (!res.ok) return showError();
+		setWishesList((prev) => prev.filter((w) => w.id !== wishId));
 	};
 
-	// Obsługa łączenia z Dyskiem Google
 	const handleConnectGDrive = () => {
 		const tokenParam = ownerToken
 			? `&token=${encodeURIComponent(ownerToken)}`
@@ -404,277 +257,100 @@ export default function OwnerDashboardPage() {
 		window.location.href = `/api/auth/google?slug=${slug}${tokenParam}`;
 	};
 
-	// Obsługa odłączania Dysku Google
 	const handleDisconnectGDrive = async () => {
 		if (!confirm(t("disconnectConfirm"))) return;
-		try {
-			const headers: Record<string, string> = {
-				"Content-Type": "application/json",
-			};
-			if (ownerToken) headers["x-owner-token"] = ownerToken;
-
-			const res = await fetch(`/api/owner/${slug}/gdrive`, {
-				method: "DELETE",
-				headers,
-				body: JSON.stringify({ token: ownerToken }),
-			});
-			if (res.ok) {
-				setHasGDrive(false);
-				setGDriveEmail(null);
-				setGDriveStatus("idle");
-				setGDriveProgress(null);
-				setGDriveToast({
-					type: "success",
-					text: t("disconnectSuccess"),
-				});
-			}
-		} catch (e) {
-			console.error(e);
+		if (await gdrive.disconnect()) {
+			setToast({ type: "success", text: t("disconnectSuccess") });
+		} else {
+			showError();
 		}
 	};
 
-	// Uruchomienie eksportu
-	const handleStartExport = async () => {
-		setExportLoading(true);
-		try {
-			const headers: Record<string, string> = {
-				"Content-Type": "application/json",
-			};
-			if (ownerToken) headers["x-owner-token"] = ownerToken;
-
-			const res = await fetch(`/api/owner/${slug}/gdrive/export`, {
-				method: "POST",
-				headers,
-				body: JSON.stringify({
-					token: ownerToken,
-					includeHidden: includeHiddenInExport,
-				}),
-			});
-			const data = await res.json();
-			if (!res.ok) {
-				alert(data.error || t("exportStartError"));
-				return;
-			}
-			setGDriveStatus("running");
-			setShowExportModal(false);
-			setGDriveToast({
-				type: "success",
-				text: t("exportStartSuccess"),
-			});
-		} catch (_e) {
-			alert(t("exportConnError"));
-		} finally {
-			setExportLoading(false);
+	const handleStartExport = async (includeHidden: boolean) => {
+		const result = await gdrive.startExport(includeHidden);
+		if (result.ok) {
+			setToast({ type: "success", text: t("exportStartSuccess") });
+			return true;
 		}
+		setToast({
+			type: "error",
+			text: result.network
+				? t("exportConnError")
+				: result.message || t("exportStartError"),
+		});
+		return false;
 	};
 
 	if (!isAuthenticated) {
 		return (
-			<div className="min-h-screen flex items-center justify-center bg-[#FAF8F5] p-4">
-				<div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-200/80">
-					<div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-700 mx-auto mb-4">
-						<Lock className="w-6 h-6" aria-hidden="true" />
-					</div>
-					<h2 className="font-serif-luxury text-2xl font-bold text-center text-slate-900 mb-1">
-						{t("panelTitle")}
-					</h2>
-					<p className="text-xs text-center text-slate-500 mb-6">
-						{t("panelDesc", { slug })}
-					</p>
-
-					<form onSubmit={handleLogin} className="space-y-4">
-						{error && (
-							<div
-								id="owner-login-error"
-								role="alert"
-								aria-live="assertive"
-								className="p-3 text-xs bg-red-50 text-red-700 rounded-xl border border-red-200"
-							>
-								{error}
-							</div>
-						)}
-
-						<div>
-							<label
-								htmlFor="owner-pwd-input"
-								className="block text-xs font-semibold text-slate-700 mb-1.5"
-							>
-								{t("pwdLabel")}
-							</label>
-							<input
-								id="owner-pwd-input"
-								type="password"
-								required
-								aria-invalid={Boolean(error)}
-								aria-describedby={error ? "owner-login-error" : undefined}
-								value={password}
-								onChange={(e) => setPassword(e.target.value)}
-								placeholder={t("pwdPlaceholder")}
-								className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500"
-							/>
-						</div>
-
-						<button
-							type="submit"
-							disabled={loading}
-							className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition shadow-sm flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
-						>
-							{loading && (
-								<Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-							)}
-							<span>{loading ? t("loggingIn") : t("loginBtn")}</span>
-						</button>
-					</form>
-				</div>
-			</div>
+			<OwnerLoginForm
+				slug={slug}
+				password={password}
+				error={error}
+				loading={loading}
+				onPasswordChange={setPassword}
+				onSubmit={(e: React.FormEvent) => {
+					e.preventDefault();
+					doLogin(password);
+				}}
+			/>
 		);
 	}
 
-	const totalMegabytes = (stats.totalBytes / (1024 * 1024)).toFixed(1);
 	const imagesCount = mediaList.filter((m) => m.fileType === "image").length;
 	const videosCount = mediaList.filter((m) => m.fileType === "video").length;
 
 	return (
 		<div className="min-h-screen bg-[#FAF8F5] pb-20">
-			{/* Toast powiadomień */}
-			{gdriveToast && (
-				<div
-					role="status"
-					aria-live="polite"
-					className={`fixed top-4 right-4 z-50 max-w-md p-4 rounded-2xl shadow-xl border flex items-start gap-3 transition-all animate-in fade-in slide-in-from-top-4 ${
-						gdriveToast.type === "success"
-							? "bg-emerald-50 border-emerald-200 text-emerald-900"
-							: "bg-red-50 border-red-200 text-red-900"
-					}`}
-				>
-					{gdriveToast.type === "success" ? (
-						<CheckCircle2
-							className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5"
-							aria-hidden="true"
-						/>
-					) : (
-						<AlertCircle
-							className="w-5 h-5 text-red-600 shrink-0 mt-0.5"
-							aria-hidden="true"
-						/>
-					)}
-					<div className="text-xs font-medium flex-1">{gdriveToast.text}</div>
-					<button
-						type="button"
-						onClick={() => setGDriveToast(null)}
-						aria-label={t("closeToast")}
-						title={t("closeToast")}
-						className="text-xs font-bold opacity-60 hover:opacity-100 p-1 focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:outline-none rounded"
-					>
-						✕
-					</button>
-				</div>
-			)}
+			<Toast
+				toast={toast}
+				closeLabel={t("closeToast")}
+				onClose={() => setToast(null)}
+			/>
 
-			{/* Pasek nawigacyjny */}
-			<header className="bg-white border-b border-slate-200 px-4 sm:px-8 py-4 sticky top-0 z-30 flex flex-wrap items-center justify-between gap-4">
-				<div>
-					<h1 className="font-serif-luxury text-xl sm:text-2xl font-bold text-slate-900">
-						{galleryInfo?.coupleNames || t("defaultOwnerTitle")}
-					</h1>
-					<p className="text-xs text-slate-500">{t("ownerSubtitle")}</p>
-				</div>
-
-				<div className="flex items-center gap-2.5">
-					<Link
-						href={`/g/${slug}`}
-						target="_blank"
-						className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
-					>
-						<ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
-						<span>{t("viewGallery")}</span>
-						<span className="sr-only">(otwiera się w nowej karcie)</span>
-					</Link>
-
-					<Link
-						href={`/g/${slug}/card`}
-						className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
-					>
-						<QrCode className="w-3.5 h-3.5" aria-hidden="true" />
-						<span>{t("cardBtn")}</span>
-					</Link>
-
-					<Link
-						href={`/g/${slug}/tv`}
-						target="_blank"
-						className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
-					>
-						<Tv className="w-3.5 h-3.5" aria-hidden="true" />
-						<span>{t("openTvBtn")}</span>
-						<span className="sr-only">(otwiera się w nowej karcie)</span>
-					</Link>
-
-					<a
-						href={`/api/gallery/${slug}/zip?token=${encodeURIComponent(ownerToken)}`}
-						className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-900 text-white shadow-sm transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
-					>
-						<Download className="w-4 h-4" aria-hidden="true" />
-						<span>{t("downloadZip")}</span>
-					</a>
-				</div>
-			</header>
+			<OwnerHeader
+				slug={slug}
+				ownerToken={ownerToken}
+				coupleNames={galleryInfo?.coupleNames}
+			/>
 
 			<main className="max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-8">
-				{/* Kafelki statystyk */}
 				<OwnerStatsGrid
 					imagesCount={imagesCount}
 					videosCount={videosCount}
-					totalMegabytes={totalMegabytes}
+					totalBytes={stats.totalBytes}
 					onRefresh={() => loadMedia()}
 				/>
 
-				{/* Sekcja: Kopia w chmurze (Google Drive) */}
 				<GDriveBackupCard
-					hasGDrive={hasGDrive}
-					gdriveEmail={gdriveEmail}
-					gdriveStatus={gdriveStatus}
-					gdriveProgress={gdriveProgress}
-					gdriveFolderId={gdriveFolderId}
-					gdriveExportedAt={gdriveExportedAt}
-					isGDriveConfigured={isGDriveConfigured}
+					state={gdrive.state}
 					onConnect={handleConnectGDrive}
 					onDisconnect={handleDisconnectGDrive}
 					onOpenExportModal={() => setShowExportModal(true)}
 				/>
 
-				{/* Import materiałów od profesjonalnego fotografa/kamerzysty */}
 				<PhotographerImportPanel
 					gallerySlug={slug}
 					ownerToken={ownerToken}
 					onImportSuccess={() => loadMedia()}
 				/>
 
-				{/* Siatka moderacji */}
 				<MediaGridWithModeration
 					mediaList={mediaList}
-					filter={filter}
-					setFilter={setFilter}
 					onToggleStatus={toggleStatus}
 					onDeleteMedia={deleteMedia}
 				/>
 
-				{/* Moderacja księgi życzeń */}
 				<WishesModeration
 					wishesList={wishesList}
-					filter={wishesFilter}
-					setFilter={setWishesFilter}
 					onToggleStatus={toggleWishStatus}
 					onDeleteWish={deleteWish}
 				/>
 			</main>
 
-			{/* Modal konfiguracji eksportu do Google Drive */}
 			<GDriveExportModal
 				isOpen={showExportModal}
 				coupleNames={galleryInfo?.coupleNames || ""}
-				includeHidden={includeHiddenInExport}
-				setIncludeHidden={setIncludeHiddenInExport}
-				exportLoading={exportLoading}
 				onClose={() => setShowExportModal(false)}
 				onStartExport={handleStartExport}
 			/>

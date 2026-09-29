@@ -173,12 +173,16 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 		await expect(page.getByText("Kuzyn Tomek")).toBeVisible();
 
 		// Filtruj do 'Widoczne (1)'
-		await page.getByRole("button", { name: /Widoczne/i }).click();
+		// Filtry zdjęć i życzeń mają te same etykiety — zawężamy do grupy filtrów multimediów
+		const mediaFilters = page.getByRole("group", {
+			name: "Filtrowanie multimediów",
+		});
+		await mediaFilters.getByRole("button", { name: /Widoczne/i }).click();
 		await expect(page.getByText("Ciocia Ania")).toBeVisible();
 		await expect(page.getByText("Kuzyn Tomek")).not.toBeVisible();
 
 		// Filtruj do 'Ukryte (1)'
-		await page.getByRole("button", { name: /Ukryte/i }).click();
+		await mediaFilters.getByRole("button", { name: /Ukryte/i }).click();
 		await expect(page.getByText("Ciocia Ania")).not.toBeVisible();
 		await expect(page.getByText("Kuzyn Tomek")).toBeVisible();
 	});

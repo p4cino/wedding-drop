@@ -2,7 +2,13 @@
 	"Common": {
 		"loading": "Loading...",
 		"privacyPolicy": "Privacy Policy",
-		"termsOfService": "Terms of Service"
+		"termsOfService": "Terms of Service",
+		"loadError": "Couldn't load the gallery",
+		"loadErrorDesc": "Check your internet connection and try again.",
+		"retryBtn": "Try again",
+		"opensInNewTab": "(opens in a new tab)",
+		"backToHome": "Back to the home page",
+		"footerTagline": "WeddingDrop • Self-Hosted Wedding Gallery Platform"
 	},
 	"Legal": {
 		"privacyTitle": "Privacy Policy",
@@ -60,7 +66,7 @@
 		"actionPrint": "Print card",
 		"actionOwner": "Couple's panel",
 		"actionDelete": "Delete gallery",
-		"deleteConfirm": "Are you sure you want to permanently delete the gallery \"{slug}\" along with all its photos?",
+		"deleteConfirm": "Are you sure you want to permanently delete the gallery \"{slug}\" with all its photos?",
 		"modalTitle": "New Wedding Gallery",
 		"modalDesc": "Fill in the basic data. The QR code and printable card will be generated automatically.",
 		"modalSuccess": "Gallery successfully created!",
@@ -78,7 +84,16 @@
 		"formEmail": "Couple's Email *",
 		"formPassword": "Couple's Access Password *",
 		"formPasswordPlaceholder": "Password for moderation and ZIP download",
-		"formSubmit": "Create wedding"
+		"formSubmit": "Create wedding",
+		"sessionExpired": "Your session has expired. Please sign in again.",
+		"createError": "Failed to create the gallery",
+		"deleteError": "Failed to delete the gallery",
+		"loadError": "Failed to load the list of galleries",
+		"connectionError": "Connection error",
+		"invalidForm": "Invalid form data",
+		"closeModal": "Close the create wedding window",
+		"ownerPanelLink": "Panel",
+		"tableAria": "Active wedding galleries"
 	},
 	"LandingPage": {
 		"adminPanel": "Admin Panel",
@@ -94,7 +109,8 @@
 		"feature2Desc": "TUS protocol ensures that a broken Wi-Fi/LTE connection at the venue resumes without data loss.",
 		"feature3Title": "On-the-fly ZIP Download",
 		"feature3Desc": "The couple downloads all photos with one click without waiting for compression and without clogging RAM.",
-		"footerText": "WeddingDrop • Self-Hosted Wedding Gallery Platform • Optimized for Intel N100"
+		"footerText": "WeddingDrop • Self-Hosted Wedding Gallery Platform • Optimized for Intel N100",
+		"slugInvalid": "Enter a valid gallery ID (lowercase letters, digits, - and _)."
 	},
 	"GuestGallery": {
 		"title": "Gallery: {names}",
@@ -145,7 +161,11 @@
 		"cameraError": "Couldn't start the camera. Check your browser permissions or use the regular file picker instead.",
 		"cameraBackToFiles": "Back to file picker",
 		"cameraCancel": "Close camera preview",
-		"cameraShutter": "Take photo"
+		"cameraShutter": "Take photo",
+		"lightboxAria": "Media preview: {name}",
+		"slideAnnouncement": "Item {current} of {total}: {name}",
+		"imageAria": "Photo",
+		"videoAria": "Video"
 	},
 	"CardPage": {
 		"paletteGoldNavy": "Gold & Navy",
@@ -170,7 +190,13 @@
 		"headlineLabel": "Headline",
 		"instructionsLabel": "Instructions for guests",
 		"previewFormat": "A6 format (105 × 148 mm) • Scaled 1:1 preview",
-		"qrAlt": "QR code for wedding gallery: "
+		"qrAlt": "QR code for wedding gallery: ",
+		"paletteAria": "Choose theme: {name}",
+		"textColorPickerAria": "Pick the text and QR colour with the colour picker",
+		"textColorHexAria": "Enter the HEX code of the text and QR colour",
+		"accentColorPickerAria": "Pick the gold border colour with the colour picker",
+		"accentColorHexAria": "Enter the HEX code of the gold border colour",
+		"qrError": "Couldn't generate the QR code"
 	},
 	"OwnerPanel": {
 		"gdriveSuccess": "Google Drive has been successfully connected to the gallery!",
@@ -272,7 +298,8 @@
 		"importError": "Import error (check authorization or gallery storage limit)",
 		"importUploadingBtn": "Importing files...",
 		"importSubmitBtn": "Import to gallery ({count})",
-		"openTvBtn": "Open TV Mode"
+		"openTvBtn": "Open TV Mode",
+		"actionError": "The operation failed. Please try again."
 	},
 	"Wishes": {
 		"tabWishes": "Wishes ({count})",
@@ -309,5 +336,15 @@
 		"waitingForFirstPhoto": "Waiting for the first photo...",
 		"uploaderPrefix": "Added by:",
 		"qrHint": "Scan to add your photos"
+	},
+	"Offline": {
+		"title": "No internet connection",
+		"heading": "You are offline",
+		"description": "It looks like you lost your network connection. If you were uploading files, don't worry - uploading will resume automatically once you are back online.",
+		"refreshBtn": "Try to refresh"
+	},
+	"Meta": {
+		"title": "WeddingDrop - Wedding Photos and Videos",
+		"description": "Share wedding photos and videos without having to install an app."
 	}
 }

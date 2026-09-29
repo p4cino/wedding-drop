@@ -3,18 +3,13 @@
 import { ChevronLeft, ChevronRight, Download, User, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import React, { useEffect } from "react";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
+import { useSwipe } from "@/hooks/useSwipe";
 
-export interface MediaItemData {
-	id: string;
-	uploaderName: string;
-	source?: "guest" | "photographer";
-	fileType: "image" | "video";
-	mimeType: string;
-	originalFileName: string;
-	thumbUrl: string;
-	rawUrl: string;
-	createdAt: string;
-}
+import type { MediaItemData } from "@/lib/gallery-types";
+
+export type { MediaItemData };
 
 interface LightboxModalProps {
 	items: MediaItemData[];
@@ -22,6 +17,33 @@ interface LightboxModalProps {
 	onClose: () => void;
 	onNavigate: (index: number) => void;
 	allowDownloads?: boolean;
+}
+
+function NavButton({
+	side,
+	label,
+	icon,
+	onClick,
+}: {
+	side: "left" | "right";
+	label: string;
+	icon: React.ReactNode;
+	onClick: () => void;
+}) {
+	return (
+		<button
+			type="button"
+			onClick={(e) => {
+				e.stopPropagation();
+				onClick();
+			}}
+			title={label}
+			aria-label={label}
+			className={`absolute ${side === "left" ? "left-2 sm:left-4" : "right-2 sm:right-4"} p-2.5 sm:p-3 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 text-white transition z-20 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none`}
+		>
+			{icon}
+		</button>
+	);
 }
 
 export default function LightboxModal({
@@ -33,100 +55,38 @@ export default function LightboxModal({
 }: LightboxModalProps) {
 	const t = useTranslations("GuestGallery");
 
-	const touchStartX = React.useRef<number | null>(null);
-	const touchEndX = React.useRef<number | null>(null);
 	const dialogRef = React.useRef<HTMLDivElement>(null);
-	const previousFocusRef = React.useRef<HTMLElement | null>(null);
-
 	const isOpen = currentIndex !== null;
 
-	// Zachowanie i przywracanie fokusu przed otwarciem / po zamknięciu modala
-	useEffect(() => {
-		if (!isOpen) return;
-		previousFocusRef.current = document.activeElement as HTMLElement | null;
-		const focusable = dialogRef.current?.querySelector<HTMLElement>(
-			'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-		);
-		(focusable || dialogRef.current)?.focus();
+	useFocusTrap(dialogRef, isOpen);
+	useEscapeKey(isOpen, onClose);
 
-		return () => {
-			previousFocusRef.current?.focus();
-		};
-	}, [isOpen]);
+	const hasPrev = currentIndex !== null && currentIndex > 0;
+	const hasNext = currentIndex !== null && currentIndex < items.length - 1;
+	const goPrev = () => currentIndex !== null && onNavigate(currentIndex - 1);
+	const goNext = () => currentIndex !== null && onNavigate(currentIndex + 1);
 
-	// Obsługa klawiatury: Escape, strzałki oraz pułapka fokusu Tab
+	// Strzałki klawiatury (Escape i pułapka fokusu obsługują wspólne hooki)
 	useEffect(() => {
+		if (currentIndex === null) return;
 		const handleKeyDown = (e: KeyboardEvent) => {
-			if (currentIndex === null) return;
-			if (e.key === "Escape") {
-				e.preventDefault();
-				onClose();
-				return;
-			}
 			if (e.key === "ArrowLeft" && currentIndex > 0) {
 				e.preventDefault();
 				onNavigate(currentIndex - 1);
-				return;
-			}
-			if (e.key === "ArrowRight" && currentIndex < items.length - 1) {
+			} else if (e.key === "ArrowRight" && currentIndex < items.length - 1) {
 				e.preventDefault();
 				onNavigate(currentIndex + 1);
-				return;
-			}
-
-			// Focus trap (uwięzienie fokusu)
-			if (e.key === "Tab" && dialogRef.current) {
-				const focusables = dialogRef.current.querySelectorAll<HTMLElement>(
-					'button:not([disabled]), [href]:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
-				);
-				if (focusables.length === 0) return;
-
-				const firstElement = focusables[0];
-				const lastElement = focusables[focusables.length - 1];
-
-				if (e.shiftKey && document.activeElement === firstElement) {
-					e.preventDefault();
-					lastElement?.focus();
-				} else if (!e.shiftKey && document.activeElement === lastElement) {
-					e.preventDefault();
-					firstElement?.focus();
-				}
 			}
 		};
-
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [currentIndex, items.length, onClose, onNavigate]);
+	}, [currentIndex, items.length, onNavigate]);
 
-	const handleTouchStart = (e: React.TouchEvent) => {
-		touchStartX.current = e.targetTouches[0].clientX;
-		touchEndX.current = null;
-	};
-
-	const handleTouchMove = (e: React.TouchEvent) => {
-		touchEndX.current = e.targetTouches[0].clientX;
-	};
-
-	const handleTouchEnd = () => {
-		if (
-			touchStartX.current === null ||
-			touchEndX.current === null ||
-			currentIndex === null
-		)
-			return;
-		const diff = touchStartX.current - touchEndX.current;
-		const minSwipeDistance = 45; // piksele
-
-		if (diff > minSwipeDistance && currentIndex < items.length - 1) {
-			// Przesunięcie w lewo -> Następne zdjęcie
-			onNavigate(currentIndex + 1);
-		} else if (diff < -minSwipeDistance && currentIndex > 0) {
-			// Przesunięcie w prawo -> Poprzednie zdjęcie
-			onNavigate(currentIndex - 1);
-		}
-		touchStartX.current = null;
-		touchEndX.current = null;
-	};
+	const swipe = useSwipe({
+		// Przesunięcie w lewo -> następne, w prawo -> poprzednie
+		onSwipeLeft: () => hasNext && goNext(),
+		onSwipeRight: () => hasPrev && goPrev(),
+	});
 
 	if (currentIndex === null || !items[currentIndex]) return null;
 	const current = items[currentIndex];
@@ -136,16 +96,18 @@ export default function LightboxModal({
 			ref={dialogRef}
 			role="dialog"
 			aria-modal="true"
-			aria-label={`Podgląd multimediów: ${current.originalFileName}`}
+			aria-label={t("lightboxAria", { name: current.originalFileName })}
 			tabIndex={-1}
 			className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md select-none touch-none focus:outline-none"
-			onTouchStart={handleTouchStart}
-			onTouchMove={handleTouchMove}
-			onTouchEnd={handleTouchEnd}
+			{...swipe}
 		>
 			{/* Region dostępny dla czytników ekranu anonsujący zmianę slajdu */}
 			<div className="sr-only" aria-live="polite" aria-atomic="true">
-				Element {currentIndex + 1} z {items.length}: {current.originalFileName}
+				{t("slideAnnouncement", {
+					current: currentIndex + 1,
+					total: items.length,
+					name: current.originalFileName,
+				})}
 			</div>
 
 			{/* Górny pasek nawigacji */}
@@ -187,34 +149,29 @@ export default function LightboxModal({
 			</div>
 
 			{/* Strzałki poprzedni/następny (zoptymalizowane pod desktop i mobile) */}
-			{currentIndex > 0 && (
-				<button
-					type="button"
-					onClick={(e) => {
-						e.stopPropagation();
-						onNavigate(currentIndex - 1);
-					}}
-					title={t("prevMedia")}
-					aria-label={t("prevMedia")}
-					className="absolute left-2 sm:left-4 p-2.5 sm:p-3 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 text-white transition z-20 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
-				>
-					<ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" aria-hidden="true" />
-				</button>
+			{hasPrev && (
+				<NavButton
+					side="left"
+					label={t("prevMedia")}
+					onClick={goPrev}
+					icon={
+						<ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" aria-hidden="true" />
+					}
+				/>
 			)}
 
-			{currentIndex < items.length - 1 && (
-				<button
-					type="button"
-					onClick={(e) => {
-						e.stopPropagation();
-						onNavigate(currentIndex + 1);
-					}}
-					title={t("nextMedia")}
-					aria-label={t("nextMedia")}
-					className="absolute right-2 sm:right-4 p-2.5 sm:p-3 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 text-white transition z-20 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
-				>
-					<ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" aria-hidden="true" />
-				</button>
+			{hasNext && (
+				<NavButton
+					side="right"
+					label={t("nextMedia")}
+					onClick={goNext}
+					icon={
+						<ChevronRight
+							className="w-5 h-5 sm:w-6 sm:h-6"
+							aria-hidden="true"
+						/>
+					}
+				/>
 			)}
 
 			{/* Podgląd nośnika */}
@@ -225,7 +182,7 @@ export default function LightboxModal({
 						controls
 						autoPlay
 						playsInline
-						aria-label={`Wideo: ${current.originalFileName}`}
+						aria-label={`${t("videoAria")}: ${current.originalFileName}`}
 						className="max-w-full max-h-[85vh] rounded-xl shadow-2xl"
 					/>
 				) : (

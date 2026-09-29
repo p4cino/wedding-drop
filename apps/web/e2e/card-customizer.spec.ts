@@ -102,7 +102,7 @@ test.describe("Generator i Edytor Karteczki A6", () => {
 		// Oczekiwanie na atrybut href zawierający zaktualizowane parametry
 		await expect(pdfBtn).toHaveAttribute(
 			"href",
-			/primaryColor=%230F172A.*headline=Wielkie%20Wesele/,
+			/primaryColor=%230F172A.*headline=Wielkie(%20|\+)Wesele/,
 		);
 	});
 

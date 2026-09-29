@@ -10,13 +10,15 @@ describe("GDriveBackupCard Component", () => {
 
 		render(
 			<GDriveBackupCard
-				hasGDrive={false}
-				gdriveEmail={null}
-				gdriveStatus="idle"
-				gdriveProgress={null}
-				gdriveFolderId={null}
-				gdriveExportedAt={null}
-				isGDriveConfigured={true}
+				state={{
+					connected: false,
+					email: null,
+					status: "idle",
+					progress: null,
+					folderId: null,
+					exportedAt: null,
+					isConfigured: true,
+				}}
 				onConnect={onConnectMock}
 				onDisconnect={vi.fn()}
 				onOpenExportModal={vi.fn()}
@@ -34,13 +36,15 @@ describe("GDriveBackupCard Component", () => {
 	it("powinien wyświetlić ostrzeżenie gdy Google Drive nie jest skonfigurowany w środowisku", () => {
 		render(
 			<GDriveBackupCard
-				hasGDrive={false}
-				gdriveEmail={null}
-				gdriveStatus="idle"
-				gdriveProgress={null}
-				gdriveFolderId={null}
-				gdriveExportedAt={null}
-				isGDriveConfigured={false}
+				state={{
+					connected: false,
+					email: null,
+					status: "idle",
+					progress: null,
+					folderId: null,
+					exportedAt: null,
+					isConfigured: false,
+				}}
 				onConnect={vi.fn()}
 				onDisconnect={vi.fn()}
 				onOpenExportModal={vi.fn()}
@@ -60,13 +64,15 @@ describe("GDriveBackupCard Component", () => {
 
 		render(
 			<GDriveBackupCard
-				hasGDrive={true}
-				gdriveEmail="mlodzi@gmail.com"
-				gdriveStatus="idle"
-				gdriveProgress={null}
-				gdriveFolderId="folder-drive-123"
-				gdriveExportedAt="2026-09-12T12:00:00.000Z"
-				isGDriveConfigured={true}
+				state={{
+					connected: true,
+					email: "mlodzi@gmail.com",
+					status: "idle",
+					progress: null,
+					folderId: "folder-drive-123",
+					exportedAt: "2026-09-12T12:00:00.000Z",
+					isConfigured: true,
+				}}
 				onConnect={vi.fn()}
 				onDisconnect={onDisconnectMock}
 				onOpenExportModal={onOpenModalMock}
@@ -92,19 +98,21 @@ describe("GDriveBackupCard Component", () => {
 	it("powinien wyświetlić pasek postępu podczas aktywnego eksportu (status: running)", () => {
 		render(
 			<GDriveBackupCard
-				hasGDrive={true}
-				gdriveEmail="mlodzi@gmail.com"
-				gdriveStatus="running"
-				gdriveProgress={{
-					totalFiles: 20,
-					processedFiles: 10,
-					totalBytes: 20 * 1024 * 1024,
-					processedBytes: 10 * 1024 * 1024,
-					currentFile: "slubne_foto.jpg",
+				state={{
+					connected: true,
+					email: "mlodzi@gmail.com",
+					status: "running",
+					progress: {
+						totalFiles: 20,
+						processedFiles: 10,
+						totalBytes: 20 * 1024 * 1024,
+						processedBytes: 10 * 1024 * 1024,
+						currentFile: "slubne_foto.jpg",
+					},
+					folderId: "folder-123",
+					exportedAt: null,
+					isConfigured: true,
 				}}
-				gdriveFolderId="folder-123"
-				gdriveExportedAt={null}
-				isGDriveConfigured={true}
 				onConnect={vi.fn()}
 				onDisconnect={vi.fn()}
 				onOpenExportModal={vi.fn()}
@@ -119,13 +127,15 @@ describe("GDriveBackupCard Component", () => {
 	it("powinien wyświetlić baner o wstrzymaniu eksportu (status: interrupted)", () => {
 		render(
 			<GDriveBackupCard
-				hasGDrive={true}
-				gdriveEmail="mlodzi@gmail.com"
-				gdriveStatus="interrupted"
-				gdriveProgress={null}
-				gdriveFolderId="folder-123"
-				gdriveExportedAt={null}
-				isGDriveConfigured={true}
+				state={{
+					connected: true,
+					email: "mlodzi@gmail.com",
+					status: "interrupted",
+					progress: null,
+					folderId: "folder-123",
+					exportedAt: null,
+					isConfigured: true,
+				}}
 				onConnect={vi.fn()}
 				onDisconnect={vi.fn()}
 				onOpenExportModal={vi.fn()}
@@ -139,13 +149,15 @@ describe("GDriveBackupCard Component", () => {
 	it("powinien wyświetlić komunikat o błędzie podczas niepowodzenia (status: failed)", () => {
 		render(
 			<GDriveBackupCard
-				hasGDrive={true}
-				gdriveEmail="mlodzi@gmail.com"
-				gdriveStatus="failed"
-				gdriveProgress={{ error: "Przekroczono limit zapytań API" }}
-				gdriveFolderId="folder-123"
-				gdriveExportedAt={null}
-				isGDriveConfigured={true}
+				state={{
+					connected: true,
+					email: "mlodzi@gmail.com",
+					status: "failed",
+					progress: { error: "Przekroczono limit zapytań API" },
+					folderId: "folder-123",
+					exportedAt: null,
+					isConfigured: true,
+				}}
 				onConnect={vi.fn()}
 				onDisconnect={vi.fn()}
 				onOpenExportModal={vi.fn()}
@@ -161,13 +173,15 @@ describe("GDriveBackupCard Component", () => {
 	it("powinien wyświetlić komunikat o sukcesie po zakończeniu eksportu (status: completed)", () => {
 		render(
 			<GDriveBackupCard
-				hasGDrive={true}
-				gdriveEmail="mlodzi@gmail.com"
-				gdriveStatus="completed"
-				gdriveProgress={null}
-				gdriveFolderId="folder-123"
-				gdriveExportedAt="2026-09-12T15:30:00.000Z"
-				isGDriveConfigured={true}
+				state={{
+					connected: true,
+					email: "mlodzi@gmail.com",
+					status: "completed",
+					progress: null,
+					folderId: "folder-123",
+					exportedAt: "2026-09-12T15:30:00.000Z",
+					isConfigured: true,
+				}}
 				onConnect={vi.fn()}
 				onDisconnect={vi.fn()}
 				onOpenExportModal={vi.fn()}
