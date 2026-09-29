@@ -136,7 +136,13 @@
 		"addPhotosAria": "Dodaj zdjęcia i filmy do galerii",
 		"leaderboardTitle": "Najaktywniejsi goście",
 		"leaderboardRankAria": "{rank}. miejsce",
-		"leaderboardCount": "{count} materiałów"
+		"leaderboardCount": "{count} materiałów",
+		"cameraOptionBtn": "Zrób zdjęcie",
+		"cameraStarting": "Uruchamianie aparatu...",
+		"cameraError": "Nie udało się uruchomić aparatu. Sprawdź uprawnienia przeglądarki lub użyj zwykłego wyboru pliku.",
+		"cameraBackToFiles": "Wróć do wyboru pliku",
+		"cameraCancel": "Zamknij podgląd aparatu",
+		"cameraShutter": "Zrób zdjęcie"
 	},
 	"CardPage": {
 		"paletteGoldNavy": "Złoto & Granat",

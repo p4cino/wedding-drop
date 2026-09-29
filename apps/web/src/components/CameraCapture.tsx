@@ -1,0 +1,182 @@
+"use client";
+
+import { Camera, X } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useEffect, useRef, useState } from "react";
+import { canvasToJpegFile, captureFrameToCanvas } from "@/lib/photobooth";
+
+interface CameraCaptureProps {
+	// Kolory motywu wesela dla dekoracyjnej ramki — brak wartości oznacza użycie
+	// domyślnych kolorów generatora winietek (patrz `@/lib/photobooth`).
+	primaryColor?: string | null;
+	accentColor?: string | null;
+	disabled?: boolean;
+	onCapture: (file: File) => void;
+	onCancel: () => void;
+}
+
+type CameraStatus = "starting" | "ready" | "error";
+
+/**
+ * Podgląd na żywo z kamery urządzenia gościa (`getUserMedia`) używany wewnątrz
+ * `UploaderDrawer` jako alternatywa dla wyboru pliku z dysku. Zrobione zdjęcie
+ * jest komponowane na `<canvas>` z opcjonalną ramką motywu wesela i eksportowane
+ * jako zwykły `File` (JPEG) — dalej trafia do tego samego `startUpload`, co plik
+ * z wyboru z dysku.
+ */
+export default function CameraCapture({
+	primaryColor,
+	accentColor,
+	disabled,
+	onCapture,
+	onCancel,
+}: CameraCaptureProps) {
+	const videoRef = useRef<HTMLVideoElement>(null);
+	const canvasRef = useRef<HTMLCanvasElement>(null);
+	const streamRef = useRef<MediaStream | null>(null);
+	const [status, setStatus] = useState<CameraStatus>("starting");
+	const [isCapturing, setIsCapturing] = useState(false);
+	const t = useTranslations("GuestGallery");
+
+	useEffect(() => {
+		let cancelled = false;
+
+		async function startCamera() {
+			if (!navigator.mediaDevices?.getUserMedia) {
+				if (!cancelled) setStatus("error");
+				return;
+			}
+
+			try {
+				const stream = await navigator.mediaDevices.getUserMedia({
+					video: { facingMode: "user" },
+					audio: false,
+				});
+
+				if (cancelled) {
+					for (const track of stream.getTracks()) track.stop();
+					return;
+				}
+
+				streamRef.current = stream;
+				const video = videoRef.current;
+				if (video) {
+					try {
+						video.srcObject = stream;
+						await video.play?.();
+					} catch {
+						// Niektóre środowiska (np. jsdom w testach) nie wspierają
+						// odtwarzania wideo — nie blokuje to działania podglądu w realnej przeglądarce.
+					}
+				}
+				setStatus("ready");
+			} catch (err) {
+				// Odmowa dostępu (NotAllowedError) lub brak kamery (NotFoundError) —
+				// pokazujemy czytelny komunikat, reszta drawera zostaje odblokowana.
+				console.error("Nie udało się uruchomić kamery:", err);
+				if (!cancelled) setStatus("error");
+			}
+		}
+
+		startCamera();
+
+		return () => {
+			cancelled = true;
+			for (const track of streamRef.current?.getTracks() ?? []) {
+				track.stop();
+			}
+			streamRef.current = null;
+		};
+	}, []);
+
+	const handleShutter = async () => {
+		const video = videoRef.current;
+		const canvas = canvasRef.current;
+		if (!video || !canvas || isCapturing || status !== "ready") return;
+
+		setIsCapturing(true);
+		try {
+			captureFrameToCanvas(video, canvas, {
+				primaryColor,
+				accentColor,
+			});
+			const file = await canvasToJpegFile(
+				canvas,
+				`photobooth_${Date.now()}.jpg`,
+			);
+			onCapture(file);
+		} catch (err) {
+			console.error("Nie udało się zrobić zdjęcia w przeglądarce:", err);
+			setStatus("error");
+		} finally {
+			setIsCapturing(false);
+		}
+	};
+
+	if (status === "error") {
+		return (
+			<div
+				role="alert"
+				className="rounded-2xl border border-red-200 bg-red-50 p-5 text-center space-y-3"
+			>
+				<p className="text-sm text-red-700 font-medium">{t("cameraError")}</p>
+				<button
+					type="button"
+					onClick={onCancel}
+					className="text-xs font-semibold text-red-700 underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:outline-none rounded"
+				>
+					{t("cameraBackToFiles")}
+				</button>
+			</div>
+		);
+	}
+
+	return (
+		<div className="space-y-3">
+			<div className="relative rounded-2xl overflow-hidden bg-slate-900 aspect-[4/3]">
+				<video
+					ref={videoRef}
+					autoPlay
+					playsInline
+					muted
+					className="w-full h-full object-cover"
+					data-testid="camera-preview-video"
+				/>
+
+				{status === "starting" && (
+					<div className="absolute inset-0 flex items-center justify-center text-white text-sm bg-slate-900/60">
+						{t("cameraStarting")}
+					</div>
+				)}
+
+				<button
+					type="button"
+					onClick={onCancel}
+					aria-label={t("cameraCancel")}
+					title={t("cameraCancel")}
+					className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 text-white hover:bg-black/60 transition focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+				>
+					<X className="w-4 h-4" aria-hidden="true" />
+				</button>
+			</div>
+
+			{/* Ukryty canvas roboczy — kompozycja klatki + ramki motywu przed eksportem do pliku */}
+			<canvas
+				ref={canvasRef}
+				className="hidden"
+				data-testid="photobooth-canvas"
+			/>
+
+			<button
+				type="button"
+				onClick={handleShutter}
+				disabled={status !== "ready" || disabled || isCapturing}
+				aria-label={t("cameraShutter")}
+				className="w-full py-3.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white rounded-2xl font-semibold shadow-lg shadow-amber-600/25 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
+			>
+				<Camera className="w-5 h-5" aria-hidden="true" />
+				{t("cameraShutter")}
+			</button>
+		</div>
+	);
+}

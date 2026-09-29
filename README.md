@@ -56,6 +56,7 @@ Szybki podgląd wszystkich ślubów, zarządzanie przestrzenią dyskową oraz b�
    - Brak logowania, rejestracji i instalowania aplikacji ze sklepów.
    - **Progressive Web App (PWA)**: Możliwość instalacji na ekranie głównym (dodaj do ekranu głównego) oraz strona awaryjna (Offline Fallback) informująca o braku sieci.
    - Wrzucanie zdjęć i filmów prosto z rolki aparatu.
+   - **Photobooth w przeglądarce**: opcja "Zrób zdjęcie" w drawerze uploadu otwiera podgląd z kamery urządzenia (`getUserMedia`) bezpośrednio w przeglądarce — bez aplikacji aparatu systemowego. Zdjęcie jest komponowane na `<canvas>` z dekoracyjną ramką w kolorach motywu danej pary (te same `primaryColor`/`accentColor` co generator winietek) i trafia do dokładnie tego samego potoku TUS, co zwykły upload z galerii telefonu. Gdy przeglądarka/urządzenie nie udzieli dostępu do kamery, opcja jest po prostu niedostępna — zwykły wybór pliku pozostaje działającym fallbackiem.
    - Opcjonalny podpis ("np. Wujek Janusz i Ciocia Halinka").
    - **Wznawialny upload (TUS Protocol 1.0.0)**: Jeśli na sali weselnej na chwilę zerwie się zasięg Wi-Fi lub LTE, upload wznowi się automatycznie bez utraty przesłanych danych.
    - **Galeria na żywo (SSE)**: Nowe zdjęcia pojawiają się w telefonach gości w czasie rzeczywistym bez przeładowywania widoku.

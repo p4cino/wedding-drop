@@ -12,10 +12,10 @@ export default defineConfig({
 		ignoreHTTPSErrors: true, // Dla lokalnego certyfikatu Caddy
 		trace: "on-first-retry",
 		screenshot: "only-on-failure",
-		// Wszystkie scenariusze e2e zakładają domyślną (polską) treść aplikacji.
-		// Bez tego next-intl middleware neguje Accept-Language przeglądarki
-		// (domyślnie en-US w Playwright) i przekierowuje na /en/..., łamiąc
-		// asercje tekstowe pisane po polsku — niezależnie od tej funkcji.
+		// Wymuszenie polskiego locale przeglądarki — next-intl neguje język z nagłówka
+		// Accept-Language, a domyślny "en-US" Playwrighta przebija defaultLocale: "pl"
+		// z i18n/routing.ts, serwując /en/* zamiast /pl/* i psując cały istniejący
+		// (polskojęzyczny) zestaw testów e2e.
 		locale: "pl-PL",
 	},
 	projects: [

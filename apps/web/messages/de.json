@@ -136,7 +136,13 @@
 		"addPhotosAria": "Fügen Sie Fotos und Videos zur Galerie hinzu",
 		"leaderboardTitle": "Aktivste Gäste",
 		"leaderboardRankAria": "Platz {rank}",
-		"leaderboardCount": "{count} Beiträge"
+		"leaderboardCount": "{count} Beiträge",
+		"cameraOptionBtn": "Foto aufnehmen",
+		"cameraStarting": "Kamera wird gestartet...",
+		"cameraError": "Die Kamera konnte nicht gestartet werden. Überprüfen Sie die Browserberechtigungen oder verwenden Sie die normale Dateiauswahl.",
+		"cameraBackToFiles": "Zurück zur Dateiauswahl",
+		"cameraCancel": "Kameravorschau schließen",
+		"cameraShutter": "Foto aufnehmen"
 	},
 	"CardPage": {
 		"paletteGoldNavy": "Gold & Marineblau",
