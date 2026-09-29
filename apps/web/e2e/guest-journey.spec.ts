@@ -331,4 +331,120 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 			}),
 		).toBeVisible({ timeout: 30000 });
 	});
+
+	test("UC9: powinien pokazać ranking TOP 3 najaktywniejszych gości w poprawnej kolejności", async ({
+		page,
+	}) => {
+		// Trzech różnych "gości" o różnej liczbie wgranych materiałów, plus czwarty
+		// (spoza podium) i dwa wgrania tej samej osoby zapisane niespójnie
+		// (wielkość liter / spacje), by upewnić się, że liczą się razem.
+		const leaderboardMedia = [
+			{
+				id: "lb-1",
+				uploaderName: "Wujek Staszek",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "foto1.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				createdAt: "2026-09-12T15:00:00.000Z",
+			},
+			{
+				id: "lb-2",
+				uploaderName: "wujek staszek ",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "foto2.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				createdAt: "2026-09-12T15:01:00.000Z",
+			},
+			{
+				id: "lb-3",
+				uploaderName: "Wujek Staszek",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "foto3.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				createdAt: "2026-09-12T15:02:00.000Z",
+			},
+			{
+				id: "lb-4",
+				uploaderName: "Ciocia Halinka",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "foto4.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				createdAt: "2026-09-12T15:03:00.000Z",
+			},
+			{
+				id: "lb-5",
+				uploaderName: "Ciocia Halinka",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "foto5.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				createdAt: "2026-09-12T15:04:00.000Z",
+			},
+			{
+				id: "lb-6",
+				uploaderName: "Kuzyn Tomek",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "foto6.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				createdAt: "2026-09-12T15:05:00.000Z",
+			},
+			{
+				id: "lb-7",
+				uploaderName: "Nieznajomy Gość",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "foto7.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				createdAt: "2026-09-12T15:06:00.000Z",
+			},
+		];
+
+		await page.route("**/api/gallery/kasia-i-tomek/media", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({ media: leaderboardMedia }),
+			});
+		});
+
+		await page.goto("/g/kasia-i-tomek");
+
+		const leaderboard = page.getByRole("region", {
+			name: "Najaktywniejsi goście",
+		});
+		await expect(leaderboard).toBeVisible();
+
+		const rows = leaderboard.getByRole("listitem");
+		await expect(rows).toHaveCount(3);
+
+		// Kolejność malejąco: Wujek Staszek (3, po zgrupowaniu) > Ciocia Halinka (2) > Kuzyn Tomek (1)
+		await expect(rows.nth(0)).toContainText("Wujek Staszek");
+		await expect(rows.nth(0)).toContainText("3 materiałów");
+		await expect(rows.nth(1)).toContainText("Ciocia Halinka");
+		await expect(rows.nth(1)).toContainText("2 materiałów");
+		await expect(rows.nth(2)).toContainText("Kuzyn Tomek");
+		await expect(rows.nth(2)).toContainText("1 materiałów");
+
+		// Czwarty gość (Nieznajomy Gość, 1 materiał) nie mieści się na podium TOP 3
+		await expect(leaderboard.getByText("Nieznajomy Gość")).not.toBeVisible();
+	});
 });

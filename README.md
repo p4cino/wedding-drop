@@ -62,6 +62,7 @@ Szybki podgląd wszystkich ślubów, zarządzanie przestrzenią dyskową oraz b�
    - **Galeria na żywo (SSE)**: Nowe zdjęcia pojawiają się w telefonach gości w czasie rzeczywistym bez przeładowywania widoku.
    - **Pełnoekranowa przeglądarka (Lightbox)**: Natywna obsługa gestów dotykowych **Swipe** (przesuwanie palcem lewo/prawo na smartfonach) oraz klawiatury na desktopie.
    - **Odporność na napływ zdjęć**: Przeglądanie zdjęcia w powiększeniu nie ulega zresetowaniu, gdy w tle pojawiają się nowe zdjęcia od innych gości.
+   - **Ranking najaktywniejszych gości (TOP 3)**: Niewielki widget nad galerią pokazuje trzech gości z największą liczbą wgranych zdjęć/filmów wraz z odznakami miejsc (🥇🥈🥉) — prosty "społeczny dowód słuszności", który zachęca do dalszego dodawania zdjęć. Ranking liczy się w całości po stronie przeglądarki (bez dodatkowego zapytania do serwera) na podstawie listy zdjęć, którą galeria już wczytała, więc aktualizuje się na żywo razem z resztą galerii (SSE). Uwzględnia wyłącznie widoczne materiały (ukryte/skasowane nigdy nie liczą się na korzyść gościa), a drobne różnice w zapisie podpisu (wielkość liter, spacje) grupują się w jedną pozycję. Widget jest niewidoczny, dopóki nikt jeszcze nic nie wgrał.
 
 2. **Dla Pary Młodej (Właściciela Galerii)**:
    - Panel zarządzania dostępny pod `/owner/[slug]`.
