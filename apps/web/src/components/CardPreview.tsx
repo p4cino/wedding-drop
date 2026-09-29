@@ -26,6 +26,13 @@ export default function CardPreview({
 	qrFailed,
 }: CardPreviewProps) {
 	const t = useTranslations("CardPage");
+	// Powtarzające się linie instrukcji dostają unikalne klucze (linia + numer wystąpienia)
+	const seen = new Map<string, number>();
+	const keyedLines = lines.map((line) => {
+		const occurrence = (seen.get(line) ?? 0) + 1;
+		seen.set(line, occurrence);
+		return { key: `${line}#${occurrence}`, line };
+	});
 	return (
 		<div
 			id="printable-card"
@@ -89,8 +96,8 @@ export default function CardPreview({
 					{headline}
 				</p>
 				<div className="space-y-0.5 text-[9.5px] leading-relaxed text-slate-600 max-w-[240px] mx-auto">
-					{lines.map((line, index) => (
-						<p key={`${index}-${line}`}>{line}</p>
+					{keyedLines.map(({ key, line }) => (
+						<p key={key}>{line}</p>
 					))}
 				</div>
 			</div>
