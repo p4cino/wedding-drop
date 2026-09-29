@@ -156,7 +156,9 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 		// Nawigacja klawiaturą: Strzałka w prawo -> zdjęcie 2
 		await page.keyboard.press("ArrowRight");
 		await expect(page.getByText("2 z 2", { exact: true })).toBeVisible();
-		await expect(page.getByText("tort_weselny.jpg")).toBeVisible();
+		await expect(
+			page.getByText("tort_weselny.jpg", { exact: true }),
+		).toBeVisible();
 
 		// Nawigacja klawiaturą: Strzałka w lewo -> powrót do zdjęcia 1
 		await page.keyboard.press("ArrowLeft");

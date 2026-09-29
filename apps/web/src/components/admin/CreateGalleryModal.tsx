@@ -101,22 +101,22 @@ export function CreateGalleryModal({
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="admin-create-wedding-title"
-			className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+			className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto bg-black/60 backdrop-blur-sm p-4"
 		>
-			<div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto">
+			<div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-6 relative my-auto">
 				<button
 					type="button"
 					onClick={onClose}
 					aria-label={t("closeModal")}
 					title={t("closeModal")}
-					className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-600 rounded-full focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
+					className="absolute top-5 right-5 z-10 p-2 text-slate-400 hover:text-slate-600 rounded-full focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 				>
 					<X className="w-5 h-5" aria-hidden="true" />
 				</button>
 
 				<h3
 					id="admin-create-wedding-title"
-					className="font-serif-luxury text-xl font-bold text-slate-900 mb-1"
+					className="font-serif-luxury text-xl font-bold text-slate-900 mb-1 pr-10"
 				>
 					{t("modalTitle")}
 				</h3>
