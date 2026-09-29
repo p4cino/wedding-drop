@@ -16,10 +16,15 @@ export interface ZipStreamResult {
 /**
  * Tworzy bezpośrednio strumieniowane archiwum ZIP bez buforowania całości w pamięci RAM lub na dysku.
  * Spełnia wymóg ochrony procesora i pamięci Intel N100 (poziom kompresji 1).
+ *
+ * Opcjonalny `wishesText` dogrywa księgę życzeń jako plik tekstowy `zyczenia.txt`
+ * — jedna prosta operacja `archive.append`, zgodna ze stylem strumieniowania bez
+ * buforowania całości archiwum.
  */
 export function createGalleryZipStream(
 	items: ZipFileEntry[],
 	dataDir: string,
+	wishesText?: string,
 ): ZipStreamResult {
 	const passThrough = new PassThrough();
 	const archive = new ZipArchive({
@@ -44,7 +49,11 @@ export function createGalleryZipStream(
 		}
 	});
 
-	if (addedCount > 0) {
+	if (wishesText) {
+		archive.append(wishesText, { name: "zyczenia.txt" });
+	}
+
+	if (addedCount > 0 || wishesText) {
 		archive.finalize().catch((err: unknown) => {
 			console.error("[ZipStreamer] Błąd finalizacji archiwum:", err);
 		});

@@ -2,10 +2,74 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { FileStore } from "@tus/file-store";
 import { EVENTS, Server } from "@tus/server";
-import { tusUploadMetadataDto } from "@wedding-drop/db";
+import {
+	db,
+	galleries,
+	mediaItems,
+	tusUploadMetadataDto,
+} from "@wedding-drop/db";
+import { eq, sql } from "drizzle-orm";
 import { scheduleMediaProcessing } from "./media-processor";
 
-export function initTusServer(dataDir: string) {
+/**
+ * Funkcja weryfikująca poświadczenia właściciela galerii, wstrzykiwana z `apps/web/server.ts`.
+ * Utrzymuje to poprawny kierunek zależności monorepo (apps/web -> packages/media),
+ * bez przenoszenia logiki HMAC (`verifyOwnerToken`) do tego pakietu.
+ */
+export type VerifyOwnerCredentials = (
+	gallerySlug: string,
+	ownerToken: string | undefined,
+) => boolean | Promise<boolean>;
+
+export interface TusServerOptions {
+	verifyOwnerCredentials?: VerifyOwnerCredentials;
+}
+
+/**
+ * Sprawdza, czy import fotografa mieści się w limicie `maxStorageBytes` galerii.
+ * `maxStorageBytes === 0` oznacza brak limitu (zgodnie z konwencją kolumny w schemacie).
+ * Dotyczy wyłącznie ścieżki importu fotografa - uploady gości nie są tu w żaden sposób ograniczane.
+ */
+async function checkPhotographerStorageLimit(
+	gallerySlug: string,
+	incomingFileSize: number,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+	const galleryResult = await db
+		.select()
+		.from(galleries)
+		.where(eq(galleries.slug, gallerySlug))
+		.limit(1);
+
+	if (!galleryResult.length) {
+		return { ok: false, message: "Błąd: Galeria nie istnieje." };
+	}
+
+	const gallery = galleryResult[0];
+	if (!gallery.maxStorageBytes) {
+		return { ok: true };
+	}
+
+	const usageResult = await db
+		.select({
+			totalBytes: sql<number>`COALESCE(sum(${mediaItems.fileSize}), 0)::bigint`,
+		})
+		.from(mediaItems)
+		.where(eq(mediaItems.galleryId, gallery.id));
+
+	const currentUsage = Number(usageResult[0]?.totalBytes || 0);
+	if (currentUsage + incomingFileSize > gallery.maxStorageBytes) {
+		return {
+			ok: false,
+			message:
+				"Błąd: Import przekroczyłby limit pojemności dyskowej tej galerii.",
+		};
+	}
+
+	return { ok: true };
+}
+
+export function initTusServer(dataDir: string, options: TusServerOptions = {}) {
+	const { verifyOwnerCredentials } = options;
 	const uploadDir = path.join(dataDir, "tus_temp");
 	// Zapewnienie istnienia katalogu tymczasowego
 	fs.mkdir(uploadDir, { recursive: true }).catch(console.error);
@@ -29,6 +93,35 @@ export function initTusServer(dataDir: string) {
 					body: "Błąd: Brak wymaganego parametru gallerySlug w metadanych.",
 				};
 			}
+
+			const { gallerySlug, source, ownerToken } = parseResult.data;
+
+			if (source === "photographer") {
+				// Import fotografa wymaga zawsze poprawnej autoryzacji właściciela.
+				// Brak wstrzykniętej funkcji weryfikującej = bezpieczne domyślne odrzucenie.
+				const isAuthorized = verifyOwnerCredentials
+					? await verifyOwnerCredentials(gallerySlug, ownerToken)
+					: false;
+
+				if (!isAuthorized) {
+					throw {
+						status_code: 401,
+						body: "Błąd: Import materiałów fotografa wymaga poprawnej autoryzacji właściciela galerii.",
+					};
+				}
+
+				const sizeCheck = await checkPhotographerStorageLimit(
+					gallerySlug,
+					upload.size || 0,
+				);
+				if (!sizeCheck.ok) {
+					throw {
+						status_code: 413,
+						body: sizeCheck.message,
+					};
+				}
+			}
+
 			return { metadata };
 		},
 	});
@@ -48,6 +141,7 @@ export function initTusServer(dataDir: string) {
 			uploaderName,
 			originalName,
 			fileType: mimeType,
+			source,
 		} = parseResult.data;
 		const isVideo =
 			mimeType.startsWith("video") ||
@@ -56,10 +150,11 @@ export function initTusServer(dataDir: string) {
 		const tempFilePath = path.join(uploadDir, upload.id);
 
 		console.log(
-			`[TUS] Ukończono upload ${upload.id} dla galerii ${gallerySlug} (${upload.size} bajtów)`,
+			`[TUS] Ukończono upload ${upload.id} dla galerii ${gallerySlug} (${upload.size} bajtów, źródło: ${source})`,
 		);
 
-		// Asynchroniczne przekazanie do kolejki obróbki
+		// Asynchroniczne przekazanie do kolejki obróbki - dokładnie ta sama, ograniczona
+		// kolejka p-queue(2) co uploady gości, bez priorytetu dla importu fotografa.
 		scheduleMediaProcessing({
 			uploadId: upload.id,
 			tempFilePath,
@@ -70,6 +165,7 @@ export function initTusServer(dataDir: string) {
 			mimeType,
 			fileSize: upload.size || 0,
 			dataDir,
+			source,
 		});
 	});
 

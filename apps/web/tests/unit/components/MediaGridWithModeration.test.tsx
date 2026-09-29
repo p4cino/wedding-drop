@@ -116,4 +116,34 @@ describe("MediaGridWithModeration Component", () => {
 		fireEvent.click(deleteBtns[0]);
 		expect(onDeleteMediaMock).toHaveBeenCalledWith("med-1");
 	});
+
+	it("powinien wyświetlić odznakę fotografa wyłącznie dla materiałów source: photographer", () => {
+		const mediaWithPhotographer: OwnerMediaItem[] = [
+			...sampleMedia,
+			{
+				id: "med-3",
+				uploaderName: "Fotograf Jan Kowalski",
+				source: "photographer",
+				fileType: "image",
+				originalFileName: "sesja.jpg",
+				fileSize: 2048,
+				thumbUrl: "/thumb3.jpg",
+				rawUrl: "/raw3.jpg",
+				status: "ready",
+				createdAt: new Date().toISOString(),
+			},
+		];
+
+		render(
+			<MediaGridWithModeration
+				mediaList={mediaWithPhotographer}
+				filter="all"
+				setFilter={vi.fn()}
+				onToggleStatus={vi.fn()}
+				onDeleteMedia={vi.fn()}
+			/>,
+		);
+
+		expect(screen.getAllByText("photographerBadge")).toHaveLength(1);
+	});
 });

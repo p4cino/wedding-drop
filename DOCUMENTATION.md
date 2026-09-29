@@ -73,21 +73,33 @@ graph TD
 ## 3. Cykl Życia Zdjęcia / Wideo (Upload Flow)
 
 1. **Skanowanie**: Gość skanuje kod QR ze stolika, otwierając adres `https://domena.pl/g/kasia-i-tomek`.
-2. **Inicjalizacja Uploadu**: Klient (`UploaderDrawer.tsx`) dynamicznie ustala endpoint w oparciu o `window.location.origin` (`/api/upload/tus`), co zapobiega rozbieżnościom protokołów HTTP/HTTPS. Serwer TUS zwraca relatywny nagłówek `Location` (`relativeLocation: true`), eliminując błędy CORS i niepożądane przekierowania preflight 308 za proxy Caddy.
-3. **Wznawialny Transfer**: Plik przesyłany jest w kawałkach po 5 MB (`chunkSize: 5MB`). Jeśli gość wejdzie w martwą strefę zasięgu sali, transfer zostaje wstrzymany i po ponownym złapaniu sygnału wznawia się automatycznie od ostatniego bajtu (zero powtórek).
-4. **Hook Zakończenia (`POST_FINISH`)**:
+2. **Źródło pliku — rolka aparatu albo photobooth w przeglądarce**:
+   - **Wybór z dysku/rolki**: standardowy `<input type="file" multiple>`.
+   - **Photobooth w przeglądarce** (`CameraCapture.tsx`): opcja "Zrób zdjęcie" w `UploaderDrawer.tsx` uruchamia podgląd na żywo z kamery urządzenia gościa (`navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })`) bez potrzeby otwierania natywnej aplikacji aparatu. Po naciśnięciu spustu migawki bieżąca klatka `<video>` jest rysowana na `<canvas>` (`captureFrameToCanvas`, z zachowaniem faktycznych `video.videoWidth`/`video.videoHeight` i skalowaniem w dół do maks. 1920px po dłuższym boku), na wierzchu dokładana jest dekoracyjna ramka w kolorach motywu wesela (`primaryColor`/`accentColor` z `card_settings`, odczytane przez ten sam publiczny `GET /api/gallery/:slug` co reszta galerii, z domyślnymi kolorami generatora winietek, gdy galeria nie ma zapisanych ustawień), a canvas jest eksportowany przez `canvas.toBlob("image/jpeg", 0.92)` do zwykłego obiektu `File`. Ten plik trafia do **dokładnie tej samej** kolejki `files`/`startUpload`, co plik z wyboru z dysku — zero rozgałęzień w logice TUS poniżej ani w backendzie. Gdy przeglądarka odmówi dostępu do kamery lub jej nie posiada, komponent pokazuje czytelny komunikat błędu, a zwykły wybór pliku pozostaje w pełni funkcjonalny.
+4. **Inicjalizacja Uploadu**: Klient (`UploaderDrawer.tsx`) dynamicznie ustala endpoint w oparciu o `window.location.origin` (`/api/upload/tus`), co zapobiega rozbieżnościom protokołów HTTP/HTTPS. Serwer TUS zwraca relatywny nagłówek `Location` (`relativeLocation: true`), eliminując błędy CORS i niepożądane przekierowania preflight 308 za proxy Caddy.
+5. **Wznawialny Transfer**: Plik przesyłany jest w kawałkach po 5 MB (`chunkSize: 5MB`). Jeśli gość wejdzie w martwą strefę zasięgu sali, transfer zostaje wstrzymany i po ponownym złapaniu sygnału wznawia się automatycznie od ostatniego bajtu (zero powtórek).
+6. **Hook Zakończenia (`POST_FINISH`)**:
    - Plik z tymczasowego katalogu `tus_temp` trafia do `/data/galleries/{slug}/raw/`.
    - Zadanie obróbki trafia do kolejki `p-queue` (max 2 zadania współbieżne dla ochrony 4 rdzeni procesora N100).
-5. **Przetwarzanie**:
+7. **Przetwarzanie**:
    - **Zdjęcia**: `Sharp` odczytuje orientację EXIF (np. zdjęcia pionowe z iPhone'a) i generuje zoptymalizowaną miniaturkę WebP 500x500 z zachowaniem proporcji.
    - **Wideo**: `FFmpeg` wycina klatkę z pierwszej sekundy wideo i konwertuje ją do formatu WebP.
    - **Watchdog FFmpeg**: Proces `ffmpeg` uruchamiany jest z twardym limitem czasu (25 sekund). W razie zawieszenia na uszkodzonym pliku wideo proces zostaje bezwzględnie ubity (`SIGKILL`), uniemożliwiając zablokowanie kolejki zadań (`p-queue starvation`).
-6. **Zapis i Real-Time Notyfikacja**:
+8. **Zapis i Real-Time Notyfikacja**:
    - Ścieżki dyskowe zapisywane są w bazie PostgreSQL z wymuszeniem separatorów uniksowych (`path.posix.join`), gwarantując pełną zgodność niezależnie od systemu operacyjnego.
    - Rekord zostaje utrwalony w tabeli `media_items` PostgreSQL.
    - Magistrala `sseBus` (zarejestrowana w `globalThis.__wedding_sse_bus__` jako globalny singleton procesu Node) emituje zdarzenie `new-media` dla danego sluga galerii.
    - Wszystkie podłączone smartfony na sali weselnej otrzymują powiadomienie przez otwarty strumień SSE i natychmiast renderują nowe zdjęcie w siatce Masonry (bez zakłócania otwartego u innego gościa Lightboxa).
    - Dodatkowo interfejs gościa realizuje cichy fallback polling (po 1s, 2.5s i 5s) w tle na wypadek chwilowego zerwania strumienia SSE podczas obróbki długiego materiału wideo.
+
+### 3.1. Import materiałów profesjonalnego fotografa/kamerzysty
+
+Para Młoda może w panelu właściciela (`/owner/[slug]`, komponent `PhotographerImportPanel.tsx`) masowo zaimportować materiały otrzymane od profesjonalnego fotografa lub kamerzysty do tej samej galerii i chronologii co uploady gości, korzystając z dokładnie tego samego protokołu TUS 1.0.0 i tego samego endpointu `/api/upload/tus`. Różnice względem zwykłego uploadu gościa:
+
+1. **Autoryzacja właściciela jest obowiązkowa**: metadane TUS niosą dodatkowe pola `source: "photographer"` i `ownerToken`. `onUploadCreate` w `packages/media/src/tus-server.ts` odrzuca (`401 Unauthorized`) każdy upload ze `source: "photographer"`, jeśli `ownerToken` nie zweryfikuje się poprawnie dla danej galerii — zanim jakikolwiek plik trafi na dysk lub do bazy. Weryfikacja odbywa się przez funkcję wstrzykiwaną z `apps/web/server.ts` (`verifyOwnerCredentialsForTus`, reużywającą istniejący `verifyOwnerToken` z `@/lib/auth`), aby `packages/media` nigdy nie importowało kodu z `apps/web` (zachowany kierunek zależności monorepo).
+2. **Egzekwowanie limitu pojemności galerii (`maxStorageBytes`)**: to pierwsze miejsce w całym kodzie, w którym ta istniejąca od dawna kolumna jest faktycznie sprawdzana. Jeśli galeria ma ustawiony niezerowy limit, `onUploadCreate` sumuje dotychczasowe `file_size` z `media_items` i odrzuca (`413 Payload Too Large`) tylko ten pojedynczy plik importu, który przekroczyłby limit — pozostałe pliki tej samej paczki importu (każdy plik to osobne żądanie TUS) przechodzą normalnie. **Uwaga**: ten limit dotyczy wyłącznie ścieżki importu fotografa; zwykłe uploady gości pozostają nieograniczone (`maxStorageBytes` nie jest tam sprawdzane).
+3. **Wspólna, ograniczona kolejka przetwarzania**: zaimportowane pliki trafiają do dokładnie tej samej kolejki `p-queue` (concurrency: 2) i tego samego watchdoga FFmpeg (25s SIGKILL) co uploady gości — brak priorytetu i osobnego limitu współbieżności. Masowy import wielu dużych plików w trakcie trwającej recepcji może chwilowo spowolnić przetwarzanie bieżących zdjęć gości; zalecane jest wykonywanie importu poza szczytem aktywności gości (np. dzień po weselu).
+4. **Oznaczenie źródła**: każdy wpis w `media_items` ma kolumnę `source` (`"guest"` domyślnie, `"photographer"` dla importu). Materiały fotografa są widoczne w tej samej siatce galerii (gościa i właściciela) z odróżniającą odznaką "Fotograf" i podlegają dokładnie tej samej moderacji (ukrywanie/usuwanie, propagacja SSE) co materiały gości.
 
 ---
 
@@ -143,6 +155,7 @@ graph TD
 | `id` | UUID | Klucz główny |
 | `gallery_id` | UUID FK | Odwołanie do `galleries.id` (`ON DELETE CASCADE`) |
 | `uploader_name` | TEXT | Podpis gościa (np. "Świadek Piotr") |
+| `source` | TEXT | Źródło materiału: `guest` (domyślnie) lub `photographer` (import przez właściciela) |
 | `file_type` | TEXT | `image` lub `video` |
 | `mime_type` | TEXT | Typ MIME (np. `image/jpeg`, `video/mp4`) |
 | `original_file_name` | TEXT | Pierwotna nazwa pliku z telefonu |
@@ -166,19 +179,35 @@ Dla zapewnienia błyskawicznego działania zapytań SQL na tysiącach zdjęć ut
 | `username` | TEXT UNIQUE | Login administratora |
 | `password_hash` | TEXT | Hasz hasła administratora (bcrypt) |
 
+### Tabela `wishes`
+Oddzielna, równoległa do `media_items` "księga życzeń" — tekstowe życzenia gości niezwiązane z żadnym plikiem, o identycznym kształcie stanu i moderacji.
+
+| Kolumna | Typ | Opis |
+|---|---|---|
+| `id` | UUID | Klucz główny (`defaultRandom()`) |
+| `gallery_id` | UUID FK | Odwołanie do `galleries.id` (`ON DELETE CASCADE`) |
+| `guest_name` | TEXT (nullable) | Opcjonalne imię/nazwisko gościa — `NULL` wyświetlane w UI jako "Anonimowy gość" |
+| `message` | TEXT | Treść życzenia (wymagane, max 500 znaków) |
+| `status` | TEXT | `ready` (widoczne), `hidden` (ukryte przez parę), `deleted` (trwale usunięte — soft-delete, bo brak plików do fizycznego skasowania) |
+| `created_at` | TIMESTAMPTZ | Czas dodania |
+
+Indeks `idx_wishes_gallery_status_created` na `(gallery_id, status, created_at)` — identyczny wzorzec co `idx_media_items_gallery_status_created`, bo zapytania mają dokładnie ten sam kształt (lista życzeń danej galerii, filtrowana po statusie, sortowana chronologicznie).
+
 ---
 
 ## 5. Wykaz Endpointów API
 
 ### Publiczne (Gość)
-- `GET /api/gallery/:slug` – Metadane galerii, status aktywności i ustawienia winietki.
+- `GET /api/gallery/:slug` – Metadane galerii, status aktywności i ustawienia winietki, w tym `primaryColor`/`accentColor` motywu wesela (zawsze zwracane, z domyślnymi wartościami generatora winietek, gdy galeria nie ma zapisanych ustawień) — wykorzystywane m.in. przez ramkę photobooth w przeglądarce gościa (`CameraCapture.tsx`).
 - `GET /api/gallery/:slug/media` – Lista aktywnych multimediów (`status: "ready"`):
   - Parametr `?includeHidden=true` wymaga autoryzacji nagłówkiem `Authorization: Bearer <adminToken>` lub nagłówkiem `x-owner-password: <password>` (ewentualnie `?password=`). Próba nieautoryzowanego odczytu zwraca `401 Unauthorized`.
   - Pozycje o statusie `status: "deleted"` są bezwzględnie odfiltrowywane.
 - `GET /api/gallery/:slug/live` – Strumień Server-Sent Events (SSE):
   - Emisja `new-media`: powiadomienie o nowym przetworzonym zdjęciu.
   - Emisja `media-updated`: natychmiastowa aktualizacja widoczności (ukrycie/odkrycie/usunięcie) synchronizowana na żywo na ekranach wszystkich gości.
-- `ANY /api/upload/tus/*` – W pełni zgodny ze specyfikacją protokół TUS 1.0.0 (`POST`, `PATCH`, `HEAD`, `OPTIONS`, `DELETE`).
+  - Emisja `new-wish`: powiadomienie o nowym życzeniu dodanym do księgi gości.
+  - Emisja `wish-updated`: natychmiastowa aktualizacja widoczności życzenia (ukrycie/odkrycie/usunięcie) synchronizowana na żywo, tym samym wzorcem co `media-updated`.
+- `ANY /api/upload/tus/*` – W pełni zgodny ze specyfikacją protokół TUS 1.0.0 (`POST`, `PATCH`, `HEAD`, `OPTIONS`, `DELETE`). Ten sam endpoint obsługuje zarówno upload gościa, jak i import fotografa (`source: "photographer"` w metadanych TUS): import fotografa wymaga dodatkowo poprawnego `ownerToken` (inaczej `401 Unauthorized`) i respektuje limit `maxStorageBytes` galerii (inaczej `413 Payload Too Large` dla konkretnego pliku) — patrz sekcja 3.1.
 - `GET /api/gallery/:slug/card/pdf` – Wektorowy dokument PDF A6 (300 DPI) generowany w locie:
   - Obsługuje zapytanie z parametrami URL (`headline`, `primaryColor`, `accentColor`, `instructions`), dzięki czemu pobierany plik od razu odzwierciedla stan edytora wizualnego bez wymogu uprzedniego zapisu w bazie.
   - Generuje prawidłowy kod QR z dynamicznym wykrywaniem hosta (brak sztywnego kodowania domen lokalnych).
@@ -186,13 +215,25 @@ Dla zapewnienia błyskawicznego działania zapytań SQL na tysiącach zdjęć ut
   - Weryfikuje uprawnienie `allowGuestDownloads` oraz PIN galerii.
   - Przy podaniu hasła właściciela (`?password=`) do archiwum dołączane są również zdjęcia ukryte (`status: "hidden"`).
   - Oparte o nowoczesny strumień `ZipArchive` z pakietu `archiver` (brak buforowania gigabajtów w RAM).
+  - Jeśli galeria zawiera widoczne życzenia (zgodnie z tymi samymi zasadami widoczności `hidden` co przy przeglądaniu przez właściciela), do archiwum dogrywany jest dodatkowy plik tekstowy `zyczenia.txt` z treścią i autorem każdego wpisu.
 - `GET /media-file/*` – Bezpośrednie serwowanie statycznych plików przez zoptymalizowane proxy Caddy (bez udziału Node.js), z pełną obsługą cache i nagłówków Byte-Range.
+- `POST /api/gallery/:slug/wishes` – Dodanie tekstowego życzenia do księgi gości (publiczne, bez logowania, bez pliku):
+  - Waliduje `addWishDto` (treść wymagana, max 500 znaków; opcjonalne imię/nazwisko, max 60 znaków).
+  - Odrzuca żądanie kodem `404`, gdy galeria nie istnieje, lub `400`, gdy jest nieaktywna albo treść jest pusta/nieprawidłowa.
+  - Emitowana jest natychmiastowa notyfikacja SSE `new-wish`.
+- `GET /api/gallery/:slug/wishes` – Lista życzeń, dokładnie ten sam wzorzec autoryzacji co `GET /api/gallery/:slug/media` (`includeHidden`, `ownerToken`/`password`/`adminToken`):
+  - Bez poświadczeń zwraca wyłącznie życzenia o statusie `ready`.
+  - Z poświadczeniami właściciela/administratora zwraca wszystkie poza `deleted`.
 - `GET /g/:slug/tv` – **Nie jest to nowy endpoint API**, lecz publiczna trasa strony (komponent kliencki `apps/web/src/app/[locale]/g/[slug]/tv/page.tsx`) — tryb TV/pokaz slajdów na telewizor lub rzutnik. Pobiera dane wyłącznie z `GET /api/gallery/:slug/media` i `GET /api/gallery/:slug/live` powyżej, bez żadnych własnych zapytań do bazy i bez wysyłania nagłówków/parametrów właściciela — dziedziczy filtrowanie `status: "ready"` 1:1 z istniejących endpointów.
 
 ### Panel Pary Młodej (RESTful API)
 - `POST /api/owner/:slug/auth` – Logowanie hasłem właściciela, wydanie podpisanego tokenu HMAC-SHA256, zwrócenie statystyk galerii, stanu Google Drive i konfiguracji winietki.
+- Import materiałów fotografa/kamerzysty (`PhotographerImportPanel.tsx`) nie ma osobnego endpointu REST — korzysta z tego samego `ANY /api/upload/tus/*` co upload gościa, przekazując dodatkowo `ownerToken` z logowania właściciela oraz `source: "photographer"` w metadanych TUS (patrz sekcja 3.1 i 5 wyżej).
 - `PATCH /api/owner/:slug/media/:id/status` – Zmiana widoczności zdjęcia (`ready` <-> `hidden`) autoryzowana tokenem HMAC, wraz z natychmiastową emisją SSE `media-updated`.
 - `DELETE /api/owner/:slug/media/:id` – Fizyczne usunięcie pliku źródłowego i miniatury z dysku oraz bazy danych z powiadomieniem SSE.
+- `PATCH /api/owner/:slug/wishes/:id/status` – Moderacja życzenia autoryzowana tokenem HMAC (`authenticateOwner`), analogicznie do moderacji zdjęć:
+  - `newStatus: "hidden"` ukrywa życzenie przed gośćmi, `"ready"` przywraca widoczność, `"deleted"` trwale je usuwa (soft-delete — brak plików do fizycznego skasowania, więc wystarczy zmiana statusu).
+  - Emisja SSE `wish-updated` synchronizuje zmianę na żywo ze wszystkimi otwartymi widokami galerii.
 - `PUT /api/owner/:slug/card` – Zapis zmodyfikowanych kolorów i tekstów winietki.
 - `GET /api/owner/:slug/gdrive` – Pobranie aktualnego stanu transferu, liczby przetworzonych bajtów i linku do folderu Google Drive.
 - `POST /api/owner/:slug/gdrive/export` – Uruchomienie asynchronicznego eksportu multimediów na Dysk Google w tle z opcją dołączenia ukrytych zdjęć.
@@ -306,13 +347,14 @@ Projekt objęty jest dwupoziomową piramidą testów automatycznych oraz standar
    - Weryfikacja typów TypeScript w całym monorepo: `pnpm -r check-types`.
 
 2. **Testy Jednostkowe i Integracyjne (Vitest)**:
-   - Liczba testów: **211 testów** w 24 plikach (`packages/db`: 30, `packages/media`: 65, `apps/web`: 116).
-   - `packages/media/tests/`: testy potoku przetwarzania mediów, integracji Google Drive i wznawialnego serwera TUS.
-   - `apps/web/tests/`: testy integracyjne tras API (`admin`, `gallery`, `owner`), komponentów UI (`LightboxModal`, `MediaGrid`, `UploaderDrawer`) oraz — od tej zmiany — funkcji pomocniczej trybu TV `buildTvGalleryQrUrl` (`apps/web/tests/unit/lib/tv-slideshow.test.ts`).
+   - Liczba testów: **323 testy** w 32 plikach.
+   - `packages/db/tests/`: 38 testów schematu Drizzle, walidatorów Zod (w tym `wishes`/`addWishDto`) i klienta bazy.
+   - `packages/media/tests/`: 81 testów potoku przetwarzania mediów, integracji Google Drive, wznawialnego serwera TUS, event-busa SSE (w tym `new-wish`/`wish-updated`) i strumienia ZIP (w tym dołączanie `zyczenia.txt`).
+   - `apps/web/tests/`: 204 testy integracyjnych tras API (`admin`, `gallery`, `owner`, w tym księga życzeń) oraz komponentów UI (`LightboxModal`, `MediaGrid`, `UploaderDrawer`).
    - Uruchomienie: `pnpm turbo run test` lub `docker run --rm -v "${PWD}:/app" -w /app node:24-alpine sh -c "corepack enable && pnpm -r test"`
 
 3. **Testy End-to-End (Playwright)**:
-   - Liczba testów: **35 unikalnych scenariuszy (105 testów łącznych)** w katalogu `apps/web/e2e/`.
+   - Liczba testów: **38 unikalnych scenariuszy (114 testów łącznych)** w katalogu `apps/web/e2e/`.
    - Macierz środowiskowa: **Desktop Chromium**, **Mobile Chrome (Pixel 5)**, **Mobile Safari (iPhone 13 / WebKit)**.
    - Uruchomienie: `pnpm --filter @wedding-drop/web test:e2e` lub w sieci Docker:
      `docker run --rm --network wedding-drop_wedding_net -v wedding_playwright_browsers:/ms-playwright -v "${PWD}:/app" -w /app/apps/web -e BASE_URL=http://wedding_web:3000 mcr.microsoft.com/playwright:v1.50.0-noble npx playwright test`

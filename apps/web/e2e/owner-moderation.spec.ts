@@ -39,7 +39,7 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 		).not.toBeVisible();
 	});
 
-	test("UC3: powinien wygenerować link do pobrania ZIP zawierający hasło właściciela", async ({
+	test("UC3: powinien wygenerować link do pobrania ZIP zawierający bezpieczny token właściciela", async ({
 		page,
 	}) => {
 		await page.goto("/owner/kasia-i-tomek");
@@ -50,14 +50,16 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 			page.getByText("Zarządzanie galerią, eksport i moderacja treści"),
 		).toBeVisible();
 
-		// Przycisk pobierania ZIP
+		// Przycisk pobierania ZIP — link zawiera podpisany token HMAC (nie hasło w URL,
+		// zgodnie z regułą bezpieczeństwa z AGENTS.md), więc dopasowujemy wzorzec zamiast
+		// stałego ciągu (token zawiera znacznik czasu i jest inny przy każdym logowaniu)
 		const zipBtn = page.getByRole("link", {
 			name: /Pobierz ZIP/i,
 		});
 		await expect(zipBtn).toBeVisible();
 		await expect(zipBtn).toHaveAttribute(
 			"href",
-			"/api/gallery/kasia-i-tomek/zip?password=sekret123",
+			/^\/api\/gallery\/kasia-i-tomek\/zip\?token=owner_\d+_[A-Za-z0-9%]+_[a-f0-9]+$/,
 		);
 	});
 
@@ -240,6 +242,118 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 		await expect(page.getByText("Do Skasowania")).not.toBeVisible();
 	});
 
+	test("UC8: powinien umożliwić moderację widoczności życzenia (ukryj / pokaż)", async ({
+		page,
+	}) => {
+		await page.route("**/api/gallery/kasia-i-tomek/media*", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({ media: [] }),
+			});
+		});
+
+		await page.route("**/api/gallery/kasia-i-tomek/wishes*", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({
+					wishes: [
+						{
+							id: "wish-1",
+							guestName: "Świadek Jan",
+							message: "Sto lat i szczęścia!",
+							status: "ready",
+							createdAt: "2026-09-12T12:00:00.000Z",
+						},
+					],
+				}),
+			});
+		});
+
+		await page.goto("/owner/kasia-i-tomek");
+		await page.getByPlaceholder("Wpisz hasło dostępu").fill("sekret123");
+		await page.getByRole("button", { name: "Zaloguj się" }).click();
+
+		await expect(page.getByText("Sto lat i szczęścia!")).toBeVisible();
+
+		const toggleBtn = page.getByTitle("Ukryj przed gośćmi");
+		await expect(toggleBtn).toBeVisible();
+
+		await page.route("**/api/owner/**", async (route) => {
+			const method = route.request().method();
+			if (method === "PATCH") {
+				await route.fulfill({
+					status: 200,
+					contentType: "application/json",
+					body: JSON.stringify({ success: true, newStatus: "hidden" }),
+				});
+			} else {
+				await route.continue();
+			}
+		});
+
+		await toggleBtn.click();
+
+		await expect(page.getByText("Ukryte", { exact: true })).toBeVisible();
+		await expect(page.getByTitle("Pokaż w księdze")).toBeVisible();
+	});
+
+	test("UC9: powinien umożliwić trwałe usunięcie życzenia z księgi po potwierdzeniu dialogu", async ({
+		page,
+	}) => {
+		await page.route("**/api/gallery/kasia-i-tomek/media*", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({ media: [] }),
+			});
+		});
+
+		await page.route("**/api/gallery/kasia-i-tomek/wishes*", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({
+					wishes: [
+						{
+							id: "wish-del",
+							guestName: null,
+							message: "Życzenie do skasowania",
+							status: "ready",
+							createdAt: "2026-09-12T12:00:00.000Z",
+						},
+					],
+				}),
+			});
+		});
+
+		await page.goto("/owner/kasia-i-tomek");
+		await page.getByPlaceholder("Wpisz hasło dostępu").fill("sekret123");
+		await page.getByRole("button", { name: "Zaloguj się" }).click();
+		await expect(page.getByText("Życzenie do skasowania")).toBeVisible();
+
+		await page.route("**/api/owner/**", async (route) => {
+			const method = route.request().method();
+			if (method === "PATCH") {
+				await route.fulfill({
+					status: 200,
+					contentType: "application/json",
+					body: JSON.stringify({ success: true, newStatus: "deleted" }),
+				});
+			} else {
+				await route.continue();
+			}
+		});
+
+		page.once("dialog", async (dialog) => {
+			await dialog.accept();
+		});
+
+		await page.getByTitle("Usuń bezpowrotnie").click();
+		await expect(page.getByText("Życzenie do skasowania")).not.toBeVisible();
+	});
+
 	test("UC7: powinien zawierać bezpośredni link nawigacyjny do projektanta winietek A6", async ({
 		page,
 	}) => {
@@ -249,6 +363,219 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 
 		const cardLink = page.getByRole("link", { name: /Karteczka A6/i });
 		await expect(cardLink).toBeVisible();
-		await expect(cardLink).toHaveAttribute("href", "/g/kasia-i-tomek/card");
+		// next-intl (localePrefix: "always") dodaje prefiks lokalizacji nawet dla domyślnej "pl"
+		await expect(cardLink).toHaveAttribute("href", "/pl/g/kasia-i-tomek/card");
+	});
+
+	test("UC8: ukrycie zdjęcia przez Parę Młodą zmniejsza wynik danego gościa w rankingu galerii", async ({
+		browser,
+	}) => {
+		// Wspólny, mutowalny stan multimediów widziany zarówno przez panel właściciela
+		// (włącznie z ukrytymi), jak i przez galerię gościa (tylko status "ready") —
+		// symuluje to, co w produkcji robi backend po wywołaniu toggle-status.
+		const mediaList = [
+			{
+				id: "rank-1",
+				uploaderName: "Świadek Jan",
+				fileType: "image",
+				originalFileName: "a.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				status: "ready",
+				createdAt: "2026-09-12T12:00:00.000Z",
+			},
+			{
+				id: "rank-2",
+				uploaderName: "Świadek Jan",
+				fileType: "image",
+				originalFileName: "b.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				status: "ready",
+				createdAt: "2026-09-12T12:01:00.000Z",
+			},
+		];
+
+		const ownerContext = await browser.newContext();
+		const ownerPage = await ownerContext.newPage();
+
+		await ownerPage.route(
+			"**/api/gallery/kasia-i-tomek/media*",
+			async (route) => {
+				await route.fulfill({
+					status: 200,
+					contentType: "application/json",
+					body: JSON.stringify({ media: mediaList }),
+				});
+			},
+		);
+
+		// Przechwycenie akcji ukrycia — mutuje wspólny stan `mediaList`
+		await ownerPage.route("**/api/owner/**", async (route) => {
+			const method = route.request().method();
+			let action = "";
+			try {
+				action = route.request().postDataJSON()?.action;
+			} catch (_e) {}
+
+			if (method === "PATCH" || action === "toggle-status") {
+				const item = mediaList.find((m) => m.id === "rank-2");
+				if (item) item.status = "hidden";
+				await route.fulfill({
+					status: 200,
+					contentType: "application/json",
+					body: JSON.stringify({ success: true }),
+				});
+			} else {
+				await route.continue();
+			}
+		});
+
+		await ownerPage.goto("/owner/kasia-i-tomek");
+		await ownerPage.getByPlaceholder("Wpisz hasło dostępu").fill("sekret123");
+		await ownerPage.getByRole("button", { name: "Zaloguj się" }).click();
+		await expect(ownerPage.getByText("Świadek Jan").first()).toBeVisible();
+
+		// Widok gościa PRZED ukryciem: dwa materiały Świadka Jana w rankingu
+		const guestContext = await browser.newContext();
+		const guestPage = await guestContext.newPage();
+		await guestPage.route(
+			"**/api/gallery/kasia-i-tomek/media",
+			async (route) => {
+				const visible = mediaList.filter((m) => m.status === "ready");
+				await route.fulfill({
+					status: 200,
+					contentType: "application/json",
+					body: JSON.stringify({ media: visible }),
+				});
+			},
+		);
+		await guestPage.goto("/g/kasia-i-tomek");
+
+		const leaderboard = guestPage.getByRole("region", {
+			name: "Najaktywniejsi goście",
+		});
+		await expect(leaderboard).toBeVisible();
+		await expect(leaderboard).toContainText("Świadek Jan");
+		await expect(leaderboard).toContainText("2 materiałów");
+
+		// Właściciel ukrywa jeden z dwóch materiałów Świadka Jana
+		const toggleButtons = ownerPage.getByTitle("Ukryj przed gośćmi");
+		await toggleButtons.last().click();
+		await expect(ownerPage.getByTitle("Pokaż w galerii")).toBeVisible();
+
+		// Odświeżenie widoku gościa: wynik Świadka Jana w rankingu spadł o jeden
+		await guestPage.reload();
+		await expect(leaderboard).toContainText("Świadek Jan");
+		await expect(leaderboard).toContainText("1 materiałów");
+		await expect(leaderboard).not.toContainText("2 materiałów");
+
+		await ownerContext.close();
+		await guestContext.close();
+	});
+
+	test("UC8: import fotografa bez poprawnego tokenu właściciela powinien zostać odrzucony przez serwer TUS (401)", async ({
+		request,
+	}) => {
+		// Prawdziwe żądanie utworzenia uploadu TUS (protokół tus 1.0.0) do rzeczywistego backendu -
+		// weryfikuje, że onUploadCreate w packages/media/src/tus-server.ts odrzuca import fotografa
+		// bez wstrzykniętej, poprawnej autoryzacji właściciela, zanim jakikolwiek plik trafi na dysk.
+		const encodeMeta = (value: string) =>
+			Buffer.from(value, "utf-8").toString("base64");
+
+		const metadataNoToken = [
+			`gallerySlug ${encodeMeta("kasia-i-tomek")}`,
+			`source ${encodeMeta("photographer")}`,
+			`originalName ${encodeMeta("sesja-bez-tokenu.jpg")}`,
+			`fileType ${encodeMeta("image/jpeg")}`,
+		].join(",");
+
+		const resNoToken = await request.post("/api/upload/tus", {
+			headers: {
+				"Tus-Resumable": "1.0.0",
+				"Upload-Length": "1000",
+				"Upload-Metadata": metadataNoToken,
+			},
+		});
+		expect(resNoToken.status()).toBe(401);
+
+		const metadataWrongToken = [
+			`gallerySlug ${encodeMeta("kasia-i-tomek")}`,
+			`source ${encodeMeta("photographer")}`,
+			`ownerToken ${encodeMeta("owner_1_ZmFrZQ==_totalnie-zly-hmac")}`,
+			`originalName ${encodeMeta("sesja-zly-token.jpg")}`,
+			`fileType ${encodeMeta("image/jpeg")}`,
+		].join(",");
+
+		const resWrongToken = await request.post("/api/upload/tus", {
+			headers: {
+				"Tus-Resumable": "1.0.0",
+				"Upload-Length": "1000",
+				"Upload-Metadata": metadataWrongToken,
+			},
+		});
+		expect(resWrongToken.status()).toBe(401);
+	});
+
+	test("UC9: powinien umożliwić import fotografa po zalogowaniu i wyświetlić odróżniającą odznakę źródła w galerii", async ({
+		page,
+	}) => {
+		// Symulacja odpowiedzi galerii po pomyślnym imporcie fotografa - potwierdza, że panel importu
+		// jest dostępny po zalogowaniu właściciela i że materiały source: "photographer" otrzymują
+		// odróżniającą odznakę w siatce moderacji (patrz MediaGridWithModeration.tsx).
+		await page.route("**/api/gallery/kasia-i-tomek/media*", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({
+					media: [
+						{
+							id: "foto-gosc",
+							uploaderName: "Ciocia Ania",
+							source: "guest",
+							fileType: "image",
+							originalFileName: "kwiaty.jpg",
+							fileSize: 204800,
+							thumbUrl:
+								"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='pink'/></svg>",
+							rawUrl: "#",
+							status: "ready",
+							createdAt: "2026-09-12T12:00:00.000Z",
+						},
+						{
+							id: "foto-fotograf",
+							uploaderName: "Fotograf Jan Kowalski",
+							source: "photographer",
+							fileType: "image",
+							originalFileName: "sesja-plenerowa.jpg",
+							fileSize: 4096000,
+							thumbUrl:
+								"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='goldenrod'/></svg>",
+							rawUrl: "#",
+							status: "ready",
+							createdAt: "2026-09-12T13:00:00.000Z",
+						},
+					],
+				}),
+			});
+		});
+
+		await page.goto("/owner/kasia-i-tomek");
+		await page.getByPlaceholder("Wpisz hasło dostępu").fill("sekret123");
+		await page.getByRole("button", { name: "Zaloguj się" }).click();
+
+		// Sekcja importu fotografa jest widoczna wyłącznie po zalogowaniu właściciela
+		await expect(
+			page.getByText("Importuj zdjęcia/filmy fotografa"),
+		).toBeVisible();
+
+		// Materiał gościa nie ma odznaki źródła fotografa
+		await expect(page.getByText("Ciocia Ania")).toBeVisible();
+
+		// Materiał fotografa w siatce moderacji ma odróżniającą odznakę
+		await expect(page.getByText("Fotograf Jan Kowalski")).toBeVisible();
+		await expect(page.getByText("Fotograf", { exact: true })).toBeVisible();
 	});
 });

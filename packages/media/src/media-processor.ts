@@ -20,6 +20,7 @@ export interface ProcessTask {
 	mimeType: string;
 	fileSize: number;
 	dataDir: string;
+	source?: "guest" | "photographer";
 }
 
 export async function scheduleMediaProcessing(task: ProcessTask) {
@@ -37,6 +38,7 @@ async function processMediaTask(task: ProcessTask) {
 		mimeType,
 		fileSize,
 		dataDir,
+		source = "guest",
 	} = task;
 
 	try {
@@ -87,6 +89,7 @@ async function processMediaTask(task: ProcessTask) {
 				galleryId: gallery.id,
 				uploaderName: uploaderName || "Gość weselny",
 				fileType,
+				source,
 				mimeType:
 					mimeType || (fileType === "video" ? "video/mp4" : "image/jpeg"),
 				originalFileName: originalName,

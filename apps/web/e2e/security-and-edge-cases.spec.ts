@@ -27,7 +27,8 @@ test.describe("Bezpieczeństwo i Przypadki Brzegowe (Security & Edge Cases)", ()
 
 		const homeBtn = page.getByRole("link", { name: "Strona główna" });
 		await expect(homeBtn).toBeVisible();
-		await expect(homeBtn).toHaveAttribute("href", "/");
+		// next-intl (localePrefix: "always") dodaje prefiks lokalizacji nawet dla domyślnej "pl"
+		await expect(homeBtn).toHaveAttribute("href", "/pl");
 	});
 
 	test("UC3: próba Directory Traversal w /media-file/* powinna zostać zablokowana przez sandbox", async ({

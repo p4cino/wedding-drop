@@ -63,6 +63,7 @@ export const mediaItems = pgTable(
 			.notNull()
 			.references(() => galleries.id, { onDelete: "cascade" }),
 		uploaderName: text("uploader_name").notNull().default("Gość weselny"),
+		source: text("source").notNull().default("guest"), // 'guest' | 'photographer'
 		fileType: text("file_type").notNull(), // 'image' | 'video'
 		mimeType: text("mime_type").notNull(),
 		originalFileName: text("original_file_name").notNull(),
@@ -85,6 +86,29 @@ export const mediaItems = pgTable(
 			table.createdAt,
 		),
 		index("idx_media_items_gallery_size").on(table.galleryId, table.fileSize),
+	],
+);
+
+export const wishes = pgTable(
+	"wishes",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		galleryId: uuid("gallery_id")
+			.notNull()
+			.references(() => galleries.id, { onDelete: "cascade" }),
+		guestName: text("guest_name"),
+		message: text("message").notNull(),
+		status: text("status").notNull().default("ready"), // 'ready' | 'hidden' | 'deleted'
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => [
+		index("idx_wishes_gallery_status_created").on(
+			table.galleryId,
+			table.status,
+			table.createdAt,
+		),
 	],
 );
 
@@ -132,5 +156,7 @@ export type NewGallery = typeof galleries.$inferInsert;
 export type CardSetting = typeof cardSettings.$inferSelect;
 export type MediaItem = typeof mediaItems.$inferSelect;
 export type NewMediaItem = typeof mediaItems.$inferInsert;
+export type Wish = typeof wishes.$inferSelect;
+export type NewWish = typeof wishes.$inferInsert;
 export type GalleryGdriveExport = typeof galleryGdriveExports.$inferSelect;
 export type NewGalleryGdriveExport = typeof galleryGdriveExports.$inferInsert;

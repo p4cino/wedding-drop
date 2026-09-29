@@ -32,6 +32,8 @@ export async function GET(
 			.where(eq(cardSettings.galleryId, gallery.id))
 			.limit(1);
 
+		const card = cardResult[0];
+
 		return NextResponse.json({
 			id: gallery.id,
 			slug: gallery.slug,
@@ -41,7 +43,12 @@ export async function GET(
 			allowGuestDownloads: gallery.allowGuestDownloads,
 			allowVideos: gallery.allowVideos,
 			hasPin: !!gallery.accessPin,
-			cardSettings: cardResult[0] || null,
+			cardSettings: card || null,
+			// Kolory motywu wesela (z domyślnymi wartościami generatora winietek A6),
+			// używane przez ramkę photobooth w przeglądarce gościa — reużycie tych
+			// samych, publicznie już czytanych danych co GET .../card/pdf.
+			primaryColor: card?.primaryColor || "#1E293B",
+			accentColor: card?.accentColor || "#D4AF37",
 		});
 	} catch (error) {
 		console.error("Błąd pobierania metadanych galerii:", error);

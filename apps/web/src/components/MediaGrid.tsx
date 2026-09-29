@@ -1,6 +1,6 @@
 "use client";
 
-import { Image as ImageIcon, Play, User } from "lucide-react";
+import { Camera, Image as ImageIcon, Play, User } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { MediaItemData } from "./LightboxModal";
 
@@ -31,6 +31,7 @@ export default function MediaGrid({ items, onItemClick }: MediaGridProps) {
 		<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
 			{items.map((item, index) => {
 				const isVideo = item.fileType === "video";
+				const isPhotographer = item.source === "photographer";
 				const uploader = item.uploaderName || t("defaultUploaderName");
 				const ariaLabel = `${isVideo ? "Video" : "Image"}: ${item.originalFileName}, ${t("uploaderLabel")} ${uploader}`;
 
@@ -57,6 +58,19 @@ export default function MediaGrid({ items, onItemClick }: MediaGridProps) {
 									className="w-3.5 h-3.5 fill-current ml-0.5"
 									aria-hidden="true"
 								/>
+							</div>
+						)}
+
+						{/* Odznaka materiału od fotografa/kamerzysty */}
+						{isPhotographer && (
+							<div
+								className="absolute top-2.5 left-2.5 px-2 py-1 rounded-full bg-amber-500/90 backdrop-blur-md flex items-center gap-1 text-white shadow-sm"
+								aria-label={t("photographerBadge")}
+							>
+								<Camera className="w-3 h-3" aria-hidden="true" />
+								<span className="text-[10px] font-semibold uppercase tracking-wide">
+									{t("photographerBadge")}
+								</span>
 							</div>
 						)}
 

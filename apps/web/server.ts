@@ -5,6 +5,7 @@ import { initDatabase } from "@wedding-drop/db";
 import { initTusServer, recoverInterruptedExports } from "@wedding-drop/media";
 import dotenv from "dotenv";
 import next from "next";
+import { verifyOwnerCredentialsForTus } from "./src/lib/auth";
 
 dotenv.config();
 
@@ -28,7 +29,11 @@ async function bootstrap() {
 	await recoverInterruptedExports();
 
 	// 3. Przygotowanie serwera TUS
-	const tusServer = initTusServer(dataDir);
+	// Weryfikacja właściciela dla importu fotografa jest wstrzykiwana z apps/web,
+	// aby packages/media nie zależało od Next.js / apps/web (patrz AGENTS.md - kierunek zależności).
+	const tusServer = initTusServer(dataDir, {
+		verifyOwnerCredentials: verifyOwnerCredentialsForTus,
+	});
 
 	// 4. Przygotowanie Next.js
 	await app.prepare();

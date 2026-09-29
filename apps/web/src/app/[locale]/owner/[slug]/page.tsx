@@ -25,10 +25,16 @@ import {
 	type OwnerMediaItem,
 } from "@/components/owner/MediaGridWithModeration";
 import { OwnerStatsGrid } from "@/components/owner/OwnerStatsGrid";
+import { PhotographerImportPanel } from "@/components/owner/PhotographerImportPanel";
+import {
+	type OwnerWishItem,
+	WishesModeration,
+} from "@/components/owner/WishesModeration";
 import { Link } from "@/i18n/routing";
 
 export default function OwnerDashboardPage() {
 	const t = useTranslations("OwnerPanel");
+	const tWishes = useTranslations("Wishes");
 	const params = useParams();
 	const slug = params?.slug as string;
 
@@ -48,6 +54,10 @@ export default function OwnerDashboardPage() {
 	}>({ totalFiles: 0, totalBytes: 0 });
 	const [mediaList, setMediaList] = useState<OwnerMediaItem[]>([]);
 	const [filter, setFilter] = useState<"all" | "ready" | "hidden">("all");
+	const [wishesList, setWishesList] = useState<OwnerWishItem[]>([]);
+	const [wishesFilter, setWishesFilter] = useState<"all" | "ready" | "hidden">(
+		"all",
+	);
 
 	// Google Drive state
 	const [isGDriveConfigured, setIsGDriveConfigured] = useState(true);
@@ -81,6 +91,29 @@ export default function OwnerDashboardPage() {
 				if (res.ok) {
 					const data = await res.json();
 					setMediaList(data.media || []);
+				}
+			} catch (e) {
+				console.error(e);
+			}
+		},
+		[ownerToken, slug],
+	);
+
+	const loadWishes = useCallback(
+		async (token = ownerToken) => {
+			try {
+				const headers: Record<string, string> = {};
+				if (token) headers["x-owner-token"] = token;
+
+				const res = await fetch(
+					`/api/gallery/${slug}/wishes?includeHidden=true`,
+					{
+						headers,
+					},
+				);
+				if (res.ok) {
+					const data = await res.json();
+					setWishesList(data.wishes || []);
 				}
 			} catch (e) {
 				console.error(e);
@@ -133,13 +166,14 @@ export default function OwnerDashboardPage() {
 				setGDriveExportedAt(data.gallery?.gdriveExportedAt || null);
 
 				loadMedia(data.ownerToken);
+				loadWishes(data.ownerToken);
 			} catch (_err) {
 				setError(t("connError"));
 			} finally {
 				setLoading(false);
 			}
 		},
-		[slug, loadMedia, t],
+		[slug, loadMedia, loadWishes, t],
 	);
 
 	const handleLogin = async (e: React.FormEvent) => {
@@ -202,6 +236,8 @@ export default function OwnerDashboardPage() {
 				const data = JSON.parse(event.data);
 				if (data.type === "new-media") {
 					loadMedia();
+				} else if (data.type === "new-wish" || data.type === "wish-updated") {
+					loadWishes();
 				} else if (data.type === "gdrive-progress") {
 					if (data.progress) {
 						setGDriveProgress(data.progress);
@@ -219,7 +255,7 @@ export default function OwnerDashboardPage() {
 		return () => {
 			es.close();
 		};
-	}, [isAuthenticated, slug, loadMedia]);
+	}, [isAuthenticated, slug, loadMedia, loadWishes]);
 
 	// Fallbackowe odpytywanie statusu eksportu, gdy jest 'running'
 	useEffect(() => {
@@ -300,6 +336,60 @@ export default function OwnerDashboardPage() {
 			});
 			if (res.ok) {
 				setMediaList((prev) => prev.filter((m) => m.id !== mediaId));
+			}
+		} catch (e) {
+			console.error(e);
+		}
+	};
+
+	const toggleWishStatus = async (wishId: string, currentStatus: string) => {
+		const newStatus = currentStatus === "ready" ? "hidden" : "ready";
+		try {
+			const headers: Record<string, string> = {
+				"Content-Type": "application/json",
+			};
+			if (ownerToken) headers["x-owner-token"] = ownerToken;
+
+			const res = await fetch(`/api/owner/${slug}/wishes/${wishId}/status`, {
+				method: "PATCH",
+				headers,
+				body: JSON.stringify({
+					newStatus,
+					token: ownerToken,
+				}),
+			});
+			if (res.ok) {
+				setWishesList((prev) =>
+					prev.map((w) =>
+						w.id === wishId
+							? { ...w, status: newStatus as "ready" | "hidden" }
+							: w,
+					),
+				);
+			}
+		} catch (e) {
+			console.error(e);
+		}
+	};
+
+	const deleteWish = async (wishId: string) => {
+		if (!confirm(tWishes("deleteConfirm"))) return;
+		try {
+			const headers: Record<string, string> = {
+				"Content-Type": "application/json",
+			};
+			if (ownerToken) headers["x-owner-token"] = ownerToken;
+
+			const res = await fetch(`/api/owner/${slug}/wishes/${wishId}/status`, {
+				method: "PATCH",
+				headers,
+				body: JSON.stringify({
+					newStatus: "deleted",
+					token: ownerToken,
+				}),
+			});
+			if (res.ok) {
+				setWishesList((prev) => prev.filter((w) => w.id !== wishId));
 			}
 		} catch (e) {
 			console.error(e);
@@ -552,6 +642,13 @@ export default function OwnerDashboardPage() {
 					onOpenExportModal={() => setShowExportModal(true)}
 				/>
 
+				{/* Import materiałów od profesjonalnego fotografa/kamerzysty */}
+				<PhotographerImportPanel
+					gallerySlug={slug}
+					ownerToken={ownerToken}
+					onImportSuccess={() => loadMedia()}
+				/>
+
 				{/* Siatka moderacji */}
 				<MediaGridWithModeration
 					mediaList={mediaList}
@@ -559,6 +656,15 @@ export default function OwnerDashboardPage() {
 					setFilter={setFilter}
 					onToggleStatus={toggleStatus}
 					onDeleteMedia={deleteMedia}
+				/>
+
+				{/* Moderacja księgi życzeń */}
+				<WishesModeration
+					wishesList={wishesList}
+					filter={wishesFilter}
+					setFilter={setWishesFilter}
+					onToggleStatus={toggleWishStatus}
+					onDeleteWish={deleteWish}
 				/>
 			</main>
 

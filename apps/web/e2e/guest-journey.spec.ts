@@ -232,6 +232,89 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 		).toBeVisible();
 	});
 
+	test("UC8: powinien umożliwić dodanie życzenia z księgi gości i wyświetlić je natychmiast na liście", async ({
+		page,
+	}) => {
+		let wishesStore: Array<{
+			id: string;
+			guestName: string | null;
+			message: string;
+			createdAt: string;
+		}> = [];
+
+		await page.route("**/api/gallery/kasia-i-tomek/wishes", async (route) => {
+			const method = route.request().method();
+			if (method === "POST") {
+				const body = route.request().postDataJSON();
+				const newWish = {
+					id: `wish-${wishesStore.length + 1}`,
+					guestName: body.guestName || null,
+					message: body.message,
+					createdAt: new Date().toISOString(),
+				};
+				wishesStore = [newWish, ...wishesStore];
+				await route.fulfill({
+					status: 201,
+					contentType: "application/json",
+					body: JSON.stringify({ success: true, wish: newWish }),
+				});
+			} else {
+				await route.fulfill({
+					status: 200,
+					contentType: "application/json",
+					body: JSON.stringify({ wishes: wishesStore }),
+				});
+			}
+		});
+
+		await page.goto("/g/kasia-i-tomek");
+
+		// Przejście na zakładkę Życzenia
+		await page.getByRole("tab", { name: /Życzenia/i }).click();
+		await expect(
+			page.getByText("Księga życzeń czeka na pierwsze wpisy"),
+		).toBeVisible();
+
+		// Wypełnienie formularza życzenia
+		await page
+			.getByPlaceholder("np. Ciocia Kasia i Wujek Michał")
+			.fill("Ciocia Zosia");
+		await page
+			.getByPlaceholder("Napisz kilka ciepłych słów dla Pary Młodej...")
+			.fill("Sto lat i samych szczęśliwych dni!");
+
+		await page.getByRole("button", { name: /Wyślij życzenia/i }).click();
+
+		// Życzenie powinno pojawić się natychmiast na liście
+		await expect(
+			page.getByText("Sto lat i samych szczęśliwych dni!"),
+		).toBeVisible();
+		await expect(page.getByText("Ciocia Zosia")).toBeVisible();
+	});
+
+	test("UC9: przycisk wysyłania życzenia powinien być zablokowany, dopóki treść jest pusta", async ({
+		page,
+	}) => {
+		await page.route("**/api/gallery/kasia-i-tomek/wishes", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({ wishes: [] }),
+			});
+		});
+
+		await page.goto("/g/kasia-i-tomek");
+		await page.getByRole("tab", { name: /Życzenia/i }).click();
+
+		const submitBtn = page.getByRole("button", { name: /Wyślij życzenia/i });
+		await expect(submitBtn).toBeDisabled();
+
+		await page
+			.getByPlaceholder("Napisz kilka ciepłych słów dla Pary Młodej...")
+			.fill("Wszystkiego najlepszego!");
+		await expect(submitBtn).toBeEnabled();
+	});
+
 	test("UC7: powinien zawierać przycisk pobierania pojedynczego zdjęcia z Lightboxa", async ({
 		page,
 	}) => {
@@ -253,5 +336,198 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 			"download",
 			"pierwszy_taniec.jpg",
 		);
+	});
+
+	test("UC8: powinien pozwolić zrobić zdjęcie aparatem w przeglądarce (photobooth) i wysłać je do galerii tym samym potokiem co zwykły upload", async ({
+		page,
+	}) => {
+		// Symulacja getUserMedia fałszywym strumieniem opartym o canvas (bez realnej
+		// kamery/uprawnień) — działa identycznie w Chromium i WebKit, bo canvas.captureStream()
+		// jest standardowym API HTML5, a nie sztuczką specyficzną dla jednej przeglądarki.
+		await page.addInitScript(() => {
+			const canvas = document.createElement("canvas");
+			canvas.width = 320;
+			canvas.height = 240;
+			const ctx = canvas.getContext("2d");
+			const paint = () => {
+				if (ctx) {
+					ctx.fillStyle = "goldenrod";
+					ctx.fillRect(0, 0, canvas.width, canvas.height);
+				}
+				requestAnimationFrame(paint);
+			};
+			paint();
+
+			const fakeStream = (
+				canvas as HTMLCanvasElement & {
+					captureStream: (frameRate?: number) => MediaStream;
+				}
+			).captureStream(15);
+
+			const mediaDevicesStub = {
+				getUserMedia: () => Promise.resolve(fakeStream),
+			};
+			Object.defineProperty(navigator, "mediaDevices", {
+				configurable: true,
+				get: () => mediaDevicesStub,
+			});
+		});
+
+		await page.goto("/g/kasia-i-tomek");
+
+		// Otwarcie drawera i przełączenie na tryb aparatu w przeglądarce
+		await page.getByRole("button", { name: /Dodaj zdjęcia i filmy/i }).click();
+		await page.getByRole("button", { name: "Zrób zdjęcie" }).click();
+
+		// Podgląd na żywo z (fałszywej) kamery + gotowy przycisk spustu migawki
+		const shutterBtn = page.getByRole("button", { name: "Zrób zdjęcie" });
+		await expect(shutterBtn).toBeEnabled({ timeout: 15000 });
+		// Krótkie oczekiwanie na załadowanie faktycznych wymiarów strumienia wideo
+		// (video.videoWidth/videoHeight) zanim klatka zostanie zrzucona na canvas
+		await page.waitForTimeout(500);
+
+		// Podpis gościa dla zrobionego zdjęcia
+		const nameInput = page.getByPlaceholder("np. Ciocia Kasia i Wujek Michał");
+		await nameInput.fill("Photobooth E2E Gość");
+
+		// Spust migawki -> kompozycja canvas + ramka motywu -> plik JPEG w kolejce
+		await shutterBtn.click();
+		const queuedFileName = page.getByText(/photobooth_\d+\.jpg/);
+		await expect(queuedFileName).toBeVisible();
+		// Dokładna, unikalna (znacznik czasu) nazwa pliku z tego konkretnego przebiegu testu —
+		// unika niejednoznaczności strict-mode, gdy w tej samej, współdzielonej galerii
+		// zostały już wcześniej zdjęcia z photobooth z innych przebiegów/profili Playwrighta.
+		const exactFileName = (await queuedFileName.textContent())?.trim();
+		expect(exactFileName).toMatch(/^photobooth_\d+\.jpg$/);
+
+		// Wysyłka dokładnie tym samym przyciskiem/potokiem TUS co zwykły upload
+		await page.getByRole("button", { name: /Wyślij do galerii/i }).click();
+		await expect(page.getByText("Gotowe, wróć do galerii")).toBeVisible({
+			timeout: 30000,
+		});
+		await page.getByRole("button", { name: "Gotowe, wróć do galerii" }).click();
+
+		// Zdjęcie z photobooth pojawia się w galerii na tych samych zasadach co zwykły upload
+		await expect(
+			page.getByRole("button", {
+				name: new RegExp(`^Image: ${exactFileName}, `),
+			}),
+		).toBeVisible({ timeout: 30000 });
+	});
+
+	test("UC9: powinien pokazać ranking TOP 3 najaktywniejszych gości w poprawnej kolejności", async ({
+		page,
+	}) => {
+		// Trzech różnych "gości" o różnej liczbie wgranych materiałów, plus czwarty
+		// (spoza podium) i dwa wgrania tej samej osoby zapisane niespójnie
+		// (wielkość liter / spacje), by upewnić się, że liczą się razem.
+		const leaderboardMedia = [
+			{
+				id: "lb-1",
+				uploaderName: "Wujek Staszek",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "foto1.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				createdAt: "2026-09-12T15:00:00.000Z",
+			},
+			{
+				id: "lb-2",
+				uploaderName: "wujek staszek ",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "foto2.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				createdAt: "2026-09-12T15:01:00.000Z",
+			},
+			{
+				id: "lb-3",
+				uploaderName: "Wujek Staszek",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "foto3.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				createdAt: "2026-09-12T15:02:00.000Z",
+			},
+			{
+				id: "lb-4",
+				uploaderName: "Ciocia Halinka",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "foto4.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				createdAt: "2026-09-12T15:03:00.000Z",
+			},
+			{
+				id: "lb-5",
+				uploaderName: "Ciocia Halinka",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "foto5.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				createdAt: "2026-09-12T15:04:00.000Z",
+			},
+			{
+				id: "lb-6",
+				uploaderName: "Kuzyn Tomek",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "foto6.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				createdAt: "2026-09-12T15:05:00.000Z",
+			},
+			{
+				id: "lb-7",
+				uploaderName: "Nieznajomy Gość",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "foto7.jpg",
+				fileSize: 100000,
+				thumbUrl: "#",
+				rawUrl: "#",
+				createdAt: "2026-09-12T15:06:00.000Z",
+			},
+		];
+
+		await page.route("**/api/gallery/kasia-i-tomek/media", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({ media: leaderboardMedia }),
+			});
+		});
+
+		await page.goto("/g/kasia-i-tomek");
+
+		const leaderboard = page.getByRole("region", {
+			name: "Najaktywniejsi goście",
+		});
+		await expect(leaderboard).toBeVisible();
+
+		const rows = leaderboard.getByRole("listitem");
+		await expect(rows).toHaveCount(3);
+
+		// Kolejność malejąco: Wujek Staszek (3, po zgrupowaniu) > Ciocia Halinka (2) > Kuzyn Tomek (1)
+		await expect(rows.nth(0)).toContainText("Wujek Staszek");
+		await expect(rows.nth(0)).toContainText("3 materiałów");
+		await expect(rows.nth(1)).toContainText("Ciocia Halinka");
+		await expect(rows.nth(1)).toContainText("2 materiałów");
+		await expect(rows.nth(2)).toContainText("Kuzyn Tomek");
+		await expect(rows.nth(2)).toContainText("1 materiałów");
+
+		// Czwarty gość (Nieznajomy Gość, 1 materiał) nie mieści się na podium TOP 3
+		await expect(leaderboard.getByText("Nieznajomy Gość")).not.toBeVisible();
 	});
 });
