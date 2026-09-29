@@ -33,7 +33,8 @@ export function GalleryTable({ galleries, onDelete }: GalleryTableProps) {
 				</span>
 			</div>
 
-			<div className="overflow-x-auto">
+			{/* `relative`: elementy sr-only (absolute) muszą mieć tu punkt odniesienia, inaczej poszerzają stronę na telefonie */}
+			<div className="relative overflow-x-auto">
 				<table className="w-full text-left text-xs" aria-label={t("tableAria")}>
 					<thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-100">
 						<tr>
