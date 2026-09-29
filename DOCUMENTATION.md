@@ -369,10 +369,10 @@ Projekt objęty jest dwupoziomową piramidą testów automatycznych oraz standar
    - Weryfikacja typów TypeScript w całym monorepo: `pnpm -r check-types`.
 
 2. **Testy Jednostkowe i Integracyjne (Vitest)**:
-   - Liczba testów: **323 testy** w 32 plikach.
-   - `packages/db/tests/`: 38 testów schematu Drizzle, walidatorów Zod (w tym `wishes`/`addWishDto`) i klienta bazy.
+   - Liczba testów: **464 testy** w 53 plikach.
+   - `packages/db/tests/`: 55 testów schematu Drizzle, walidatorów Zod (w tym `wishes`/`addWishDto`) i klienta bazy.
    - `packages/media/tests/`: 81 testów potoku przetwarzania mediów, integracji Google Drive, wznawialnego serwera TUS, event-busa SSE (w tym `new-wish`/`wish-updated`) i strumienia ZIP (w tym dołączanie `zyczenia.txt`).
-   - `apps/web/tests/`: 204 testy integracyjnych tras API (`admin`, `gallery`, `owner`, w tym księga życzeń) oraz komponentów UI (`LightboxModal`, `MediaGrid`, `UploaderDrawer`).
+   - `apps/web/tests/`: 328 testów integracyjnych tras API (`admin`, `gallery`, `owner`, w tym księga życzeń i sesja właściciela), hooków (`useLiveGallery`, `useUploadQueue`, `useGDriveExport`, hooków dostępności modali), bibliotek (`lib/*`) oraz komponentów i stron UI.
    - Uruchomienie: `pnpm turbo run test` lub `docker run --rm -v "${PWD}:/app" -w /app node:24-alpine sh -c "corepack enable && pnpm -r test"`
 
 3. **Testy End-to-End (Playwright)**:
