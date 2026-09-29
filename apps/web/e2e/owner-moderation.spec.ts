@@ -242,6 +242,118 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 		await expect(page.getByText("Do Skasowania")).not.toBeVisible();
 	});
 
+	test("UC8: powinien umożliwić moderację widoczności życzenia (ukryj / pokaż)", async ({
+		page,
+	}) => {
+		await page.route("**/api/gallery/kasia-i-tomek/media*", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({ media: [] }),
+			});
+		});
+
+		await page.route("**/api/gallery/kasia-i-tomek/wishes*", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({
+					wishes: [
+						{
+							id: "wish-1",
+							guestName: "Świadek Jan",
+							message: "Sto lat i szczęścia!",
+							status: "ready",
+							createdAt: "2026-09-12T12:00:00.000Z",
+						},
+					],
+				}),
+			});
+		});
+
+		await page.goto("/owner/kasia-i-tomek");
+		await page.getByPlaceholder("Wpisz hasło dostępu").fill("sekret123");
+		await page.getByRole("button", { name: "Zaloguj się" }).click();
+
+		await expect(page.getByText("Sto lat i szczęścia!")).toBeVisible();
+
+		const toggleBtn = page.getByTitle("Ukryj przed gośćmi");
+		await expect(toggleBtn).toBeVisible();
+
+		await page.route("**/api/owner/**", async (route) => {
+			const method = route.request().method();
+			if (method === "PATCH") {
+				await route.fulfill({
+					status: 200,
+					contentType: "application/json",
+					body: JSON.stringify({ success: true, newStatus: "hidden" }),
+				});
+			} else {
+				await route.continue();
+			}
+		});
+
+		await toggleBtn.click();
+
+		await expect(page.getByText("Ukryte", { exact: true })).toBeVisible();
+		await expect(page.getByTitle("Pokaż w księdze")).toBeVisible();
+	});
+
+	test("UC9: powinien umożliwić trwałe usunięcie życzenia z księgi po potwierdzeniu dialogu", async ({
+		page,
+	}) => {
+		await page.route("**/api/gallery/kasia-i-tomek/media*", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({ media: [] }),
+			});
+		});
+
+		await page.route("**/api/gallery/kasia-i-tomek/wishes*", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({
+					wishes: [
+						{
+							id: "wish-del",
+							guestName: null,
+							message: "Życzenie do skasowania",
+							status: "ready",
+							createdAt: "2026-09-12T12:00:00.000Z",
+						},
+					],
+				}),
+			});
+		});
+
+		await page.goto("/owner/kasia-i-tomek");
+		await page.getByPlaceholder("Wpisz hasło dostępu").fill("sekret123");
+		await page.getByRole("button", { name: "Zaloguj się" }).click();
+		await expect(page.getByText("Życzenie do skasowania")).toBeVisible();
+
+		await page.route("**/api/owner/**", async (route) => {
+			const method = route.request().method();
+			if (method === "PATCH") {
+				await route.fulfill({
+					status: 200,
+					contentType: "application/json",
+					body: JSON.stringify({ success: true, newStatus: "deleted" }),
+				});
+			} else {
+				await route.continue();
+			}
+		});
+
+		page.once("dialog", async (dialog) => {
+			await dialog.accept();
+		});
+
+		await page.getByTitle("Usuń bezpowrotnie").click();
+		await expect(page.getByText("Życzenie do skasowania")).not.toBeVisible();
+	});
+
 	test("UC7: powinien zawierać bezpośredni link nawigacyjny do projektanta winietek A6", async ({
 		page,
 	}) => {

@@ -1,6 +1,13 @@
 "use client";
 
-import { Heart, Image as ImageIcon, Plus, Sparkles, Video } from "lucide-react";
+import {
+	Heart,
+	Image as ImageIcon,
+	MessageCircleHeart,
+	Plus,
+	Sparkles,
+	Video,
+} from "lucide-react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
@@ -9,6 +16,7 @@ import { LegalFooterLinks } from "@/components/LegalFooterLinks";
 import LightboxModal, { type MediaItemData } from "@/components/LightboxModal";
 import MediaGrid from "@/components/MediaGrid";
 import UploaderDrawer from "@/components/UploaderDrawer";
+import WishesBook, { type WishItemData } from "@/components/WishesBook";
 import { Link } from "@/i18n/routing";
 
 interface GalleryData {
@@ -32,21 +40,25 @@ export default function GuestGalleryPage() {
 
 	const [gallery, setGallery] = useState<GalleryData | null>(null);
 	const [items, setItems] = useState<MediaItemData[]>([]);
+	const [wishesList, setWishesList] = useState<WishItemData[]>([]);
+	const [activeTab, setActiveTab] = useState<"photos" | "wishes">("photos");
 	const [loading, setLoading] = useState(true);
 	const [isUploaderOpen, setIsUploaderOpen] = useState(false);
 	const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 	const [isLiveConnected, setIsLiveConnected] = useState(false);
 	const tCommon = useTranslations("Common");
 	const t = useTranslations("GuestGallery");
+	const tWishes = useTranslations("Wishes");
 
-	// Pobranie metadanych galerii i listy mediów
+	// Pobranie metadanych galerii, listy mediów i życzeń
 	const fetchData = useCallback(
 		async (silent = false) => {
 			try {
 				if (!silent) setLoading(true);
-				const [resGallery, resMedia] = await Promise.all([
+				const [resGallery, resMedia, resWishes] = await Promise.all([
 					fetch(`/api/gallery/${slug}`),
 					fetch(`/api/gallery/${slug}/media`),
+					fetch(`/api/gallery/${slug}/wishes`),
 				]);
 
 				if (resGallery.ok) {
@@ -58,10 +70,41 @@ export default function GuestGalleryPage() {
 					const medData = await resMedia.json();
 					setItems(medData.media || []);
 				}
+
+				if (resWishes.ok) {
+					const wishData = await resWishes.json();
+					setWishesList(wishData.wishes || []);
+				}
 			} catch (err) {
 				console.error("Błąd ładowania galerii:", err);
 			} finally {
 				setLoading(false);
+			}
+		},
+		[slug],
+	);
+
+	// Dodanie nowego życzenia przez gościa
+	const handleAddWish = useCallback(
+		async (guestName: string, message: string) => {
+			try {
+				const res = await fetch(`/api/gallery/${slug}/wishes`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ guestName, message }),
+				});
+				if (res.ok) {
+					const data = await res.json();
+					setWishesList((prev) => {
+						if (prev.some((w) => w.id === data.wish.id)) return prev;
+						return [data.wish, ...prev];
+					});
+					return true;
+				}
+				return false;
+			} catch (err) {
+				console.error("Błąd dodawania życzenia:", err);
+				return false;
 			}
 		},
 		[slug],
@@ -118,6 +161,18 @@ export default function GuestGalleryPage() {
 							}
 							return prev.filter((item) => item.id !== mediaId);
 						});
+					}
+				} else if (data.type === "new-wish" && data.wish) {
+					// Dodanie nowego życzenia na szczyt księgi
+					setWishesList((prev) => {
+						if (prev.some((w) => w.id === data.wish.id)) return prev;
+						return [data.wish, ...prev];
+					});
+				} else if (data.type === "wish-updated" && data.update) {
+					const { wishId, status } = data.update;
+					if (status === "hidden" || status === "deleted") {
+						// Natychmiastowe usunięcie ukrytego/skasowanego życzenia z widoku gości
+						setWishesList((prev) => prev.filter((w) => w.id !== wishId));
 					}
 				}
 			} catch (_err) {
@@ -223,33 +278,79 @@ export default function GuestGalleryPage() {
 				</div>
 			</header>
 
-			{/* Ranking najaktywniejszych gości (TOP 3) */}
-			<div className="pt-6">
-				<ContributorLeaderboard items={items} />
+			{/* Zakładki: Zdjęcia / Życzenia */}
+			<div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6">
+				<div
+					role="tablist"
+					aria-label={t("tabsAria")}
+					className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200/80 w-fit mx-auto shadow-xs"
+				>
+					<button
+						type="button"
+						role="tab"
+						aria-selected={activeTab === "photos"}
+						onClick={() => setActiveTab("photos")}
+						className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none ${
+							activeTab === "photos"
+								? "bg-slate-900 text-white"
+								: "text-slate-600 hover:bg-slate-100"
+						}`}
+					>
+						<ImageIcon className="w-4 h-4" aria-hidden="true" />
+						<span>{t("tabPhotos")}</span>
+					</button>
+					<button
+						type="button"
+						role="tab"
+						aria-selected={activeTab === "wishes"}
+						onClick={() => setActiveTab("wishes")}
+						className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none ${
+							activeTab === "wishes"
+								? "bg-slate-900 text-white"
+								: "text-slate-600 hover:bg-slate-100"
+						}`}
+					>
+						<MessageCircleHeart className="w-4 h-4" aria-hidden="true" />
+						<span>{tWishes("tabWishes", { count: wishesList.length })}</span>
+					</button>
+				</div>
 			</div>
 
-			{/* Siatka galerii */}
-			<main className="max-w-6xl mx-auto px-4 sm:px-6">
-				<MediaGrid
-					items={items}
-					onItemClick={(index) => setLightboxIndex(index)}
-				/>
+			{/* Ranking najaktywniejszych gości (TOP 3) — tylko w zakładce zdjęć */}
+			{activeTab === "photos" && (
+				<div className="pt-6">
+					<ContributorLeaderboard items={items} />
+				</div>
+			)}
+
+			{/* Siatka galerii lub księga życzeń */}
+			<main className="max-w-6xl mx-auto px-4 sm:px-6 pt-6">
+				{activeTab === "photos" ? (
+					<MediaGrid
+						items={items}
+						onItemClick={(index) => setLightboxIndex(index)}
+					/>
+				) : (
+					<WishesBook wishes={wishesList} onSubmit={handleAddWish} />
+				)}
 			</main>
 
 			{/* Pływający Przycisk Dodawania Zdjęć (FAB) */}
-			<div className="fixed bottom-6 inset-x-0 flex justify-center z-40 px-4 pointer-events-none">
-				<button
-					type="button"
-					onClick={() => setIsUploaderOpen(true)}
-					aria-haspopup="dialog"
-					aria-expanded={isUploaderOpen}
-					aria-label={t("addPhotosAria")}
-					className="pointer-events-auto flex items-center gap-2.5 px-6 py-4 rounded-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white font-semibold shadow-xl shadow-amber-600/30 hover:shadow-2xl hover:scale-105 active:scale-95 transition duration-200 text-sm sm:text-base border border-amber-400/30 focus-visible:ring-4 focus-visible:ring-amber-500/50 focus-visible:outline-none"
-				>
-					<Plus className="w-5 h-5 stroke-[2.5]" aria-hidden="true" />
-					<span>{t("addPhotosBtn")}</span>
-				</button>
-			</div>
+			{activeTab === "photos" && (
+				<div className="fixed bottom-6 inset-x-0 flex justify-center z-40 px-4 pointer-events-none">
+					<button
+						type="button"
+						onClick={() => setIsUploaderOpen(true)}
+						aria-haspopup="dialog"
+						aria-expanded={isUploaderOpen}
+						aria-label={t("addPhotosAria")}
+						className="pointer-events-auto flex items-center gap-2.5 px-6 py-4 rounded-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white font-semibold shadow-xl shadow-amber-600/30 hover:shadow-2xl hover:scale-105 active:scale-95 transition duration-200 text-sm sm:text-base border border-amber-400/30 focus-visible:ring-4 focus-visible:ring-amber-500/50 focus-visible:outline-none"
+					>
+						<Plus className="w-5 h-5 stroke-[2.5]" aria-hidden="true" />
+						<span>{t("addPhotosBtn")}</span>
+					</button>
+				</div>
+			)}
 
 			{/* Drawer Uploadu */}
 			<UploaderDrawer
