@@ -232,6 +232,8 @@ describe("UploaderDrawer Component", () => {
 
 		// Sam błąd — pozycja zostaje na liście (brak pełnego wyczyszczenia)
 		expect(screen.getByText("problem.jpg")).toBeInTheDocument();
+		// Komunikat błędu jest widoczny przy pliku (wcześniej trafiał tylko do stanu)
+		expect(screen.getByText("uploadError")).toBeInTheDocument();
 	});
 
 	it("powinien wywołać click na ukrytym input[type=file] po kliknięciu strefy drop", () => {
