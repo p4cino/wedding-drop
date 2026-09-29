@@ -2,7 +2,7 @@
 
 import { Camera, Image as ImageIcon, Play, User } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { MediaItemData } from "./LightboxModal";
+import type { MediaItemData } from "@/lib/gallery-types";
 
 interface MediaGridProps {
 	items: MediaItemData[];

@@ -2,7 +2,10 @@
 	"Common": {
 		"loading": "Wird geladen...",
 		"privacyPolicy": "Datenschutzerklärung",
-		"termsOfService": "Nutzungsbedingungen"
+		"termsOfService": "Nutzungsbedingungen",
+		"loadError": "Die Galerie konnte nicht geladen werden",
+		"loadErrorDesc": "Überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
+		"retryBtn": "Erneut versuchen"
 	},
 	"Legal": {
 		"privacyTitle": "Datenschutzerklärung",

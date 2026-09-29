@@ -1,7 +1,6 @@
 "use client";
 
 import {
-	Heart,
 	Image as ImageIcon,
 	MessageCircleHeart,
 	Plus,
@@ -10,79 +9,35 @@ import {
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import ContributorLeaderboard from "@/components/ContributorLeaderboard";
+import GalleryStatusScreen from "@/components/GalleryStatusScreen";
 import { LegalFooterLinks } from "@/components/LegalFooterLinks";
-import LightboxModal, { type MediaItemData } from "@/components/LightboxModal";
+import LightboxModal from "@/components/LightboxModal";
 import MediaGrid from "@/components/MediaGrid";
 import UploaderDrawer from "@/components/UploaderDrawer";
-import WishesBook, { type WishItemData } from "@/components/WishesBook";
-import { Link } from "@/i18n/routing";
-
-interface GalleryData {
-	id: string;
-	slug: string;
-	coupleNames: string;
-	weddingDate: string;
-	isActive: boolean;
-	allowGuestDownloads: boolean;
-	allowVideos: boolean;
-	// Kolory motywu wesela (zawsze zwracane przez API, z domyślnymi wartościami
-	// generatora winietek A6, gdy galeria nie ma zapisanych ustawień) — używane
-	// do ramki zdjęcia zrobionego w photobooth przeglądarki.
-	primaryColor?: string;
-	accentColor?: string;
-}
+import WishesBook from "@/components/WishesBook";
+import { useLiveGallery } from "@/hooks/useLiveGallery";
 
 export default function GuestGalleryPage() {
 	const params = useParams();
 	const slug = params?.slug as string;
 
-	const [gallery, setGallery] = useState<GalleryData | null>(null);
-	const [items, setItems] = useState<MediaItemData[]>([]);
-	const [wishesList, setWishesList] = useState<WishItemData[]>([]);
+	const {
+		gallery,
+		items,
+		wishes,
+		status,
+		isLive,
+		refetch,
+		refetchWithBackoff,
+		addWish,
+	} = useLiveGallery(slug);
 	const [activeTab, setActiveTab] = useState<"photos" | "wishes">("photos");
-	const [loading, setLoading] = useState(true);
 	const [isUploaderOpen, setIsUploaderOpen] = useState(false);
 	const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-	const [isLiveConnected, setIsLiveConnected] = useState(false);
-	const tCommon = useTranslations("Common");
 	const t = useTranslations("GuestGallery");
 	const tWishes = useTranslations("Wishes");
-
-	// Pobranie metadanych galerii, listy mediów i życzeń
-	const fetchData = useCallback(
-		async (silent = false) => {
-			try {
-				if (!silent) setLoading(true);
-				const [resGallery, resMedia, resWishes] = await Promise.all([
-					fetch(`/api/gallery/${slug}`),
-					fetch(`/api/gallery/${slug}/media`),
-					fetch(`/api/gallery/${slug}/wishes`),
-				]);
-
-				if (resGallery.ok) {
-					const galData = await resGallery.json();
-					setGallery(galData);
-				}
-
-				if (resMedia.ok) {
-					const medData = await resMedia.json();
-					setItems(medData.media || []);
-				}
-
-				if (resWishes.ok) {
-					const wishData = await resWishes.json();
-					setWishesList(wishData.wishes || []);
-				}
-			} catch (err) {
-				console.error("Błąd ładowania galerii:", err);
-			} finally {
-				setLoading(false);
-			}
-		},
-		[slug],
-	);
 
 	// Dodanie nowego życzenia przez gościa
 	const handleAddWish = useCallback(
@@ -93,132 +48,21 @@ export default function GuestGalleryPage() {
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({ guestName, message }),
 				});
-				if (res.ok) {
-					const data = await res.json();
-					setWishesList((prev) => {
-						if (prev.some((w) => w.id === data.wish.id)) return prev;
-						return [data.wish, ...prev];
-					});
-					return true;
-				}
-				return false;
+				if (!res.ok) return false;
+				addWish((await res.json()).wish);
+				return true;
 			} catch (err) {
 				console.error("Błąd dodawania życzenia:", err);
 				return false;
 			}
 		},
-		[slug],
+		[slug, addWish],
 	);
 
-	useEffect(() => {
-		fetchData();
-	}, [fetchData]);
-
-	// Połączenie z kanałem Live SSE
-	useEffect(() => {
-		if (!slug) return;
-		const eventSource = new EventSource(`/api/gallery/${slug}/live`);
-
-		eventSource.onopen = () => {
-			setIsLiveConnected(true);
-		};
-
-		eventSource.onmessage = (e) => {
-			try {
-				const data = JSON.parse(e.data);
-				if (data.type === "new-media" && data.media) {
-					// Dodanie nowego zdjęcia/wideo na szczyt galerii
-					setItems((prev) => {
-						// Zapobiegamy duplikatom
-						if (prev.some((item) => item.id === data.media.id)) return prev;
-						return [data.media, ...prev];
-					});
-
-					// Korekta indeksu w otwartym lightboxie, by zdjęcie nie przeskoczyło
-					setLightboxIndex((curr) => (curr !== null ? curr + 1 : null));
-				} else if (data.type === "media-updated" && data.update) {
-					const { mediaId, status } = data.update;
-					if (status === "hidden" || status === "deleted") {
-						// Natychmiastowe usunięcie ukrytego/skasowanego zdjęcia z ekranów gości
-						// wraz z bezpieczną korektą indeksu otwartego lightboxa
-						setItems((prev) => {
-							const deletedIndex = prev.findIndex(
-								(item) => item.id === mediaId,
-							);
-							if (deletedIndex !== -1) {
-								setLightboxIndex((curr) => {
-									if (curr === null) return null;
-									if (curr === deletedIndex) {
-										const newLength = prev.length - 1;
-										if (newLength === 0) return null;
-										return curr >= newLength ? newLength - 1 : curr;
-									}
-									if (deletedIndex < curr) {
-										return curr - 1;
-									}
-									return curr;
-								});
-							}
-							return prev.filter((item) => item.id !== mediaId);
-						});
-					}
-				} else if (data.type === "new-wish" && data.wish) {
-					// Dodanie nowego życzenia na szczyt księgi
-					setWishesList((prev) => {
-						if (prev.some((w) => w.id === data.wish.id)) return prev;
-						return [data.wish, ...prev];
-					});
-				} else if (data.type === "wish-updated" && data.update) {
-					const { wishId, status } = data.update;
-					if (status === "hidden" || status === "deleted") {
-						// Natychmiastowe usunięcie ukrytego/skasowanego życzenia z widoku gości
-						setWishesList((prev) => prev.filter((w) => w.id !== wishId));
-					}
-				}
-			} catch (_err) {
-				// Ping lub cichy błąd
-			}
-		};
-
-		eventSource.onerror = () => {
-			setIsLiveConnected(false);
-		};
-
-		return () => {
-			eventSource.close();
-		};
-	}, [slug]);
-
-	if (loading && !gallery) {
-		return (
-			<div className="min-h-screen flex items-center justify-center bg-[#FAF8F5]">
-				<div className="text-center space-y-3">
-					<Heart className="w-10 h-10 text-amber-500 animate-pulse mx-auto" />
-					<p className="font-serif-luxury text-lg text-slate-700">
-						{tCommon("loading")}
-					</p>
-				</div>
-			</div>
-		);
-	}
-
-	if (!gallery) {
-		return (
-			<div className="min-h-screen flex items-center justify-center bg-[#FAF8F5] p-6 text-center">
-				<div className="max-w-md bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
-					<h2 className="font-serif-luxury text-2xl font-bold text-slate-900 mb-2">
-						{t("notFoundTitle")}
-					</h2>
-					<p className="text-sm text-slate-500 mb-6">{t("notFoundDesc")}</p>
-					<Link
-						href="/"
-						className="inline-block px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-semibold hover:bg-slate-800 transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
-					>
-						{t("homeBtn")}
-					</Link>
-				</div>
-			</div>
-		);
+	if (status === "loading") return <GalleryStatusScreen variant="loading" />;
+	if (status === "notFound") return <GalleryStatusScreen variant="notFound" />;
+	if (status === "error" || !gallery) {
+		return <GalleryStatusScreen variant="error" onRetry={refetch} />;
 	}
 
 	const imagesCount = items.filter((i) => i.fileType === "image").length;
@@ -250,10 +94,10 @@ export default function GuestGalleryPage() {
 							className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white shadow-xs border border-slate-200/80"
 						>
 							<span
-								className={`w-2 h-2 rounded-full ${isLiveConnected ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`}
+								className={`w-2 h-2 rounded-full ${isLive ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`}
 								aria-hidden="true"
 							/>
-							<span>{isLiveConnected ? t("live") : t("offline")}</span>
+							<span>{isLive ? t("live") : t("offline")}</span>
 						</div>
 
 						<div className="flex items-center gap-3 px-3 py-1 rounded-full bg-white shadow-xs border border-slate-200/80">
@@ -311,7 +155,7 @@ export default function GuestGalleryPage() {
 						}`}
 					>
 						<MessageCircleHeart className="w-4 h-4" aria-hidden="true" />
-						<span>{tWishes("tabWishes", { count: wishesList.length })}</span>
+						<span>{tWishes("tabWishes", { count: wishes.length })}</span>
 					</button>
 				</div>
 			</div>
@@ -331,7 +175,7 @@ export default function GuestGalleryPage() {
 						onItemClick={(index) => setLightboxIndex(index)}
 					/>
 				) : (
-					<WishesBook wishes={wishesList} onSubmit={handleAddWish} />
+					<WishesBook wishes={wishes} onSubmit={handleAddWish} />
 				)}
 			</main>
 
@@ -360,16 +204,11 @@ export default function GuestGalleryPage() {
 				isOpen={isUploaderOpen}
 				onClose={() => {
 					setIsUploaderOpen(false);
-					fetchData(true);
+					refetch();
 				}}
-				onUploadSuccess={() => {
-					// Natychmiastowe ciche pobranie oraz zaplanowane odpytywania w tle (1s, 2.5s, 5s)
-					// jako odporny fallback dla przetwarzania plików wideo (FFmpeg) i miniaturek
-					fetchData(true);
-					setTimeout(() => fetchData(true), 1000);
-					setTimeout(() => fetchData(true), 2500);
-					setTimeout(() => fetchData(true), 5000);
-				}}
+				// Natychmiastowe pobranie oraz odpytywania w tle (1s, 2.5s, 5s) jako odporny
+				// fallback dla przetwarzania plików wideo (FFmpeg) i miniaturek
+				onUploadSuccess={refetchWithBackoff}
 			/>
 
 			{/* Pełnoekranowy Lightbox */}

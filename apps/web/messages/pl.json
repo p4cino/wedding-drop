@@ -2,7 +2,10 @@
 	"Common": {
 		"loading": "Wczytywanie...",
 		"privacyPolicy": "Polityka Prywatności",
-		"termsOfService": "Warunki Korzystania"
+		"termsOfService": "Warunki Korzystania",
+		"loadError": "Nie udało się wczytać galerii",
+		"loadErrorDesc": "Sprawdź połączenie z internetem i spróbuj ponownie.",
+		"retryBtn": "Spróbuj ponownie"
 	},
 	"Legal": {
 		"privacyTitle": "Polityka Prywatności",

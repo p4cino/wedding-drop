@@ -4,17 +4,9 @@ import { ChevronLeft, ChevronRight, Download, User, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import React, { useEffect } from "react";
 
-export interface MediaItemData {
-	id: string;
-	uploaderName: string;
-	source?: "guest" | "photographer";
-	fileType: "image" | "video";
-	mimeType: string;
-	originalFileName: string;
-	thumbUrl: string;
-	rawUrl: string;
-	createdAt: string;
-}
+import type { MediaItemData } from "@/lib/gallery-types";
+
+export type { MediaItemData };
 
 interface LightboxModalProps {
 	items: MediaItemData[];

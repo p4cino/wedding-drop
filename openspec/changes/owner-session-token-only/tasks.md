@@ -8,8 +8,8 @@
 ## 2. Klient
 
 - [x] 2.1 Usuń zapis i odczyt `owner_pwd_${slug}` z `owner/[slug]/page.tsx`, dodaj sprzątanie starego klucza i odtwarzanie sesji przez `GET /session` (401 → czyszczenie tokenu i formularz logowania)
-- [x] 2.2 Uprość efekt inicjalizacji (usuń `hasInitialized` i `typeof window` w efekcie, wydziel parsowanie `?gdrive=` do małego helpera)
-- [x] 2.3 Zweryfikuj testem/e2e: po logowaniu w `sessionStorage` brak hasła, odświeżenie strony zachowuje sesję, stary klucz jest usuwany
+- [ ] 2.2 Uprość efekt inicjalizacji (usuń `hasInitialized` i `typeof window` w efekcie, wydziel parsowanie `?gdrive=` do małego helpera)
+- [ ] 2.3 Zweryfikuj testem/e2e: po logowaniu w `sessionStorage` brak hasła, odświeżenie strony zachowuje sesję, stary klucz jest usuwany
 
 ## 3. Dokumentacja i weryfikacja
 

@@ -4,13 +4,9 @@ import { Heart, Loader2, MessageCircleHeart, Send } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type React from "react";
 import { useState } from "react";
+import type { WishItemData } from "@/lib/gallery-types";
 
-export interface WishItemData {
-	id: string;
-	guestName: string | null;
-	message: string;
-	createdAt: string;
-}
+export type { WishItemData };
 
 interface WishesBookProps {
 	wishes: WishItemData[];

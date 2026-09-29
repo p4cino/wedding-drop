@@ -2,7 +2,10 @@
 	"Common": {
 		"loading": "Loading...",
 		"privacyPolicy": "Privacy Policy",
-		"termsOfService": "Terms of Service"
+		"termsOfService": "Terms of Service",
+		"loadError": "Couldn't load the gallery",
+		"loadErrorDesc": "Check your internet connection and try again.",
+		"retryBtn": "Try again"
 	},
 	"Legal": {
 		"privacyTitle": "Privacy Policy",

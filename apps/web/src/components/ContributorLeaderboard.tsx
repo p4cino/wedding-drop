@@ -3,8 +3,8 @@
 import { Trophy } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo } from "react";
+import type { MediaItemData } from "@/lib/gallery-types";
 import { computeLeaderboard } from "@/lib/leaderboard";
-import type { MediaItemData } from "./LightboxModal";
 
 const RANK_MEDALS = ["🥇", "🥈", "🥉"];
 

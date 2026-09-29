@@ -275,6 +275,12 @@ Indeks `idx_wishes_gallery_status_created` na `(gallery_id, status, created_at)`
 
 ---
 
+### 6.1. Architektura klienta: hooki i biblioteki współdzielone
+
+Logika klienta wspólna dla wielu stron jest w `apps/web/src/hooks/` i `apps/web/src/lib/`, a nie kopiowana między stronami:
+
+- **Galeria na żywo** — `useGalleryEvents` (jedyne miejsce tworzące `EventSource` na `/api/gallery/[slug]/live`, flaga `isLive`, `onReconnect`) oraz `useLiveGallery` (metadane, media i życzenia + czysty reducer `lib/live-gallery.ts`). Używane przez galerię gościa i tryb TV. Po zerwaniu i wznowieniu SSE dane są pobierane ponownie; ciche odświeżenie zakończone błędem nie zamienia działającej galerii w błąd. Stany: `loading`, `ready`, `notFound` (404), `error` (sieć/5xx) — ekran `GalleryStatusScreen`. Typy publicznego API: `lib/gallery-types.ts`.
+
 ## 7. Procedury Kopiowania Zapasowego i Przywracania (Backup)
 
 Wszystkie dane aplikacji znajdują się w dwóch dedykowanych wolumenach Dockera:

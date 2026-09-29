@@ -1,4 +1,4 @@
-import type { MediaItemData } from "@/components/LightboxModal";
+import type { MediaItemData } from "@/lib/gallery-types";
 
 export interface LeaderboardEntry {
 	/** Wyświetlana etykieta podpisu gościa (pierwszy napotkany, nieznormalizowany zapis). */
