@@ -3,48 +3,11 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import UploaderDrawer from "@/components/UploaderDrawer";
+import { tusMock } from "../../helpers/tus-mock";
 
-let shouldFailUpload = false;
-let failFileNames = new Set<string>();
-let deferUploadFinish = false;
-let pendingFinish: (() => void) | null = null;
-
-interface TusMockOptions {
-	metadata?: { originalName?: string };
-	onError: (err: Error) => void;
-	onProgress: (bytesUploaded: number, bytesTotal: number) => void;
-	onSuccess: () => void;
-}
-
-vi.mock("tus-js-client", () => {
-	class MockUpload {
-		options: TusMockOptions;
-		constructor(_file: unknown, options: TusMockOptions) {
-			this.options = options;
-		}
-		start() {
-			const name = this.options.metadata?.originalName ?? "";
-			const fail =
-				shouldFailUpload || (name.length > 0 && failFileNames.has(name));
-			const finish = () => {
-				if (fail) {
-					this.options.onError(new Error("Błąd sieci"));
-				} else {
-					this.options.onProgress(50, 100);
-					this.options.onSuccess();
-				}
-			};
-			if (deferUploadFinish) {
-				pendingFinish = finish;
-			} else {
-				finish();
-			}
-		}
-	}
-	return {
-		Upload: MockUpload,
-	};
-});
+vi.mock("tus-js-client", async () =>
+	(await import("../../helpers/tus-mock")).createTusMock(),
+);
 
 vi.mock("@/components/CameraCapture", () => ({
 	default: ({
@@ -76,10 +39,7 @@ vi.mock("@/components/CameraCapture", () => ({
 
 describe("UploaderDrawer Component", () => {
 	beforeEach(() => {
-		shouldFailUpload = false;
-		failFileNames = new Set();
-		deferUploadFinish = false;
-		pendingFinish = null;
+		tusMock.reset();
 		// Symulacja obsługi getUserMedia przez przeglądarkę — opcja "Zrób zdjęcie" widoczna
 		Object.defineProperty(navigator, "mediaDevices", {
 			configurable: true,
@@ -191,7 +151,7 @@ describe("UploaderDrawer Component", () => {
 	});
 
 	it("przy częściowym błędzie zostawia pliki z error i usuwa completed", async () => {
-		failFileNames = new Set(["fail.jpg"]);
+		tusMock.failNames = new Set(["fail.jpg"]);
 		const { container } = render(
 			<UploaderDrawer
 				gallerySlug="kasia-i-tomek"
@@ -246,7 +206,7 @@ describe("UploaderDrawer Component", () => {
 	});
 
 	it("powinien obsłużyć błąd uploadu dla pliku", async () => {
-		shouldFailUpload = true;
+		tusMock.failAll = true;
 		const { container } = render(
 			<UploaderDrawer
 				gallerySlug="kasia-i-tomek"
@@ -310,7 +270,7 @@ describe("UploaderDrawer Component", () => {
 	});
 
 	it("nie powinien zamykać szuflady po naciśnięciu Escape gdy trwa upload", async () => {
-		deferUploadFinish = true;
+		tusMock.defer = true;
 		const onClose = vi.fn();
 		const { container } = render(
 			<UploaderDrawer
@@ -338,7 +298,7 @@ describe("UploaderDrawer Component", () => {
 		fireEvent.keyDown(window, { key: "Escape" });
 		expect(onClose).not.toHaveBeenCalled();
 
-		pendingFinish?.();
+		tusMock.pendingFinish?.();
 		await waitFor(() => {
 			expect(screen.getByText("doneBtn")).toBeInTheDocument();
 		});

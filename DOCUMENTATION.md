@@ -281,6 +281,9 @@ Logika klienta wspólna dla wielu stron jest w `apps/web/src/hooks/` i `apps/web
 
 - **Galeria na żywo** — `useGalleryEvents` (jedyne miejsce tworzące `EventSource` na `/api/gallery/[slug]/live`, flaga `isLive`, `onReconnect`) oraz `useLiveGallery` (metadane, media i życzenia + czysty reducer `lib/live-gallery.ts`). Używane przez galerię gościa i tryb TV. Po zerwaniu i wznowieniu SSE dane są pobierane ponownie; ciche odświeżenie zakończone błędem nie zamienia działającej galerii w błąd. Stany: `loading`, `ready`, `notFound` (404), `error` (sieć/5xx) — ekran `GalleryStatusScreen`. Typy publicznego API: `lib/gallery-types.ts`.
 
+- **Upload plików (TUS)** — `lib/tus-upload.ts` (`uploadFileViaTus`: jedyne miejsce ze stałymi klienta TUS — chunk 5 MB, `retryDelays`, endpoint względny, ograniczanie częstości raportowania postępu), hook `useUploadQueue` (sekwencyjna kolejka; po wysyłce udane pliki znikają, nieudane zostają z komunikatem błędu; callback sukcesu tylko gdy ≥ 1 plik się powiódł) oraz komponenty `components/upload/UploadFileRow` i `FilePickerDropzone`. Współdzielone przez `UploaderDrawer` (gość) i `PhotographerImportPanel` (import fotografa — dodatkowe metadane `source: "photographer"` i `ownerToken`).
+- **Lightbox** — `useLightboxSelection` śledzi otwarty element po `id`, więc zdarzenia na żywo (nowe/ukryte zdjęcia) nie przesuwają oglądanego materiału.
+
 ## 7. Procedury Kopiowania Zapasowego i Przywracania (Backup)
 
 Wszystkie dane aplikacji znajdują się w dwóch dedykowanych wolumenach Dockera:
