@@ -16,6 +16,10 @@
 		"./schema": {
 			"types": "./src/schema.ts",
 			"default": "./src/schema.ts"
+		},
+		"./slug": {
+			"types": "./src/slug.ts",
+			"default": "./src/slug.ts"
 		}
 	},
 	"scripts": {

@@ -3,6 +3,7 @@
 import { Calendar, HardDrive, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { GalleryRow } from "@/lib/admin-types";
+import { formatMegabytes } from "@/lib/format";
 
 export function AdminStats({ galleries }: { galleries: GalleryRow[] }) {
 	const t = useTranslations("AdminPanel");
@@ -11,7 +12,7 @@ export function AdminStats({ galleries }: { galleries: GalleryRow[] }) {
 		(acc, g) => acc + Number(g.totalBytes || 0),
 		0,
 	);
-	const totalMb = (totalBytes / (1024 * 1024)).toFixed(1);
+	const totalMb = formatMegabytes(totalBytes);
 
 	const tiles = [
 		{ Icon: Users, label: t("statsWeddings"), value: galleries.length },

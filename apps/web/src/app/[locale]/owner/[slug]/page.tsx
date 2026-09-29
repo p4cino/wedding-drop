@@ -24,10 +24,9 @@ import { useGalleryEvents } from "@/hooks/useGalleryEvents";
 import { useGDriveExport } from "@/hooks/useGDriveExport";
 import { useOwnerApi } from "@/hooks/useOwnerApi";
 import { parseGDriveReturn } from "@/lib/gdrive-state";
+import { type ModerationStatus, toggledStatus } from "@/lib/moderation";
 import { ownerRequest } from "@/lib/owner-api";
 import type { OwnerPanelData, OwnerPanelGallery } from "@/lib/owner-types";
-
-type Filter = "all" | "ready" | "hidden";
 
 export default function OwnerDashboardPage() {
 	const t = useTranslations("OwnerPanel");
@@ -46,9 +45,7 @@ export default function OwnerDashboardPage() {
 	);
 	const [stats, setStats] = useState({ totalFiles: 0, totalBytes: 0 });
 	const [mediaList, setMediaList] = useState<OwnerMediaItem[]>([]);
-	const [filter, setFilter] = useState<Filter>("all");
 	const [wishesList, setWishesList] = useState<OwnerWishItem[]>([]);
-	const [wishesFilter, setWishesFilter] = useState<Filter>("all");
 	const [showExportModal, setShowExportModal] = useState(false);
 	const [toast, setToast] = useState<ToastMessage | null>(null);
 
@@ -197,8 +194,11 @@ export default function OwnerDashboardPage() {
 		},
 	});
 
-	const toggleStatus = async (mediaId: string, currentStatus: string) => {
-		const newStatus = currentStatus === "ready" ? "hidden" : "ready";
+	const toggleStatus = async (
+		mediaId: string,
+		currentStatus: ModerationStatus,
+	) => {
+		const newStatus = toggledStatus(currentStatus);
 		const res = await api(
 			"PATCH",
 			`/api/owner/${slug}/media/${mediaId}/status`,
@@ -219,8 +219,11 @@ export default function OwnerDashboardPage() {
 		setMediaList((prev) => prev.filter((m) => m.id !== mediaId));
 	};
 
-	const toggleWishStatus = async (wishId: string, currentStatus: string) => {
-		const newStatus = currentStatus === "ready" ? "hidden" : "ready";
+	const toggleWishStatus = async (
+		wishId: string,
+		currentStatus: ModerationStatus,
+	) => {
+		const newStatus = toggledStatus(currentStatus);
 		const res = await api(
 			"PATCH",
 			`/api/owner/${slug}/wishes/${wishId}/status`,
@@ -294,7 +297,6 @@ export default function OwnerDashboardPage() {
 		);
 	}
 
-	const totalMegabytes = (stats.totalBytes / (1024 * 1024)).toFixed(1);
 	const imagesCount = mediaList.filter((m) => m.fileType === "image").length;
 	const videosCount = mediaList.filter((m) => m.fileType === "video").length;
 
@@ -316,7 +318,7 @@ export default function OwnerDashboardPage() {
 				<OwnerStatsGrid
 					imagesCount={imagesCount}
 					videosCount={videosCount}
-					totalMegabytes={totalMegabytes}
+					totalBytes={stats.totalBytes}
 					onRefresh={() => loadMedia()}
 				/>
 
@@ -335,16 +337,12 @@ export default function OwnerDashboardPage() {
 
 				<MediaGridWithModeration
 					mediaList={mediaList}
-					filter={filter}
-					setFilter={setFilter}
 					onToggleStatus={toggleStatus}
 					onDeleteMedia={deleteMedia}
 				/>
 
 				<WishesModeration
 					wishesList={wishesList}
-					filter={wishesFilter}
-					setFilter={setWishesFilter}
 					onToggleStatus={toggleWishStatus}
 					onDeleteWish={deleteWish}
 				/>

@@ -1,5 +1,6 @@
 "use client";
 
+import { sanitizeSlug } from "@wedding-drop/db/slug";
 import {
 	ArrowRight,
 	Camera,
@@ -18,15 +19,18 @@ import { Link } from "@/i18n/routing";
 export default function HomePage() {
 	const t = useTranslations("LandingPage");
 	const [slugInput, setSlugInput] = useState("");
+	const [slugError, setSlugError] = useState(false);
 	const router = useRouter();
 
 	const handleSearch = (e: React.FormEvent) => {
 		e.preventDefault();
-		if (!slugInput.trim()) return;
-		const cleanSlug = slugInput
-			.trim()
-			.toLowerCase()
-			.replace(/[^a-z0-9_-]/g, "");
+		const cleanSlug = sanitizeSlug(slugInput);
+		if (!cleanSlug) {
+			// Puste pole lub same niedozwolone znaki — nie nawigujemy do `/g/`
+			setSlugError(true);
+			return;
+		}
+		setSlugError(false);
 		router.push(`/g/${cleanSlug}`);
 	};
 
@@ -80,7 +84,10 @@ export default function HomePage() {
 							aria-label={t("inputLabel")}
 							placeholder={t("inputPlaceholder")}
 							value={slugInput}
-							onChange={(e) => setSlugInput(e.target.value)}
+							onChange={(e) => {
+								setSlugInput(e.target.value);
+								setSlugError(false);
+							}}
 							className="flex-1 px-4 py-2.5 text-sm bg-transparent focus:outline-none text-slate-800"
 						/>
 						<button
@@ -91,6 +98,11 @@ export default function HomePage() {
 							<ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
 						</button>
 					</div>
+					{slugError && (
+						<p role="alert" className="mt-2 text-xs text-red-600">
+							{t("slugInvalid")}
+						</p>
+					)}
 				</form>
 
 				{/* Cechy systemu */}

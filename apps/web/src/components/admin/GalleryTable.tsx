@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import NewTabLabel from "@/components/NewTabLabel";
 import { Link } from "@/i18n/routing";
 import type { GalleryRow } from "@/lib/admin-types";
+import { formatMegabytes } from "@/lib/format";
 import { GALLERY_LINKS } from "./galleryLinks";
 
 const COLUMNS = [
@@ -59,7 +60,7 @@ export function GalleryTable({ galleries, onDelete }: GalleryTableProps) {
 								<td className="px-6 py-3.5 text-slate-600">{g.ownerEmail}</td>
 								<td className="px-6 py-3.5 font-medium">{g.totalFiles}</td>
 								<td className="px-6 py-3.5 font-medium text-slate-600">
-									{(Number(g.totalBytes || 0) / (1024 * 1024)).toFixed(1)} MB
+									{formatMegabytes(Number(g.totalBytes || 0))} MB
 								</td>
 								<td className="px-6 py-3.5 text-right space-x-2">
 									{GALLERY_LINKS.map((link) => (

@@ -3,48 +3,61 @@
 import { Film, HardDrive, Images, RefreshCw } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type React from "react";
+import { formatMegabytes } from "@/lib/format";
 
 interface OwnerStatsGridProps {
 	imagesCount: number;
 	videosCount: number;
-	totalMegabytes: string;
+	totalBytes: number;
 	onRefresh: () => void;
 }
+
+function StatTile({
+	icon,
+	label,
+	value,
+}: {
+	icon: React.ReactNode;
+	label: string;
+	value: React.ReactNode;
+}) {
+	return (
+		<div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+			<div className="flex items-center gap-2 text-slate-600 text-xs font-medium mb-1">
+				{icon}
+				<span>{label}</span>
+			</div>
+			<p className="text-2xl font-bold text-slate-900">{value}</p>
+		</div>
+	);
+}
+
+const ICON_CLASS = "w-4 h-4 text-amber-600";
 
 export const OwnerStatsGrid: React.FC<OwnerStatsGridProps> = ({
 	imagesCount,
 	videosCount,
-	totalMegabytes,
+	totalBytes,
 	onRefresh,
 }) => {
 	const t = useTranslations("OwnerPanel");
 	return (
 		<div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-			<div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-				<div className="flex items-center gap-2 text-slate-600 text-xs font-medium mb-1">
-					<Images className="w-4 h-4 text-amber-600" aria-hidden="true" />
-					<span>{t("photos")}</span>
-				</div>
-				<p className="text-2xl font-bold text-slate-900">{imagesCount}</p>
-			</div>
-
-			<div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-				<div className="flex items-center gap-2 text-slate-600 text-xs font-medium mb-1">
-					<Film className="w-4 h-4 text-amber-600" aria-hidden="true" />
-					<span>{t("videos")}</span>
-				</div>
-				<p className="text-2xl font-bold text-slate-900">{videosCount}</p>
-			</div>
-
-			<div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-				<div className="flex items-center gap-2 text-slate-600 text-xs font-medium mb-1">
-					<HardDrive className="w-4 h-4 text-amber-600" aria-hidden="true" />
-					<span>{t("storage")}</span>
-				</div>
-				<p className="text-2xl font-bold text-slate-900">
-					{t("storageUnit", { size: totalMegabytes })}
-				</p>
-			</div>
+			<StatTile
+				icon={<Images className={ICON_CLASS} aria-hidden="true" />}
+				label={t("photos")}
+				value={imagesCount}
+			/>
+			<StatTile
+				icon={<Film className={ICON_CLASS} aria-hidden="true" />}
+				label={t("videos")}
+				value={videosCount}
+			/>
+			<StatTile
+				icon={<HardDrive className={ICON_CLASS} aria-hidden="true" />}
+				label={t("storage")}
+				value={t("storageUnit", { size: formatMegabytes(totalBytes) })}
+			/>
 
 			<div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
 				<div>

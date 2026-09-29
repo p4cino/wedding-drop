@@ -294,6 +294,8 @@ Logika klienta wspólna dla wielu stron jest w `apps/web/src/hooks/` i `apps/web
 
 - **Dostępność okien modalnych** — hooki `useEscapeKey`, `useFocusTrap` (zapamiętanie i przywrócenie fokusu, pętla Tab/Shift+Tab liczona przy każdym Tab, więc działa z dynamiczną zawartością) i `useSwipe`. Stosowane w lightboxie, panelu dodawania zdjęć, modalu eksportu na Dysk Google i modalu tworzenia galerii w panelu administratora. `CameraCapture` zatrzymuje strumień kamery natychmiast po błędzie (dioda kamery nie świeci na ekranie błędu); wsparcie `getUserMedia` sprawdza jedna funkcja `isCameraSupported()`.
 
+- **Wspólne prymitywy** — moderacja zdjęć i życzeń używa `ModerationFilterBar`, `ModerationActions` i typów z `lib/moderation.ts` (`ModerationStatus`, `filterByStatus`; stan filtra jest lokalny w komponentach), rozmiar plików formatuje jedna funkcja `lib/format.ts:formatMegabytes`, puste listy to `EmptyState`, a kafelki statystyk panelu `StatTile`. Sanityzacja sluga (`^[a-z0-9_-]*$`) ma jedną definicję — `sanitizeSlug` w `packages/db/src/slug.ts` (import `@wedding-drop/db/slug` w kliencie), używaną przez stronę główną (pusty wynik nie nawiguje do `/g/`) i trasę tworzenia galerii; test tabelaryczny gwarantuje wynik identyczny z dotychczasowym wyrażeniem.
+
 ## 7. Procedury Kopiowania Zapasowego i Przywracania (Backup)
 
 Wszystkie dane aplikacji znajdują się w dwóch dedykowanych wolumenach Dockera:

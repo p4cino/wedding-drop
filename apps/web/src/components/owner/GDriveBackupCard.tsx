@@ -13,6 +13,7 @@ import {
 import { useTranslations } from "next-intl";
 import type React from "react";
 import NewTabLabel from "@/components/NewTabLabel";
+import { formatMegabytes } from "@/lib/format";
 import type { GDriveState } from "@/lib/owner-types";
 
 interface GDriveBackupCardProps {
@@ -48,12 +49,8 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 				)
 			: 0;
 
-	const processedMB = gdriveProgress?.processedBytes
-		? (gdriveProgress.processedBytes / (1024 * 1024)).toFixed(1)
-		: "0";
-	const totalProgMB = gdriveProgress?.totalBytes
-		? (gdriveProgress.totalBytes / (1024 * 1024)).toFixed(1)
-		: "0";
+	const processedMB = formatMegabytes(gdriveProgress?.processedBytes ?? 0);
+	const totalProgMB = formatMegabytes(gdriveProgress?.totalBytes ?? 0);
 	const t = useTranslations("OwnerPanel");
 
 	return (

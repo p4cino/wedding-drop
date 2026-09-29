@@ -109,7 +109,8 @@
 		"feature2Desc": "Protokół TUS gwarantuje, że zerwane połączenie Wi-Fi/LTE na sali wznowi się bez utraty danych.",
 		"feature3Title": "Pobieranie ZIP w locie",
 		"feature3Desc": "Para młoda pobiera wszystkie zdjęcia jednym kliknięciem bez czekania na kompresję i bez zapychania RAMu.",
-		"footerText": "WeddingDrop • Self-Hosted Wedding Gallery Platform • Zoptymalizowano pod Intel N100"
+		"footerText": "WeddingDrop • Self-Hosted Wedding Gallery Platform • Zoptymalizowano pod Intel N100",
+		"slugInvalid": "Podaj poprawny identyfikator galerii (małe litery, cyfry, - i _)."
 	},
 	"GuestGallery": {
 		"title": "Galeria: {names}",

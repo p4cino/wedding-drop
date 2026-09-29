@@ -1,8 +1,17 @@
 "use client";
 
-import { Camera, Eye, EyeOff, Trash2 } from "lucide-react";
+import { Camera } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type React from "react";
+import { useState } from "react";
+import {
+	countByStatus,
+	filterByStatus,
+	type ModerationFilter,
+	type ModerationStatus,
+} from "@/lib/moderation";
+import { ModerationActions } from "./ModerationActions";
+import { ModerationFilterBar } from "./ModerationFilterBar";
 
 export interface OwnerMediaItem {
 	id: string;
@@ -13,81 +22,42 @@ export interface OwnerMediaItem {
 	fileSize: number;
 	thumbUrl: string;
 	rawUrl: string;
-	status: "ready" | "hidden";
+	status: ModerationStatus;
 	createdAt: string;
 }
 
 interface MediaGridWithModerationProps {
 	mediaList: OwnerMediaItem[];
-	filter: "all" | "ready" | "hidden";
-	setFilter: (filter: "all" | "ready" | "hidden") => void;
-	onToggleStatus: (mediaId: string, currentStatus: string) => void;
+	onToggleStatus: (mediaId: string, currentStatus: ModerationStatus) => void;
 	onDeleteMedia: (mediaId: string) => void;
 }
 
 export const MediaGridWithModeration: React.FC<
 	MediaGridWithModerationProps
-> = ({ mediaList, filter, setFilter, onToggleStatus, onDeleteMedia }) => {
+> = ({ mediaList, onToggleStatus, onDeleteMedia }) => {
 	const t = useTranslations("OwnerPanel");
-	const filteredMedia = mediaList.filter((m) => {
-		if (filter === "ready") return m.status === "ready";
-		if (filter === "hidden") return m.status === "hidden";
-		return true;
-	});
+	const [filter, setFilter] = useState<ModerationFilter>("all");
+	const filteredMedia = filterByStatus(mediaList, filter);
 
 	return (
 		<div className="space-y-4">
 			{/* Pasek filtrowania i moderacji */}
 			<div className="bg-white p-4 rounded-2xl border border-slate-200/80 flex flex-wrap items-center justify-between gap-4">
-				<div
-					role="group"
-					aria-label={t("filterAria")}
-					className="flex items-center gap-2 text-xs font-medium"
-				>
-					<span className="text-slate-600 mr-1 font-semibold">
-						{t("filterLabel")}
-					</span>
-					<button
-						type="button"
-						onClick={() => setFilter("all")}
-						aria-pressed={filter === "all"}
-						className={`px-3 py-1.5 rounded-xl transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none ${
-							filter === "all"
-								? "bg-slate-900 text-white"
-								: "bg-slate-100 text-slate-600 hover:bg-slate-200"
-						}`}
-					>
-						{t("filterAll", { count: mediaList.length })}
-					</button>
-					<button
-						type="button"
-						onClick={() => setFilter("ready")}
-						aria-pressed={filter === "ready"}
-						className={`px-3 py-1.5 rounded-xl transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none ${
-							filter === "ready"
-								? "bg-slate-900 text-white"
-								: "bg-slate-100 text-slate-600 hover:bg-slate-200"
-						}`}
-					>
-						{t("filterVisible", {
-							count: mediaList.filter((m) => m.status === "ready").length,
-						})}
-					</button>
-					<button
-						type="button"
-						onClick={() => setFilter("hidden")}
-						aria-pressed={filter === "hidden"}
-						className={`px-3 py-1.5 rounded-xl transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none ${
-							filter === "hidden"
-								? "bg-slate-900 text-white"
-								: "bg-slate-100 text-slate-600 hover:bg-slate-200"
-						}`}
-					>
-						{t("filterHidden", {
-							count: mediaList.filter((m) => m.status === "hidden").length,
-						})}
-					</button>
-				</div>
+				<ModerationFilterBar
+					value={filter}
+					onChange={setFilter}
+					groupLabel={t("filterAria")}
+					title={t("filterLabel")}
+					labels={{
+						all: t("filterAll", { count: mediaList.length }),
+						ready: t("filterVisible", {
+							count: countByStatus(mediaList, "ready"),
+						}),
+						hidden: t("filterHidden", {
+							count: countByStatus(mediaList, "hidden"),
+						}),
+					}}
+				/>
 
 				<p className="text-xs text-slate-500">{t("hiddenHint")}</p>
 			</div>
@@ -134,41 +104,21 @@ export const MediaGridWithModeration: React.FC<
 								{item.uploaderName}
 							</span>
 
-							<div className="flex items-center gap-1 shrink-0">
-								<button
-									type="button"
-									onClick={() => onToggleStatus(item.id, item.status)}
-									title={
-										item.status === "ready" ? t("hideAction") : t("showAction")
-									}
-									aria-label={
-										item.status === "ready"
-											? t("hideAria", { name: item.originalFileName })
-											: t("showAria", { name: item.originalFileName })
-									}
-									className={`p-1.5 rounded-lg transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none ${
-										item.status === "ready"
-											? "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-											: "text-amber-600 bg-amber-50 hover:bg-amber-100"
-									}`}
-								>
-									{item.status === "ready" ? (
-										<Eye className="w-3.5 h-3.5" aria-hidden="true" />
-									) : (
-										<EyeOff className="w-3.5 h-3.5" aria-hidden="true" />
-									)}
-								</button>
-
-								<button
-									type="button"
-									onClick={() => onDeleteMedia(item.id)}
-									title={t("deleteAction")}
-									aria-label={t("deleteAria", { name: item.originalFileName })}
-									className="p-1.5 rounded-lg text-slate-600 hover:text-red-600 hover:bg-red-50 transition focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
-								>
-									<Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
-								</button>
-							</div>
+							<ModerationActions
+								status={item.status}
+								toggleTitle={
+									item.status === "ready" ? t("hideAction") : t("showAction")
+								}
+								toggleLabel={
+									item.status === "ready"
+										? t("hideAria", { name: item.originalFileName })
+										: t("showAria", { name: item.originalFileName })
+								}
+								deleteTitle={t("deleteAction")}
+								deleteLabel={t("deleteAria", { name: item.originalFileName })}
+								onToggle={() => onToggleStatus(item.id, item.status)}
+								onDelete={() => onDeleteMedia(item.id)}
+							/>
 						</div>
 					</div>
 				))}

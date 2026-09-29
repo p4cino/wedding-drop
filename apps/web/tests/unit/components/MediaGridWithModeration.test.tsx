@@ -33,58 +33,33 @@ const sampleMedia: OwnerMediaItem[] = [
 ];
 
 describe("MediaGridWithModeration Component", () => {
-	it("powinien renderować listę multimediów i obsłużyć filtrowanie", () => {
-		const setFilterMock = vi.fn();
-		const onToggleStatusMock = vi.fn();
-		const onDeleteMediaMock = vi.fn();
-
-		const { rerender } = render(
+	it("domyślnie pokazuje wszystkie elementy, a filtry (lokalny stan) zawężają listę", () => {
+		render(
 			<MediaGridWithModeration
 				mediaList={sampleMedia}
-				filter="all"
-				setFilter={setFilterMock}
-				onToggleStatus={onToggleStatusMock}
-				onDeleteMedia={onDeleteMediaMock}
+				onToggleStatus={vi.fn()}
+				onDeleteMedia={vi.fn()}
 			/>,
 		);
 
-		expect(screen.getByText("filterAll")).toBeInTheDocument();
-		expect(screen.getByText("filterVisible")).toBeInTheDocument();
-		expect(screen.getByText("filterHidden")).toBeInTheDocument();
-
-		// Kliknięcie filtrów
-		fireEvent.click(screen.getByText("filterAll"));
-		expect(setFilterMock).toHaveBeenCalledWith("all");
+		// Wszystkie: widoczny i ukryty element
+		expect(screen.getByText("hiddenOverlay")).toBeInTheDocument();
+		expect(screen.getAllByRole("img")).toHaveLength(2);
 
 		fireEvent.click(screen.getByText("filterVisible"));
-		expect(setFilterMock).toHaveBeenCalledWith("ready");
+		expect(screen.queryByText("hiddenOverlay")).not.toBeInTheDocument();
+		expect(screen.getAllByRole("img")).toHaveLength(1);
+		expect(screen.getByText("filterVisible")).toHaveAttribute(
+			"aria-pressed",
+			"true",
+		);
 
 		fireEvent.click(screen.getByText("filterHidden"));
-		expect(setFilterMock).toHaveBeenCalledWith("hidden");
-
-		// Rerender z filtrem "ready"
-		rerender(
-			<MediaGridWithModeration
-				mediaList={sampleMedia}
-				filter="ready"
-				setFilter={setFilterMock}
-				onToggleStatus={onToggleStatusMock}
-				onDeleteMedia={onDeleteMediaMock}
-			/>,
-		);
-		expect(screen.queryByText("hiddenOverlay")).not.toBeInTheDocument();
-
-		// Rerender z filtrem "hidden"
-		rerender(
-			<MediaGridWithModeration
-				mediaList={sampleMedia}
-				filter="hidden"
-				setFilter={setFilterMock}
-				onToggleStatus={onToggleStatusMock}
-				onDeleteMedia={onDeleteMediaMock}
-			/>,
-		);
 		expect(screen.getByText("hiddenOverlay")).toBeInTheDocument();
+		expect(screen.getAllByRole("img")).toHaveLength(1);
+
+		fireEvent.click(screen.getByText("filterAll"));
+		expect(screen.getAllByRole("img")).toHaveLength(2);
 	});
 
 	it("powinien wywołać akcję ukrycia/pokazania zdjęcia oraz usunięcia", () => {
@@ -94,8 +69,6 @@ describe("MediaGridWithModeration Component", () => {
 		render(
 			<MediaGridWithModeration
 				mediaList={sampleMedia}
-				filter="all"
-				setFilter={vi.fn()}
 				onToggleStatus={onToggleStatusMock}
 				onDeleteMedia={onDeleteMediaMock}
 			/>,
@@ -137,8 +110,6 @@ describe("MediaGridWithModeration Component", () => {
 		render(
 			<MediaGridWithModeration
 				mediaList={mediaWithPhotographer}
-				filter="all"
-				setFilter={vi.fn()}
 				onToggleStatus={vi.fn()}
 				onDeleteMedia={vi.fn()}
 			/>,

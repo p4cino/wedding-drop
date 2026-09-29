@@ -7,6 +7,7 @@ import {
 	db,
 	galleries,
 	mediaItems,
+	sanitizeSlug,
 } from "@wedding-drop/db";
 import { desc, eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
@@ -99,10 +100,7 @@ export async function POST(req: NextRequest) {
 		} = parseResult.data;
 
 		// Bezpieczne generowanie i sanityzacja sluga
-		let slug = customSlug
-			?.trim()
-			?.toLowerCase()
-			?.replace(/[^a-z0-9_-]/g, "");
+		let slug = customSlug === undefined ? undefined : sanitizeSlug(customSlug);
 		if (!slug) {
 			const normalized = coupleNames
 				.toLowerCase()

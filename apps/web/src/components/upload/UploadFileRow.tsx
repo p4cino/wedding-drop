@@ -9,6 +9,7 @@ import {
 	X,
 } from "lucide-react";
 import type { UploadItem } from "@/hooks/useUploadQueue";
+import { formatMegabytes } from "@/lib/format";
 
 interface UploadFileRowProps {
 	item: UploadItem;
@@ -50,7 +51,7 @@ export default function UploadFileRow({
 						{item.file.name}
 					</p>
 					<span className="text-slate-400 shrink-0 ml-2">
-						{(item.file.size / (1024 * 1024)).toFixed(1)} MB
+						{formatMegabytes(item.file.size)} MB
 					</span>
 				</div>
 

@@ -109,7 +109,8 @@
 		"feature2Desc": "Das TUS-Protokoll stellt sicher, dass eine unterbrochene WLAN/LTE-Verbindung am Veranstaltungsort ohne Datenverlust wieder aufgenommen wird.",
 		"feature3Title": "On-the-fly ZIP-Download",
 		"feature3Desc": "Das Brautpaar lädt alle Fotos mit einem Klick herunter, ohne auf Komprimierung zu warten und ohne den Arbeitsspeicher zu verstopfen.",
-		"footerText": "WeddingDrop • Self-Hosted Wedding Gallery Platform • Optimiert für Intel N100"
+		"footerText": "WeddingDrop • Self-Hosted Wedding Gallery Platform • Optimiert für Intel N100",
+		"slugInvalid": "Geben Sie eine gültige Galerie-ID ein (Kleinbuchstaben, Ziffern, - und _)."
 	},
 	"GuestGallery": {
 		"title": "Galerie: {names}",
