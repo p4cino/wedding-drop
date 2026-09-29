@@ -81,7 +81,16 @@
 		"formEmail": "E-mail Pary Młodej *",
 		"formPassword": "Hasło dostępu dla Pary Młodej *",
 		"formPasswordPlaceholder": "Hasło do moderacji i pobierania ZIP",
-		"formSubmit": "Utwórz wesele"
+		"formSubmit": "Utwórz wesele",
+		"sessionExpired": "Sesja wygasła. Zaloguj się ponownie.",
+		"createError": "Nie udało się utworzyć galerii",
+		"deleteError": "Nie udało się usunąć galerii",
+		"loadError": "Nie udało się wczytać listy galerii",
+		"connectionError": "Błąd połączenia",
+		"invalidForm": "Nieprawidłowe dane formularza",
+		"closeModal": "Zamknij okno tworzenia wesela",
+		"ownerPanelLink": "Panel",
+		"tableAria": "Aktywne Galerie Weselne"
 	},
 	"LandingPage": {
 		"adminPanel": "Panel Administratora",

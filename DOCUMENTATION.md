@@ -286,6 +286,8 @@ Logika klienta wspólna dla wielu stron jest w `apps/web/src/hooks/` i `apps/web
 
 - **Panel Pary Młodej** — `lib/owner-api.ts` (`ownerRequest`: jedyne miejsce dokładające nagłówek `x-owner-token`; nie rzuca wyjątków, błąd sieci to `status: 0`) i hook `useOwnerApi`; `useGDriveExport` trzyma cały stan Google Drive jako jeden obiekt `GDriveState` aktualizowany atomowo z trzech źródeł (logowanie/sesja, SSE `gdrive-progress`, polling co 3 s w trakcie eksportu; mapowania w `lib/gdrive-state.ts`). Strona składa widok z `OwnerLoginForm`, `OwnerHeader`, `Toast`; nieudane operacje pokazują komunikat błędu zamiast być połykane.
 
+- **Panel administratora** — `lib/api-request.ts` (`authedRequest`, wspólna nierzucająca warstwa `fetch` dla paneli) i `useAdminApi` (nagłówek `x-admin-token`; odpowiedź 401 wraca do logowania z komunikatem „sesja wygasła" zamiast pustej tabeli). Strona składa widok z `components/admin/*` (`AdminLoginForm`, `AdminStats`, `GalleryTable`, `CreateGalleryModal` z formularzem na `useReducer`); trzy linki do galerii (gość, wydruk karty, panel pary) pochodzą z jednej tablicy `GALLERY_LINKS`. Błędy tworzenia/usuwania są pokazywane inline (bez `alert()`).
+
 ## 7. Procedury Kopiowania Zapasowego i Przywracania (Backup)
 
 Wszystkie dane aplikacji znajdują się w dwóch dedykowanych wolumenach Dockera:

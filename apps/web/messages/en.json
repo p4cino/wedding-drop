@@ -63,7 +63,7 @@
 		"actionPrint": "Print card",
 		"actionOwner": "Couple's panel",
 		"actionDelete": "Delete gallery",
-		"deleteConfirm": "Are you sure you want to permanently delete the gallery \"{slug}\" along with all its photos?",
+		"deleteConfirm": "Are you sure you want to permanently delete the gallery \"{slug}\" with all its photos?",
 		"modalTitle": "New Wedding Gallery",
 		"modalDesc": "Fill in the basic data. The QR code and printable card will be generated automatically.",
 		"modalSuccess": "Gallery successfully created!",
@@ -81,7 +81,16 @@
 		"formEmail": "Couple's Email *",
 		"formPassword": "Couple's Access Password *",
 		"formPasswordPlaceholder": "Password for moderation and ZIP download",
-		"formSubmit": "Create wedding"
+		"formSubmit": "Create wedding",
+		"sessionExpired": "Your session has expired. Please sign in again.",
+		"createError": "Failed to create the gallery",
+		"deleteError": "Failed to delete the gallery",
+		"loadError": "Failed to load the list of galleries",
+		"connectionError": "Connection error",
+		"invalidForm": "Invalid form data",
+		"closeModal": "Close the create wedding window",
+		"ownerPanelLink": "Panel",
+		"tableAria": "Active wedding galleries"
 	},
 	"LandingPage": {
 		"adminPanel": "Admin Panel",

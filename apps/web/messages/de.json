@@ -63,7 +63,7 @@
 		"actionPrint": "Karte drucken",
 		"actionOwner": "Panel des Brautpaars",
 		"actionDelete": "Galerie löschen",
-		"deleteConfirm": "Sind Sie sicher, dass Sie die Galerie \"{slug}\" zusammen mit allen Fotos dauerhaft löschen möchten?",
+		"deleteConfirm": "Möchten Sie die Galerie \"{slug}\" mit allen Fotos wirklich endgültig löschen?",
 		"modalTitle": "Neue Hochzeitsgalerie",
 		"modalDesc": "Füllen Sie die Grunddaten aus. Der QR-Code und die druckbare Karte werden automatisch generiert.",
 		"modalSuccess": "Galerie erfolgreich erstellt!",
@@ -81,7 +81,16 @@
 		"formEmail": "E-Mail des Brautpaars *",
 		"formPassword": "Zugangspasswort des Brautpaars *",
 		"formPasswordPlaceholder": "Passwort für Moderation und ZIP-Download",
-		"formSubmit": "Hochzeit erstellen"
+		"formSubmit": "Hochzeit erstellen",
+		"sessionExpired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+		"createError": "Die Galerie konnte nicht erstellt werden",
+		"deleteError": "Die Galerie konnte nicht gelöscht werden",
+		"loadError": "Die Liste der Galerien konnte nicht geladen werden",
+		"connectionError": "Verbindungsfehler",
+		"invalidForm": "Ungültige Formulardaten",
+		"closeModal": "Fenster zum Erstellen der Hochzeit schließen",
+		"ownerPanelLink": "Panel",
+		"tableAria": "Aktive Hochzeitsgalerien"
 	},
 	"LandingPage": {
 		"adminPanel": "Admin-Panel",
