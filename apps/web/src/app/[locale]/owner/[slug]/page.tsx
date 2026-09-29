@@ -31,6 +31,7 @@ import {
 	WishesModeration,
 } from "@/components/owner/WishesModeration";
 import { Link } from "@/i18n/routing";
+import type { OwnerPanelData, OwnerPanelGallery } from "@/lib/owner-types";
 
 export default function OwnerDashboardPage() {
 	const t = useTranslations("OwnerPanel");
@@ -44,10 +45,9 @@ export default function OwnerDashboardPage() {
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
 
-	const [galleryInfo, setGalleryInfo] = useState<{
-		coupleNames?: string;
-		[key: string]: unknown;
-	} | null>(null);
+	const [galleryInfo, setGalleryInfo] = useState<OwnerPanelGallery | null>(
+		null,
+	);
 	const [stats, setStats] = useState<{
 		totalFiles: number;
 		totalBytes: number;
@@ -122,6 +122,25 @@ export default function OwnerDashboardPage() {
 		[ownerToken, slug],
 	);
 
+	// Wspólne wypełnienie stanu panelu danymi z logowania lub odtworzenia sesji
+	const applyPanelData = useCallback(
+		(data: OwnerPanelData, token: string) => {
+			setIsAuthenticated(true);
+			setGalleryInfo(data.gallery);
+			setStats(data.stats);
+			setIsGDriveConfigured(data.isGDriveConfigured ?? true);
+			setHasGDrive(Boolean(data.gallery?.hasGDrive));
+			setGDriveEmail(data.gallery?.gdriveAccountEmail || null);
+			setGDriveStatus(data.gallery?.gdriveExportStatus || "idle");
+			setGDriveProgress(data.gallery?.gdriveExportProgress || null);
+			setGDriveFolderId(data.gallery?.gdriveRootFolderId || null);
+			setGDriveExportedAt(data.gallery?.gdriveExportedAt || null);
+			loadMedia(token);
+			loadWishes(token);
+		},
+		[loadMedia, loadWishes],
+	);
+
 	const doLogin = useCallback(
 		async (pwd: string) => {
 			setError("");
@@ -144,36 +163,43 @@ export default function OwnerDashboardPage() {
 				const data = await res.json();
 				if (!res.ok) {
 					setError(data.error || t("invalidPwd"));
-					sessionStorage.removeItem(`owner_pwd_${slug}`);
-					sessionStorage.removeItem(`owner_token_${slug}`);
 					return;
 				}
 
-				if (data.ownerToken) {
-					setOwnerToken(data.ownerToken);
-					sessionStorage.setItem(`owner_token_${slug}`, data.ownerToken);
-				}
-				sessionStorage.setItem(`owner_pwd_${slug}`, pwd);
-				setIsAuthenticated(true);
-				setGalleryInfo(data.gallery);
-				setStats(data.stats);
-				setIsGDriveConfigured(data.isGDriveConfigured ?? true);
-				setHasGDrive(Boolean(data.gallery?.hasGDrive));
-				setGDriveEmail(data.gallery?.gdriveAccountEmail || null);
-				setGDriveStatus(data.gallery?.gdriveExportStatus || "idle");
-				setGDriveProgress(data.gallery?.gdriveExportProgress || null);
-				setGDriveFolderId(data.gallery?.gdriveRootFolderId || null);
-				setGDriveExportedAt(data.gallery?.gdriveExportedAt || null);
-
-				loadMedia(data.ownerToken);
-				loadWishes(data.ownerToken);
+				setOwnerToken(data.ownerToken);
+				sessionStorage.setItem(`owner_token_${slug}`, data.ownerToken);
+				applyPanelData(data, data.ownerToken);
 			} catch (_err) {
 				setError(t("connError"));
 			} finally {
 				setLoading(false);
 			}
 		},
-		[slug, loadMedia, loadWishes, t],
+		[slug, applyPanelData, t],
+	);
+
+	// Odtworzenie sesji z zapisanego tokenu (bez hasła); 401 => powrót do logowania
+	const restoreSession = useCallback(
+		async (token: string) => {
+			setLoading(true);
+			try {
+				const res = await fetch(`/api/owner/${slug}/session`, {
+					headers: { "x-owner-token": token },
+				});
+				if (!res.ok) {
+					sessionStorage.removeItem(`owner_token_${slug}`);
+					setOwnerToken("");
+					return;
+				}
+				setOwnerToken(token);
+				applyPanelData(await res.json(), token);
+			} catch (_err) {
+				setError(t("connError"));
+			} finally {
+				setLoading(false);
+			}
+		},
+		[slug, applyPanelData, t],
 	);
 
 	const handleLogin = async (e: React.FormEvent) => {
@@ -214,17 +240,15 @@ export default function OwnerDashboardPage() {
 				);
 			}
 
+			// Sprzątanie po poprzedniej wersji, która zapisywała hasło w sessionStorage
+			sessionStorage.removeItem(`owner_pwd_${slug}`);
+
 			const savedToken = sessionStorage.getItem(`owner_token_${slug}`);
-			const savedPwd = sessionStorage.getItem(`owner_pwd_${slug}`);
 			if (savedToken) {
-				setOwnerToken(savedToken);
-			}
-			if (savedPwd) {
-				setPassword(savedPwd);
-				doLogin(savedPwd);
+				restoreSession(savedToken);
 			}
 		}
-	}, [slug, doLogin, t]);
+	}, [slug, restoreSession, t]);
 
 	// Nasłuch zdarzeń SSE na żywo (nowe pliki oraz postęp Google Drive)
 	useEffect(() => {

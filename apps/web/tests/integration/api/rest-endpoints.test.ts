@@ -15,6 +15,7 @@ import {
 } from "@/app/api/owner/[slug]/gdrive/route";
 import { DELETE as ownerMediaDelete } from "@/app/api/owner/[slug]/media/[id]/route";
 import { PATCH as ownerMediaStatusPatch } from "@/app/api/owner/[slug]/media/[id]/status/route";
+import { GET as ownerSessionGet } from "@/app/api/owner/[slug]/session/route";
 import { generateAdminToken, generateOwnerToken } from "@/lib/auth";
 
 vi.mock("@node-rs/bcrypt", () => ({
@@ -432,6 +433,99 @@ describe("REST API Endpoints", () => {
 				body: JSON.stringify({ password: "owner123" }),
 			});
 			const res = await ownerAuthPost(req, {
+				params: Promise.resolve({ slug }),
+			});
+			expect(res.status).toBe(500);
+		});
+
+		it("GET /api/owner/[slug]/session - ważny token odtwarza dane panelu bez nowego tokenu", async () => {
+			const req = new NextRequest(
+				`http://localhost/api/owner/${slug}/session`,
+				{
+					headers: { "x-owner-token": ownerToken },
+				},
+			);
+			const res = await ownerSessionGet(req, {
+				params: Promise.resolve({ slug }),
+			});
+			expect(res.status).toBe(200);
+			const data = await res.json();
+			expect(data.success).toBe(true);
+			expect(data.ownerToken).toBeUndefined();
+			expect(data.gallery.slug).toBe(slug);
+			expect(data.gallery.hasGDrive).toBe(true);
+			expect(data.stats).toBeDefined();
+		});
+
+		it("GET /api/owner/[slug]/session - zwraca te same klucze co logowanie (poza tokenem)", async () => {
+			const loginRes = await ownerAuthPost(
+				new NextRequest(`http://localhost/api/owner/${slug}/auth`, {
+					method: "POST",
+					body: JSON.stringify({ password: "owner123" }),
+				}),
+				{ params: Promise.resolve({ slug }) },
+			);
+			const login = await loginRes.json();
+			const sessionRes = await ownerSessionGet(
+				new NextRequest(`http://localhost/api/owner/${slug}/session`, {
+					headers: { "x-owner-token": ownerToken },
+				}),
+				{ params: Promise.resolve({ slug }) },
+			);
+			const session = await sessionRes.json();
+			const { ownerToken: _omitted, ...loginWithoutToken } = login;
+			expect(Object.keys(session).sort()).toEqual(
+				Object.keys(loginWithoutToken).sort(),
+			);
+			expect(Object.keys(session.gallery).sort()).toEqual(
+				Object.keys(login.gallery).sort(),
+			);
+		});
+
+		it("GET /api/owner/[slug]/session - brak tokenu zwraca 401", async () => {
+			const req = new NextRequest(`http://localhost/api/owner/${slug}/session`);
+			const res = await ownerSessionGet(req, {
+				params: Promise.resolve({ slug }),
+			});
+			expect(res.status).toBe(401);
+		});
+
+		it("GET /api/owner/[slug]/session - token innej galerii zwraca 401", async () => {
+			const req = new NextRequest(
+				`http://localhost/api/owner/${slug}/session`,
+				{
+					headers: { "x-owner-token": generateOwnerToken("inna-galeria") },
+				},
+			);
+			const res = await ownerSessionGet(req, {
+				params: Promise.resolve({ slug }),
+			});
+			expect(res.status).toBe(401);
+		});
+
+		it("GET /api/owner/[slug]/session - nieistniejąca galeria zwraca 404", async () => {
+			mockGalleryList = [];
+			const req = new NextRequest(
+				`http://localhost/api/owner/nieznana/session`,
+				{
+					headers: { "x-owner-token": generateOwnerToken("nieznana") },
+				},
+			);
+			const res = await ownerSessionGet(req, {
+				params: Promise.resolve({ slug: "nieznana" }),
+			});
+			expect(res.status).toBe(404);
+		});
+
+		it("GET /api/owner/[slug]/session - błąd serwera zwraca 500", async () => {
+			shouldThrowDb = true;
+			const req = new NextRequest(
+				`http://localhost/api/owner/${slug}/session`,
+				{
+					headers: { "x-owner-token": ownerToken },
+				},
+			);
+			const res = await ownerSessionGet(req, {
 				params: Promise.resolve({ slug }),
 			});
 			expect(res.status).toBe(500);

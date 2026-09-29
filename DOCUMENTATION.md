@@ -228,6 +228,7 @@ Indeks `idx_wishes_gallery_status_created` na `(gallery_id, status, created_at)`
 
 ### Panel Pary Młodej (RESTful API)
 - `POST /api/owner/:slug/auth` – Logowanie hasłem właściciela, wydanie podpisanego tokenu HMAC-SHA256, zwrócenie statystyk galerii, stanu Google Drive i konfiguracji winietki.
+- `GET /api/owner/:slug/session` – Odtworzenie sesji panelu tokenem właściciela (nagłówek `x-owner-token`) bez ponownego podawania hasła; zwraca ten sam ładunek co logowanie, ale bez nowego tokenu. Przeglądarka przechowuje w `sessionStorage` wyłącznie token — hasło nigdy nie jest zapisywane.
 - Import materiałów fotografa/kamerzysty (`PhotographerImportPanel.tsx`) nie ma osobnego endpointu REST — korzysta z tego samego `ANY /api/upload/tus/*` co upload gościa, przekazując dodatkowo `ownerToken` z logowania właściciela oraz `source: "photographer"` w metadanych TUS (patrz sekcja 3.1 i 5 wyżej).
 - `PATCH /api/owner/:slug/media/:id/status` – Zmiana widoczności zdjęcia (`ready` <-> `hidden`) autoryzowana tokenem HMAC, wraz z natychmiastową emisją SSE `media-updated`.
 - `DELETE /api/owner/:slug/media/:id` – Fizyczne usunięcie pliku źródłowego i miniatury z dysku oraz bazy danych z powiadomieniem SSE.
