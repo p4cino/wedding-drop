@@ -224,6 +224,7 @@ Indeks `idx_wishes_gallery_status_created` na `(gallery_id, status, created_at)`
 - `GET /api/gallery/:slug/wishes` – Lista życzeń, dokładnie ten sam wzorzec autoryzacji co `GET /api/gallery/:slug/media` (`includeHidden`, `ownerToken`/`password`/`adminToken`):
   - Bez poświadczeń zwraca wyłącznie życzenia o statusie `ready`.
   - Z poświadczeniami właściciela/administratora zwraca wszystkie poza `deleted`.
+- `GET /g/:slug/tv` – **Nie jest to nowy endpoint API**, lecz publiczna trasa strony (komponent kliencki `apps/web/src/app/[locale]/g/[slug]/tv/page.tsx`) — tryb TV/pokaz slajdów na telewizor lub rzutnik. Pobiera dane wyłącznie z `GET /api/gallery/:slug/media` i `GET /api/gallery/:slug/live` powyżej, bez żadnych własnych zapytań do bazy i bez wysyłania nagłówków/parametrów właściciela — dziedziczy filtrowanie `status: "ready"` 1:1 z istniejących endpointów.
 
 ### Panel Pary Młodej (RESTful API)
 - `POST /api/owner/:slug/auth` – Logowanie hasłem właściciela, wydanie podpisanego tokenu HMAC-SHA256, zwrócenie statystyk galerii, stanu Google Drive i konfiguracji winietki.
@@ -262,6 +263,14 @@ Indeks `idx_wishes_gallery_status_created` na `(gallery_id, status, created_at)`
    - Przeniesiony do strefy zarządzania dla Pary Młodej (wyeliminowano zbędne odnośniki z nagłówka gościa).
    - Dynamiczny podgląd na żywo stylów i kolorów.
    - Pobieranie PDF przekazuje aktualne parametry edytora bezpośrednio do generatora `pdf-lib`.
+4. **Tryb TV / Pokaz Slajdów na Sali (`/g/[slug]/tv`)**:
+   - Publiczna, tylko-do-odczytu, w pełni kliencka trasa (`"use client"`) — zero nowych endpointów API, zero nowych zapytań do bazy danych.
+   - Pobiera dane identycznie jak galeria gościa: `GET /api/gallery/:slug` (metadane) + `GET /api/gallery/:slug/media` (lista) i nasłuchuje `GET /api/gallery/:slug/live` (SSE `new-media` / `media-updated`) — nigdy nie wysyła `x-owner-token`/`x-owner-password`/`x-admin-token` ani parametru `includeHidden`, nawet jeśli ktoś doda je ręcznie do adresu URL strony.
+   - Rotacja slajdów oparta o `setInterval` i lokalny stan React (indeks bieżącej pozycji); nowe zdjęcie z `new-media` trafia na początek kolejki (limit 200 pozycji) i jest natychmiast wyświetlane, a `media-updated` ze statusem `hidden`/`deleted` usuwa pozycję z rotacji w czasie rzeczywistym.
+   - Materiały `fileType: "video"` renderowane jako statyczna miniatura (`thumbUrl`) — bez `<video autoplay>` i bez ryzyka nieoczekiwanego dźwięku na sali.
+   - Stały kod QR w rogu ekranu generowany po stronie klienta biblioteką `qrcode` (funkcja `buildTvGalleryQrUrl` w `apps/web/src/lib/tv-slideshow.ts`), prowadzący do `/g/{slug}`.
+   - Brak FAB-a uploadu, brak klikalnego lightboxa — widok jest z założenia tylko-do-oglądania.
+   - Link "Otwórz tryb TV" w panelu Pary Młodej (`/owner/[slug]`) otwiera trasę w nowej karcie.
 
 ---
 
@@ -338,14 +347,14 @@ Projekt objęty jest dwupoziomową piramidą testów automatycznych oraz standar
    - Weryfikacja typów TypeScript w całym monorepo: `pnpm -r check-types`.
 
 2. **Testy Jednostkowe i Integracyjne (Vitest)**:
-   - Liczba testów: **241 testów** w 24 plikach.
-   - `packages/db/tests/`: 36 testów schematu Drizzle, walidatorów Zod (w tym `wishes`/`addWishDto`) i klienta bazy.
-   - `packages/media/tests/`: 70 testów potoku przetwarzania mediów, integracji Google Drive, wznawialnego serwera TUS, event-busa SSE (w tym `new-wish`/`wish-updated`) i strumienia ZIP (w tym dołączanie `zyczenia.txt`).
-   - `apps/web/tests/`: 135 testów integracyjnych tras API (`admin`, `gallery`, `owner`, w tym księga życzeń) oraz komponentów UI (`LightboxModal`, `MediaGrid`, `UploaderDrawer`).
+   - Liczba testów: **323 testy** w 32 plikach.
+   - `packages/db/tests/`: 38 testów schematu Drizzle, walidatorów Zod (w tym `wishes`/`addWishDto`) i klienta bazy.
+   - `packages/media/tests/`: 81 testów potoku przetwarzania mediów, integracji Google Drive, wznawialnego serwera TUS, event-busa SSE (w tym `new-wish`/`wish-updated`) i strumienia ZIP (w tym dołączanie `zyczenia.txt`).
+   - `apps/web/tests/`: 204 testy integracyjnych tras API (`admin`, `gallery`, `owner`, w tym księga życzeń) oraz komponentów UI (`LightboxModal`, `MediaGrid`, `UploaderDrawer`).
    - Uruchomienie: `pnpm turbo run test` lub `docker run --rm -v "${PWD}:/app" -w /app node:24-alpine sh -c "corepack enable && pnpm -r test"`
 
 3. **Testy End-to-End (Playwright)**:
-   - Liczba testów: **36 unikalnych scenariuszy (108 testów łącznych)** w katalogu `apps/web/e2e/`.
+   - Liczba testów: **38 unikalnych scenariuszy (114 testów łącznych)** w katalogu `apps/web/e2e/`.
    - Macierz środowiskowa: **Desktop Chromium**, **Mobile Chrome (Pixel 5)**, **Mobile Safari (iPhone 13 / WebKit)**.
    - Uruchomienie: `pnpm --filter @wedding-drop/web test:e2e` lub w sieci Docker:
      `docker run --rm --network wedding-drop_wedding_net -v wedding_playwright_browsers:/ms-playwright -v "${PWD}:/app" -w /app/apps/web -e BASE_URL=http://wedding_web:3000 mcr.microsoft.com/playwright:v1.50.0-noble npx playwright test`

@@ -271,7 +271,8 @@
 		"importRemoveFileTitle": "Datei {name} aus der Importliste entfernen",
 		"importError": "Importfehler (Autorisierung oder Speicherlimit der Galerie prüfen)",
 		"importUploadingBtn": "Dateien werden importiert...",
-		"importSubmitBtn": "In Galerie importieren ({count})"
+		"importSubmitBtn": "In Galerie importieren ({count})",
+		"openTvBtn": "TV-Modus öffnen"
 	},
 	"Wishes": {
 		"tabWishes": "Wünsche ({count})",
@@ -298,5 +299,15 @@
 		"showAction": "Im Wunschbuch anzeigen",
 		"deleteAction": "Unwiderruflich löschen",
 		"deleteConfirm": "Sind Sie sicher, dass Sie diesen Wunsch unwiderruflich löschen möchten?"
+	},
+	"TvSlideshow": {
+		"notFoundTitle": "Galerie nicht gefunden",
+		"notFoundDesc": "Stellen Sie sicher, dass die URL oder der QR-Code korrekt ist.",
+		"homeBtn": "Startseite",
+		"live": "Live",
+		"offline": "Offline",
+		"waitingForFirstPhoto": "Warten auf das erste Foto...",
+		"uploaderPrefix": "Hinzugefügt von:",
+		"qrHint": "Scannen, um eigene Fotos hinzuzufügen"
 	}
 }

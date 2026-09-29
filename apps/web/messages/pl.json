@@ -271,7 +271,8 @@
 		"importRemoveFileTitle": "Usuń plik {name} z listy importu",
 		"importError": "Błąd importu (sprawdź autoryzację lub limit pojemności galerii)",
 		"importUploadingBtn": "Importowanie plików...",
-		"importSubmitBtn": "Importuj do galerii ({count})"
+		"importSubmitBtn": "Importuj do galerii ({count})",
+		"openTvBtn": "Otwórz tryb TV"
 	},
 	"Wishes": {
 		"tabWishes": "Życzenia ({count})",
@@ -298,5 +299,15 @@
 		"showAction": "Pokaż w księdze",
 		"deleteAction": "Usuń bezpowrotnie",
 		"deleteConfirm": "Czy na pewno chcesz bezpowrotnie usunąć to życzenie?"
+	},
+	"TvSlideshow": {
+		"notFoundTitle": "Galeria nie została znaleziona",
+		"notFoundDesc": "Upewnij się, że adres URL lub kod QR jest prawidłowy.",
+		"homeBtn": "Strona główna",
+		"live": "Na żywo",
+		"offline": "Offline",
+		"waitingForFirstPhoto": "Czekamy na pierwsze zdjęcie...",
+		"uploaderPrefix": "Dodał(a):",
+		"qrHint": "Zeskanuj i dodaj swoje zdjęcia"
 	}
 }

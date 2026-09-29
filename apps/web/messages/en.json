@@ -271,7 +271,8 @@
 		"importRemoveFileTitle": "Remove file {name} from the import list",
 		"importError": "Import error (check authorization or gallery storage limit)",
 		"importUploadingBtn": "Importing files...",
-		"importSubmitBtn": "Import to gallery ({count})"
+		"importSubmitBtn": "Import to gallery ({count})",
+		"openTvBtn": "Open TV Mode"
 	},
 	"Wishes": {
 		"tabWishes": "Wishes ({count})",
@@ -298,5 +299,15 @@
 		"showAction": "Show in the book",
 		"deleteAction": "Delete permanently",
 		"deleteConfirm": "Are you sure you want to permanently delete this wish?"
+	},
+	"TvSlideshow": {
+		"notFoundTitle": "Gallery not found",
+		"notFoundDesc": "Make sure the URL or QR code is correct.",
+		"homeBtn": "Home",
+		"live": "Live",
+		"offline": "Offline",
+		"waitingForFirstPhoto": "Waiting for the first photo...",
+		"uploaderPrefix": "Added by:",
+		"qrHint": "Scan to add your photos"
 	}
 }

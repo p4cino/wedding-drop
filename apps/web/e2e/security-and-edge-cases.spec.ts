@@ -182,4 +182,104 @@ test.describe("Bezpieczeństwo i Przypadki Brzegowe (Security & Edge Cases)", ()
 		);
 		expect(deleteRes.status()).toBe(200);
 	});
+
+	test("UC9: tryb TV (/g/{slug}/tv) powinien natychmiast usunąć z rotacji zdjęcie ukryte przez właściciela w czasie rzeczywistym (SSE)", async ({
+		page,
+	}) => {
+		const hiddenCandidateId = "tv-media-do-ukrycia";
+
+		await page.route("**/api/gallery/kasia-i-tomek/media", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({
+					media: [
+						{
+							id: hiddenCandidateId,
+							uploaderName: "Świadek Kuba",
+							fileType: "image",
+							mimeType: "image/jpeg",
+							originalFileName: "prywatna-chwila.jpg",
+							fileSize: 512000,
+							thumbUrl:
+								"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='navy'/></svg>",
+							rawUrl:
+								"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='600'><rect width='800' height='600' fill='navy'/></svg>",
+							status: "ready",
+							createdAt: "2026-09-12T18:00:00.000Z",
+						},
+					],
+				}),
+			});
+		});
+
+		await page.route("**/api/gallery/kasia-i-tomek/live", async (route) => {
+			// Symulujemy, że właściciel ukrywa zdjęcie chwilę po tym, jak ekran TV je wyświetlił
+			await new Promise((resolve) => setTimeout(resolve, 1200));
+			const payload = `data: ${JSON.stringify({
+				type: "media-updated",
+				update: { mediaId: hiddenCandidateId, status: "hidden" },
+			})}\n\n`;
+			await route.fulfill({
+				status: 200,
+				contentType: "text/event-stream",
+				body: payload,
+			});
+		});
+
+		await page.goto("/g/kasia-i-tomek/tv");
+
+		// Zdjęcie jest widoczne w rotacji zaraz po wczytaniu
+		await expect(page.getByText("Świadek Kuba")).toBeVisible();
+
+		// Zdarzenie SSE `media-updated` (status: hidden) natychmiast usuwa je z ekranu TV
+		await expect(page.getByText("Świadek Kuba")).not.toBeVisible({
+			timeout: 8000,
+		});
+	});
+
+	test("UC10: parametry sugerujące dostęp właściciela w adresie URL trybu TV powinny być całkowicie ignorowane przez klienta", async ({
+		page,
+	}) => {
+		const capturedRequests: { url: string; headers: Record<string, string> }[] =
+			[];
+
+		await page.route("**/api/gallery/kasia-i-tomek/media*", async (route) => {
+			capturedRequests.push({
+				url: route.request().url(),
+				headers: route.request().headers(),
+			});
+			await route.continue();
+		});
+
+		await page.route("**/api/gallery/kasia-i-tomek/live*", async (route) => {
+			capturedRequests.push({
+				url: route.request().url(),
+				headers: route.request().headers(),
+			});
+			await route.fulfill({
+				status: 200,
+				contentType: "text/event-stream",
+				body: `data: ${JSON.stringify({ type: "connected", slug: "kasia-i-tomek" })}\n\n`,
+			});
+		});
+
+		// Próba wymuszenia dostępu właściciela/admina przez parametry w adresie URL trybu TV
+		await page.goto(
+			"/g/kasia-i-tomek/tv?ownerToken=owner_falszywy&password=sekret123&adminToken=admin_falszywy&includeHidden=true",
+		);
+
+		await expect(page.locator("body")).toBeVisible();
+
+		expect(capturedRequests.length).toBeGreaterThan(0);
+		for (const req of capturedRequests) {
+			expect(req.url).not.toContain("includeHidden");
+			expect(req.url).not.toContain("ownerToken");
+			expect(req.url).not.toContain("password");
+			expect(req.url).not.toContain("adminToken");
+			expect(req.headers["x-owner-token"]).toBeUndefined();
+			expect(req.headers["x-owner-password"]).toBeUndefined();
+			expect(req.headers["x-admin-token"]).toBeUndefined();
+		}
+	});
 });
