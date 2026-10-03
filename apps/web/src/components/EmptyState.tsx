@@ -1,4 +1,5 @@
 import type React from "react";
+import { css, cx } from "styled-system/css";
 
 interface EmptyStateProps {
 	icon: React.ReactNode;
@@ -13,19 +14,62 @@ export default function EmptyState({
 	icon,
 	title,
 	hint,
-	className = "py-16",
+	className,
 }: EmptyStateProps) {
 	return (
 		<div
-			className={`text-center px-4 bg-white/60 backdrop-blur-sm rounded-3xl border border-dashed border-slate-300 ${className}`}
+			className={cx(
+				css({
+					textAlign: "center",
+					px: "4",
+					py: "16",
+					bg: "rgba(255, 255, 255, 0.6)",
+					backdropFilter: "blur(4px)",
+					borderRadius: "3xl",
+					borderWidth: "1px",
+					borderStyle: "dashed",
+					borderColor: "slate.300",
+				}),
+				className,
+			)}
 		>
-			<div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-50 flex items-center justify-center text-amber-700">
+			<div
+				className={css({
+					w: "16",
+					h: "16",
+					mx: "auto",
+					mb: "4",
+					borderRadius: "full",
+					bg: "amber.50",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					color: "wedding.gold",
+				})}
+			>
 				{icon}
 			</div>
-			<h4 className="font-serif-luxury text-xl font-bold text-slate-800">
+			<h4
+				className={css({
+					fontFamily: "serif",
+					fontSize: "xl",
+					fontWeight: "bold",
+					color: "wedding.slate",
+				})}
+			>
 				{title}
 			</h4>
-			<p className="text-sm text-slate-500 max-w-sm mx-auto mt-1.5">{hint}</p>
+			<p
+				className={css({
+					fontSize: "sm",
+					color: "slate.500",
+					maxW: "sm",
+					mx: "auto",
+					mt: "1.5",
+				})}
+			>
+				{hint}
+			</p>
 		</div>
 	);
 }

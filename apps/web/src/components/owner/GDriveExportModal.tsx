@@ -4,6 +4,8 @@ import { Cloud, Loader2, Play } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type React from "react";
 import { useRef, useState } from "react";
+import { css } from "styled-system/css";
+import { Button } from "@/components/ui/button";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
@@ -46,106 +48,288 @@ export const GDriveExportModal: React.FC<GDriveExportModalProps> = ({
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="gdrive-export-modal-title"
-			className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4"
+			className={css({
+				position: "fixed",
+				inset: "0",
+				zIndex: "50",
+				backgroundColor: "rgba(15, 23, 42, 0.4)",
+				backdropFilter: "blur(4px)",
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				p: "4",
+			})}
 		>
-			<div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-100 space-y-5 animate-in fade-in zoom-in-95">
-				<div className="flex items-center gap-3">
-					<div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
-						<Cloud className="w-5 h-5" aria-hidden="true" />
+			<div
+				className={css({
+					backgroundColor: "white",
+					borderRadius: "3xl",
+					p: { base: "6", sm: "8" },
+					maxW: "md",
+					w: "full",
+					boxShadow: "2xl",
+					borderWidth: "1px",
+					borderColor: "slate.100",
+					display: "flex",
+					flexDirection: "column",
+					gap: "5",
+				})}
+			>
+				<div
+					className={css({
+						display: "flex",
+						alignItems: "center",
+						gap: "3",
+					})}
+				>
+					<div
+						className={css({
+							w: "10",
+							h: "10",
+							borderRadius: "xl",
+							backgroundColor: "amber.100",
+							color: "amber.800",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							flexShrink: 0,
+						})}
+					>
+						<Cloud className={css({ w: "5", h: "5" })} aria-hidden="true" />
 					</div>
 					<div>
 						<h3
 							id="gdrive-export-modal-title"
-							className="text-base font-bold text-slate-900"
+							className={css({
+								fontSize: "base",
+								fontWeight: "bold",
+								color: "wedding.slate",
+							})}
 						>
 							{t("modalTitle")}
 						</h3>
-						<p className="text-xs text-slate-500">{t("modalSubtitle")}</p>
+						<p className={css({ fontSize: "xs", color: "slate.500" })}>
+							{t("modalSubtitle")}
+						</p>
 					</div>
 				</div>
 
-				<fieldset className="space-y-3 text-xs border-0 p-0 m-0">
-					<legend className="sr-only">{t("scopeAria")}</legend>
+				<fieldset
+					className={css({
+						display: "flex",
+						flexDirection: "column",
+						gap: "3",
+						fontSize: "xs",
+						borderWidth: "0",
+						p: "0",
+						m: "0",
+					})}
+				>
+					<legend
+						className={css({
+							position: "absolute",
+							width: "1px",
+							height: "1px",
+							padding: "0",
+							margin: "-1px",
+							overflow: "hidden",
+							clip: "rect(0, 0, 0, 0)",
+							whiteSpace: "nowrap",
+							borderWidth: "0",
+						})}
+					>
+						{t("scopeAria")}
+					</legend>
 
-					<label className="flex items-start gap-3 p-3.5 rounded-2xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition focus-within:ring-2 focus-within:ring-amber-500/30">
+					<label
+						className={css({
+							display: "flex",
+							alignItems: "flex-start",
+							gap: "3",
+							p: "3.5",
+							borderRadius: "2xl",
+							borderWidth: "1px",
+							borderColor: "slate.200",
+							cursor: "pointer",
+							transition: "all 0.15s ease",
+							_hover: { backgroundColor: "slate.50" },
+						})}
+					>
 						<input
 							type="radio"
 							name="export_scope"
 							checked={includeHidden}
 							onChange={() => setIncludeHidden(true)}
-							className="mt-0.5 text-amber-600 focus:ring-amber-500 focus-visible:ring-2 focus-visible:ring-amber-500"
+							className={css({ mt: "0.5" })}
 						/>
 						<div>
-							<span className="font-semibold text-slate-900 block">
+							<span
+								className={css({
+									fontWeight: "semibold",
+									color: "wedding.slate",
+									display: "block",
+								})}
+							>
 								{t("scopeAll")}
 							</span>
-							<span className="text-slate-500 block mt-0.5">
+							<span
+								className={css({
+									color: "slate.500",
+									display: "block",
+									mt: "0.5",
+								})}
+							>
 								{t("scopeAllDesc1")}
 								<strong>{t("hiddenOverlay")}</strong> {t("scopeAllDesc2")}
 							</span>
 						</div>
 					</label>
 
-					<label className="flex items-start gap-3 p-3.5 rounded-2xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition focus-within:ring-2 focus-within:ring-amber-500/30">
+					<label
+						className={css({
+							display: "flex",
+							alignItems: "flex-start",
+							gap: "3",
+							p: "3.5",
+							borderRadius: "2xl",
+							borderWidth: "1px",
+							borderColor: "slate.200",
+							cursor: "pointer",
+							transition: "all 0.15s ease",
+							_hover: { backgroundColor: "slate.50" },
+						})}
+					>
 						<input
 							type="radio"
 							name="export_scope"
 							checked={!includeHidden}
 							onChange={() => setIncludeHidden(false)}
-							className="mt-0.5 text-amber-600 focus:ring-amber-500 focus-visible:ring-2 focus-visible:ring-amber-500"
+							className={css({ mt: "0.5" })}
 						/>
 						<div>
-							<span className="font-semibold text-slate-900 block">
+							<span
+								className={css({
+									fontWeight: "semibold",
+									color: "wedding.slate",
+									display: "block",
+								})}
+							>
 								{t("scopeVisible")}
 							</span>
-							<span className="text-slate-500 block mt-0.5">
+							<span
+								className={css({
+									color: "slate.500",
+									display: "block",
+									mt: "0.5",
+								})}
+							>
 								{t("scopeVisibleDesc")}
 							</span>
 						</div>
 					</label>
 				</fieldset>
 
-				<div className="p-3 bg-slate-50 rounded-xl text-[11px] text-slate-600 space-y-1">
+				<div
+					className={css({
+						p: "3",
+						backgroundColor: "slate.50",
+						borderRadius: "xl",
+						fontSize: "11px",
+						color: "slate.600",
+						display: "flex",
+						flexDirection: "column",
+						gap: "1",
+					})}
+				>
 					<p>
 						{t("folderNote")}
 						<br />
-						<span className="font-mono font-semibold text-slate-800">
+						<span
+							className={css({
+								fontFamily: "mono",
+								fontWeight: "semibold",
+								color: "wedding.slate",
+							})}
+						>
 							WeddingDrop - {coupleNames || t("defaultCouple")}
 						</span>
 					</p>
-					<p className="text-slate-500">{t("folderNote2")}</p>
+					<p className={css({ color: "slate.500" })}>{t("folderNote2")}</p>
 				</div>
 
-				<div className="flex items-center justify-end gap-2 pt-2">
-					<button
+				<div
+					className={css({
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "flex-end",
+						gap: "2",
+						pt: "2",
+					})}
+				>
+					<Button
 						type="button"
+						variant="ghost"
 						onClick={onClose}
 						disabled={exportLoading}
-						className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:outline-none"
+						className={css({
+							px: "4",
+							py: "2.5",
+							borderRadius: "xl",
+							fontSize: "xs",
+							fontWeight: "semibold",
+							color: "slate.600",
+							_hover: { backgroundColor: "slate.100" },
+							cursor: "pointer",
+						})}
 					>
 						{t("cancelBtn")}
-					</button>
-					<button
+					</Button>
+					<Button
 						type="button"
 						onClick={handleStart}
 						disabled={exportLoading}
-						className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
+						className={css({
+							display: "inline-flex",
+							alignItems: "center",
+							gap: "2",
+							px: "5",
+							py: "2.5",
+							borderRadius: "xl",
+							fontSize: "xs",
+							fontWeight: "bold",
+							backgroundColor: "emerald.600",
+							_hover: { backgroundColor: "emerald.700" },
+							color: "white",
+							boxShadow: "sm",
+							cursor: "pointer",
+							_focusVisible: {
+								outline: "2px solid",
+								outlineColor: "emerald.500",
+							},
+						})}
 					>
 						{exportLoading ? (
 							<>
 								<Loader2
-									className="w-3.5 h-3.5 animate-spin"
+									className={css({
+										w: "3.5",
+										h: "3.5",
+										animation: "spin 1s linear infinite",
+									})}
 									aria-hidden="true"
 								/>
 								<span>{t("initBtn")}</span>
 							</>
 						) : (
 							<>
-								<Play className="w-3.5 h-3.5" aria-hidden="true" />
+								<Play
+									className={css({ w: "3.5", h: "3.5" })}
+									aria-hidden="true"
+								/>
 								<span>{t("startBtn")}</span>
 							</>
 						)}
-					</button>
+					</Button>
 				</div>
 			</div>
 		</div>

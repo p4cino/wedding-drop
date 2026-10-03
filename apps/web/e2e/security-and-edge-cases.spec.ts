@@ -271,7 +271,7 @@ test.describe("Bezpieczeństwo i Przypadki Brzegowe (Security & Edge Cases)", ()
 
 		await expect(page.locator("body")).toBeVisible();
 
-		expect(capturedRequests.length).toBeGreaterThan(0);
+		await expect.poll(() => capturedRequests.length).toBeGreaterThan(0);
 		for (const req of capturedRequests) {
 			expect(req.url).not.toContain("includeHidden");
 			expect(req.url).not.toContain("ownerToken");

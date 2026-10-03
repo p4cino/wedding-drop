@@ -4,7 +4,10 @@ import { Heart, Loader2, MessageCircleHeart, Send } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type React from "react";
 import { useState } from "react";
+import { css } from "styled-system/css";
 import EmptyState from "@/components/EmptyState";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { WishItemData } from "@/lib/gallery-types";
 
 export type { WishItemData };
@@ -43,18 +46,49 @@ export default function WishesBook({ wishes, onSubmit }: WishesBookProps) {
 	};
 
 	return (
-		<div className="max-w-2xl mx-auto space-y-6">
+		<div
+			className={css({
+				maxW: "2xl",
+				mx: "auto",
+				display: "flex",
+				flexDirection: "column",
+				gap: "6",
+			})}
+		>
 			{/* Formularz dodawania życzenia */}
 			<form
 				onSubmit={handleSubmit}
-				className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-sm space-y-4"
+				className={css({
+					bg: "white",
+					borderRadius: "3xl",
+					p: { base: "5", sm: "6" },
+					borderWidth: "1px",
+					borderColor: "slate.200",
+					boxShadow: "sm",
+					display: "flex",
+					flexDirection: "column",
+					gap: "4",
+				})}
 			>
-				<div className="flex items-center gap-2 text-slate-800">
+				<div
+					className={css({
+						display: "flex",
+						alignItems: "center",
+						gap: "2",
+						color: "wedding.slate",
+					})}
+				>
 					<MessageCircleHeart
-						className="w-5 h-5 text-amber-600"
+						className={css({ w: "5", h: "5", color: "wedding.gold" })}
 						aria-hidden="true"
 					/>
-					<h2 className="font-serif-luxury text-lg font-bold">
+					<h2
+						className={css({
+							fontFamily: "serif",
+							fontSize: "lg",
+							fontWeight: "bold",
+						})}
+					>
 						{t("formTitle")}
 					</h2>
 				</div>
@@ -63,7 +97,15 @@ export default function WishesBook({ wishes, onSubmit }: WishesBookProps) {
 					<div
 						role="alert"
 						aria-live="assertive"
-						className="p-3 text-xs bg-red-50 text-red-700 rounded-xl border border-red-200"
+						className={css({
+							p: "3",
+							fontSize: "xs",
+							bg: "red.50",
+							color: "red.700",
+							borderRadius: "xl",
+							borderWidth: "1px",
+							borderColor: "red.200",
+						})}
 					>
 						{error}
 					</div>
@@ -72,25 +114,42 @@ export default function WishesBook({ wishes, onSubmit }: WishesBookProps) {
 				<div>
 					<label
 						htmlFor="wish-guest-name"
-						className="block text-xs font-semibold text-slate-700 mb-1.5"
+						className={css({
+							display: "block",
+							fontSize: "xs",
+							fontWeight: "semibold",
+							color: "slate.700",
+							mb: "1.5",
+						})}
 					>
 						{t("nameLabel")}
 					</label>
-					<input
+					<Input
 						id="wish-guest-name"
 						type="text"
 						value={guestName}
 						onChange={(e) => setGuestName(e.target.value)}
 						maxLength={60}
 						placeholder={t("namePlaceholder")}
-						className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500"
+						className={css({
+							w: "full",
+							borderRadius: "xl",
+							borderColor: "slate.200",
+							_focus: { borderColor: "wedding.gold" },
+						})}
 					/>
 				</div>
 
 				<div>
 					<label
 						htmlFor="wish-message"
-						className="block text-xs font-semibold text-slate-700 mb-1.5"
+						className={css({
+							display: "block",
+							fontSize: "xs",
+							fontWeight: "semibold",
+							color: "slate.700",
+							mb: "1.5",
+						})}
 					>
 						{t("messageLabel")}
 					</label>
@@ -102,42 +161,115 @@ export default function WishesBook({ wishes, onSubmit }: WishesBookProps) {
 						rows={4}
 						required
 						placeholder={t("messagePlaceholder")}
-						className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500 resize-none"
+						className={css({
+							w: "full",
+							px: "4",
+							py: "2.5",
+							fontSize: "sm",
+							borderRadius: "xl",
+							borderWidth: "1px",
+							borderColor: "slate.200",
+							resize: "none",
+							outline: "none",
+							_focus: {
+								borderColor: "wedding.gold",
+								boxShadow: "0 0 0 2px rgba(202, 138, 4, 0.2)",
+							},
+						})}
 					/>
 				</div>
 
-				<button
+				<Button
 					type="submit"
 					disabled={submitting || !message.trim()}
-					className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-sm transition shadow-sm focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
+					className={css({
+						w: "full",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						gap: "2",
+						px: "6",
+						py: "3",
+						background: "linear-gradient(to right, #b45309, #d97706)",
+						_hover: {
+							background: "linear-gradient(to right, #92400e, #b45309)",
+						},
+						_disabled: {
+							opacity: 0.5,
+							cursor: "not-allowed",
+						},
+						color: "white",
+						fontWeight: "semibold",
+						borderRadius: "xl",
+						fontSize: "sm",
+						transition: "all 0.15s ease",
+						boxShadow: "sm",
+						cursor: "pointer",
+					})}
 				>
 					{submitting ? (
-						<Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+						<Loader2
+							className={css({
+								w: "4",
+								h: "4",
+								animation: "spin 1s linear infinite",
+							})}
+							aria-hidden="true"
+						/>
 					) : (
-						<Send className="w-4 h-4" aria-hidden="true" />
+						<Send className={css({ w: "4", h: "4" })} aria-hidden="true" />
 					)}
 					<span>{submitting ? t("sending") : t("submitBtn")}</span>
-				</button>
+				</Button>
 			</form>
 
 			{/* Lista życzeń */}
 			{wishes.length === 0 ? (
 				<EmptyState
-					icon={<Heart className="w-8 h-8" aria-hidden="true" />}
+					icon={
+						<Heart className={css({ w: "8", h: "8" })} aria-hidden="true" />
+					}
 					title={t("noWishes")}
 					hint={t("beFirstWish")}
 				/>
 			) : (
-				<ul className="space-y-3">
+				<ul
+					className={css({
+						display: "flex",
+						flexDirection: "column",
+						gap: "3",
+					})}
+				>
 					{wishes.map((wish) => (
 						<li
 							key={wish.id}
-							className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs"
+							className={css({
+								bg: "white",
+								borderRadius: "2xl",
+								p: "4",
+								borderWidth: "1px",
+								borderColor: "slate.200",
+								boxShadow: "xs",
+							})}
 						>
-							<p className="text-sm text-slate-800 whitespace-pre-wrap break-words">
+							<p
+								className={css({
+									fontSize: "sm",
+									color: "wedding.slate",
+									whiteSpace: "pre-wrap",
+									wordBreak: "break-words",
+								})}
+							>
 								{wish.message}
 							</p>
-							<p className="mt-2 text-xs font-semibold text-amber-700">
+							<p
+								className={css({
+									mt: "2",
+									fontSize: "xs",
+									fontWeight: "semibold",
+									color: "wedding.gold",
+								})}
+							>
 								{wish.guestName?.trim() || t("anonymousGuest")}
 							</p>
 						</li>

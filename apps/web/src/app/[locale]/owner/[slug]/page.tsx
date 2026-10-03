@@ -136,7 +136,6 @@ export default function OwnerDashboardPage() {
 
 	// Odtworzenie sesji z ciasteczka HttpOnly (bez konieczności posiadania tokenu w storage)
 	const restoreSession = useCallback(async () => {
-		setLoading(true);
 		try {
 			const res = await fetch(`/api/owner/${slug}/session`, {
 				method: "GET",
@@ -151,8 +150,6 @@ export default function OwnerDashboardPage() {
 			}
 		} catch (_err) {
 			// Błąd sieciowy przy odtwarzaniu sesji
-		} finally {
-			setLoading(false);
 		}
 	}, [slug, applyPanelData]);
 
@@ -332,7 +329,9 @@ export default function OwnerDashboardPage() {
 				onPasswordChange={setPassword}
 				onSubmit={(e: React.FormEvent) => {
 					e.preventDefault();
-					doLogin(password);
+					const formData = new FormData(e.currentTarget as HTMLFormElement);
+					const pwd = (formData.get("password") as string) || password;
+					doLogin(pwd);
 				}}
 			/>
 		);

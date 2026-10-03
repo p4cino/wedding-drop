@@ -10,6 +10,7 @@ import {
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useState } from "react";
+import { css } from "styled-system/css";
 import ContributorLeaderboard from "@/components/ContributorLeaderboard";
 import GalleryStatusScreen from "@/components/GalleryStatusScreen";
 import { LegalFooterLinks } from "@/components/LegalFooterLinks";
@@ -70,49 +71,166 @@ export default function GuestGalleryPage() {
 	const videosCount = items.filter((i) => i.fileType === "video").length;
 
 	return (
-		<div className="min-h-screen pb-28 bg-[#FAF8F5]">
+		<div
+			className={css({
+				minH: "100vh",
+				pb: "28",
+				backgroundColor: "#FAF8F5",
+			})}
+		>
 			{/* Elegancki nagłówek ślubny */}
-			<header className="relative pt-10 pb-8 px-4 text-center overflow-hidden border-b border-amber-100/70 bg-gradient-to-b from-amber-50/40 via-white/80 to-[#FAF8F5]">
-				<div className="max-w-xl mx-auto relative z-10">
-					<div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100/70 text-amber-800 text-xs font-semibold uppercase tracking-wider mb-3">
-						<Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+			<header
+				className={css({
+					position: "relative",
+					pt: "10",
+					pb: "8",
+					px: "4",
+					textAlign: "center",
+					overflow: "hidden",
+					borderBottomWidth: "1px",
+					borderBottomColor: "rgba(254, 243, 199, 0.7)",
+					background:
+						"linear-gradient(to bottom, rgba(254, 243, 199, 0.4), rgba(255, 255, 255, 0.8), #FAF8F5)",
+				})}
+			>
+				<div
+					className={css({
+						maxW: "xl",
+						mx: "auto",
+						position: "relative",
+						zIndex: "10",
+					})}
+				>
+					<div
+						className={css({
+							display: "inline-flex",
+							alignItems: "center",
+							gap: "2",
+							px: "3",
+							py: "1",
+							borderRadius: "full",
+							backgroundColor: "rgba(254, 243, 199, 0.7)",
+							color: "amber.800",
+							fontSize: "xs",
+							fontWeight: "semibold",
+							textTransform: "uppercase",
+							letterSpacing: "wider",
+							mb: "3",
+						})}
+					>
+						<Sparkles
+							className={css({ w: "3.5", h: "3.5" })}
+							aria-hidden="true"
+						/>
 						{t("badge")}
 					</div>
 
-					<h1 className="font-serif-luxury text-3xl sm:text-4xl md:text-5xl font-bold text-slate-900 tracking-tight mb-2">
+					<h1
+						className={css({
+							fontFamily: "serif",
+							fontSize: { base: "3xl", sm: "4xl", md: "5xl" },
+							fontWeight: "bold",
+							color: "wedding.slate",
+							letterSpacing: "tight",
+							mb: "2",
+						})}
+					>
 						{gallery.coupleNames}
 					</h1>
 
-					<p className="text-sm font-medium text-amber-700/80 mb-4 font-serif-luxury italic">
+					<p
+						className={css({
+							fontSize: "sm",
+							fontWeight: "medium",
+							color: "wedding.gold",
+							mb: "4",
+							fontFamily: "serif",
+							fontStyle: "italic",
+						})}
+					>
 						{gallery.weddingDate}
 					</p>
 
 					{/* Status na żywo i statystyki */}
-					<div className="flex flex-wrap items-center justify-center gap-3 text-xs text-slate-600">
+					<div
+						className={css({
+							display: "flex",
+							flexWrap: "wrap",
+							alignItems: "center",
+							justifyContent: "center",
+							gap: "3",
+							fontSize: "xs",
+							color: "slate.600",
+						})}
+					>
 						<div
 							role="status"
 							aria-live="polite"
-							className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white shadow-xs border border-slate-200/80"
+							className={css({
+								display: "flex",
+								alignItems: "center",
+								gap: "1.5",
+								px: "2.5",
+								py: "1",
+								borderRadius: "full",
+								backgroundColor: "white",
+								boxShadow: "xs",
+								borderWidth: "1px",
+								borderColor: "slate.200",
+							})}
 						>
 							<span
-								className={`w-2 h-2 rounded-full ${isLive ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`}
+								className={css({
+									w: "2",
+									h: "2",
+									borderRadius: "full",
+									backgroundColor: isLive ? "emerald.500" : "slate.400",
+									animation: isLive
+										? "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite"
+										: undefined,
+								})}
 								aria-hidden="true"
 							/>
 							<span>{isLive ? t("live") : t("offline")}</span>
 						</div>
 
-						<div className="flex items-center gap-3 px-3 py-1 rounded-full bg-white shadow-xs border border-slate-200/80">
-							<span className="flex items-center gap-1">
+						<div
+							className={css({
+								display: "flex",
+								alignItems: "center",
+								gap: "3",
+								px: "3",
+								py: "1",
+								borderRadius: "full",
+								backgroundColor: "white",
+								boxShadow: "xs",
+								borderWidth: "1px",
+								borderColor: "slate.200",
+							})}
+						>
+							<span
+								className={css({
+									display: "flex",
+									alignItems: "center",
+									gap: "1",
+								})}
+							>
 								<ImageIcon
-									className="w-3.5 h-3.5 text-slate-400"
+									className={css({ w: "3.5", h: "3.5", color: "slate.400" })}
 									aria-hidden="true"
 								/>
 								{t("photosCount", { count: imagesCount })}
 							</span>
 							{videosCount > 0 && (
-								<span className="flex items-center gap-1">
+								<span
+									className={css({
+										display: "flex",
+										alignItems: "center",
+										gap: "1",
+									})}
+								>
 									<Video
-										className="w-3.5 h-3.5 text-slate-400"
+										className={css({ w: "3.5", h: "3.5", color: "slate.400" })}
 										aria-hidden="true"
 									/>
 									{t("videosCount", { count: videosCount })}
@@ -124,24 +242,62 @@ export default function GuestGalleryPage() {
 			</header>
 
 			{/* Zakładki: Zdjęcia / Życzenia */}
-			<div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6">
+			<div
+				className={css({
+					maxW: "6xl",
+					mx: "auto",
+					px: { base: "4", sm: "6" },
+					pt: "6",
+				})}
+			>
 				<div
 					role="tablist"
 					aria-label={t("tabsAria")}
-					className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200/80 w-fit mx-auto shadow-xs"
+					className={css({
+						display: "flex",
+						alignItems: "center",
+						gap: "2",
+						backgroundColor: "white",
+						p: "1.5",
+						borderRadius: "2xl",
+						borderWidth: "1px",
+						borderColor: "slate.200",
+						w: "fit-content",
+						mx: "auto",
+						boxShadow: "xs",
+					})}
 				>
 					<button
 						type="button"
 						role="tab"
 						aria-selected={activeTab === "photos"}
 						onClick={() => setActiveTab("photos")}
-						className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none ${
-							activeTab === "photos"
-								? "bg-slate-900 text-white"
-								: "text-slate-600 hover:bg-slate-100"
-						}`}
+						className={css({
+							display: "flex",
+							alignItems: "center",
+							gap: "1.5",
+							px: "4",
+							py: "2",
+							borderRadius: "xl",
+							fontSize: "sm",
+							fontWeight: "semibold",
+							borderWidth: "0",
+							cursor: "pointer",
+							transition: "all 0.15s ease",
+							backgroundColor:
+								activeTab === "photos" ? "slate.900" : "transparent",
+							color: activeTab === "photos" ? "white" : "slate.600",
+							_hover: {
+								backgroundColor:
+									activeTab === "photos" ? "slate.900" : "slate.100",
+							},
+							_focusVisible: {
+								outline: "2px solid",
+								outlineColor: "wedding.gold",
+							},
+						})}
 					>
-						<ImageIcon className="w-4 h-4" aria-hidden="true" />
+						<ImageIcon className={css({ w: "4", h: "4" })} aria-hidden="true" />
 						<span>{t("tabPhotos")}</span>
 					</button>
 					<button
@@ -149,13 +305,35 @@ export default function GuestGalleryPage() {
 						role="tab"
 						aria-selected={activeTab === "wishes"}
 						onClick={() => setActiveTab("wishes")}
-						className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none ${
-							activeTab === "wishes"
-								? "bg-slate-900 text-white"
-								: "text-slate-600 hover:bg-slate-100"
-						}`}
+						className={css({
+							display: "flex",
+							alignItems: "center",
+							gap: "1.5",
+							px: "4",
+							py: "2",
+							borderRadius: "xl",
+							fontSize: "sm",
+							fontWeight: "semibold",
+							borderWidth: "0",
+							cursor: "pointer",
+							transition: "all 0.15s ease",
+							backgroundColor:
+								activeTab === "wishes" ? "slate.900" : "transparent",
+							color: activeTab === "wishes" ? "white" : "slate.600",
+							_hover: {
+								backgroundColor:
+									activeTab === "wishes" ? "slate.900" : "slate.100",
+							},
+							_focusVisible: {
+								outline: "2px solid",
+								outlineColor: "wedding.gold",
+							},
+						})}
 					>
-						<MessageCircleHeart className="w-4 h-4" aria-hidden="true" />
+						<MessageCircleHeart
+							className={css({ w: "4", h: "4" })}
+							aria-hidden="true"
+						/>
 						<span>{tWishes("tabWishes", { count: wishes.length })}</span>
 					</button>
 				</div>
@@ -163,13 +341,20 @@ export default function GuestGalleryPage() {
 
 			{/* Ranking najaktywniejszych gości (TOP 3) — tylko w zakładce zdjęć */}
 			{activeTab === "photos" && (
-				<div className="pt-6">
+				<div className={css({ pt: "6" })}>
 					<ContributorLeaderboard items={items} />
 				</div>
 			)}
 
 			{/* Siatka galerii lub księga życzeń */}
-			<main className="max-w-6xl mx-auto px-4 sm:px-6 pt-6">
+			<main
+				className={css({
+					maxW: "6xl",
+					mx: "auto",
+					px: { base: "4", sm: "6" },
+					pt: "6",
+				})}
+			>
 				{activeTab === "photos" ? (
 					<MediaGrid items={items} onItemClick={lightbox.open} />
 				) : (
@@ -179,16 +364,57 @@ export default function GuestGalleryPage() {
 
 			{/* Pływający Przycisk Dodawania Zdjęć (FAB) */}
 			{activeTab === "photos" && (
-				<div className="fixed bottom-6 inset-x-0 flex justify-center z-40 px-4 pointer-events-none">
+				<div
+					className={css({
+						position: "fixed",
+						bottom: "6",
+						left: "0",
+						right: "0",
+						display: "flex",
+						justifyContent: "center",
+						zIndex: "40",
+						px: "4",
+						pointerEvents: "none",
+					})}
+				>
 					<button
 						type="button"
 						onClick={() => setIsUploaderOpen(true)}
 						aria-haspopup="dialog"
 						aria-expanded={isUploaderOpen}
 						aria-label={t("addPhotosAria")}
-						className="pointer-events-auto flex items-center gap-2.5 px-6 py-4 rounded-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white font-semibold shadow-xl shadow-amber-600/30 hover:shadow-2xl hover:scale-105 active:scale-95 transition duration-200 text-sm sm:text-base border border-amber-400/30 focus-visible:ring-4 focus-visible:ring-amber-500/50 focus-visible:outline-none"
+						className={css({
+							pointerEvents: "auto",
+							display: "flex",
+							alignItems: "center",
+							gap: "2.5",
+							px: "6",
+							py: "4",
+							borderRadius: "full",
+							background: "linear-gradient(to right, #b45309, #d97706)",
+							_hover: {
+								background: "linear-gradient(to right, #92400e, #b45309)",
+								transform: "scale(1.05)",
+							},
+							_active: { transform: "scale(0.95)" },
+							color: "white",
+							fontWeight: "semibold",
+							boxShadow: "0 20px 25px -5px rgba(180, 83, 9, 0.3)",
+							transition: "all 0.2s ease",
+							fontSize: { base: "sm", sm: "base" },
+							borderWidth: "1px",
+							borderColor: "rgba(251, 191, 36, 0.3)",
+							cursor: "pointer",
+							_focusVisible: {
+								outline: "4px solid",
+								outlineColor: "rgba(245, 158, 11, 0.5)",
+							},
+						})}
 					>
-						<Plus className="w-5 h-5 stroke-[2.5]" aria-hidden="true" />
+						<Plus
+							className={css({ w: "5", h: "5", strokeWidth: "2.5" })}
+							aria-hidden="true"
+						/>
 						<span>{t("addPhotosBtn")}</span>
 					</button>
 				</div>
@@ -204,8 +430,6 @@ export default function GuestGalleryPage() {
 					setIsUploaderOpen(false);
 					refetch();
 				}}
-				// Natychmiastowe pobranie oraz odpytywania w tle (1s, 2.5s, 5s) jako odporny
-				// fallback dla przetwarzania plików wideo (FFmpeg) i miniaturek
 				onUploadSuccess={refetchWithBackoff}
 			/>
 
@@ -219,7 +443,15 @@ export default function GuestGalleryPage() {
 			/>
 
 			{/* Stopka z dokumentami prawnymi */}
-			<footer className="pt-16 pb-8 text-center text-xs text-slate-500">
+			<footer
+				className={css({
+					pt: "16",
+					pb: "8",
+					textAlign: "center",
+					fontSize: "xs",
+					color: "slate.500",
+				})}
+			>
 				<LegalFooterLinks />
 			</footer>
 		</div>

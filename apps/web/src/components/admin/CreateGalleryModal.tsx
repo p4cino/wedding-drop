@@ -5,7 +5,10 @@ import { Check, ExternalLink, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type React from "react";
 import { useReducer, useRef, useState } from "react";
+import { css } from "styled-system/css";
 import NewTabLabel from "@/components/NewTabLabel";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { Link } from "@/i18n/routing";
@@ -49,9 +52,23 @@ interface CreateGalleryModalProps {
 	onCreate: (data: CreateGalleryForm) => Promise<CreateGalleryResult>;
 }
 
-const INPUT_CLASS =
-	"w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500";
-const LABEL_CLASS = "block font-semibold text-slate-700 mb-1";
+const inputStyle = css({
+	w: "full",
+	px: "3",
+	py: "2",
+	fontSize: "sm",
+	borderWidth: "1px",
+	borderColor: "slate.200",
+	borderRadius: "xl",
+	_focus: { borderColor: "wedding.gold" },
+});
+
+const labelStyle = css({
+	display: "block",
+	fontWeight: "semibold",
+	color: "slate.700",
+	mb: "1",
+});
 
 export function CreateGalleryModal({
 	onClose,
@@ -101,32 +118,106 @@ export function CreateGalleryModal({
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="admin-create-wedding-title"
-			className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto bg-black/60 backdrop-blur-sm p-4"
+			className={css({
+				position: "fixed",
+				inset: "0",
+				zIndex: "50",
+				display: "flex",
+				alignItems: { base: "flex-start", sm: "center" },
+				justifyContent: "center",
+				overflowY: "auto",
+				backgroundColor: "rgba(0, 0, 0, 0.6)",
+				backdropFilter: "blur(4px)",
+				p: "4",
+			})}
 		>
-			<div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-6 relative my-auto">
+			<div
+				className={css({
+					w: "full",
+					maxW: "lg",
+					backgroundColor: "white",
+					borderRadius: "3xl",
+					boxShadow: "2xl",
+					p: "6",
+					position: "relative",
+					my: "auto",
+				})}
+			>
 				<button
 					type="button"
 					onClick={onClose}
 					aria-label={t("closeModal")}
 					title={t("closeModal")}
-					className="absolute top-5 right-5 z-10 p-2 text-slate-400 hover:text-slate-600 rounded-full focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
+					className={css({
+						position: "absolute",
+						top: "5",
+						right: "5",
+						zIndex: "10",
+						p: "2",
+						color: "slate.400",
+						borderRadius: "full",
+						borderWidth: "0",
+						backgroundColor: "transparent",
+						cursor: "pointer",
+						transition: "color 0.15s ease",
+						_hover: { color: "slate.600" },
+						_focusVisible: {
+							outline: "2px solid",
+							outlineColor: "slate.900",
+						},
+					})}
 				>
-					<X className="w-5 h-5" aria-hidden="true" />
+					<X className={css({ w: "5", h: "5" })} aria-hidden="true" />
 				</button>
 
 				<h3
 					id="admin-create-wedding-title"
-					className="font-serif-luxury text-xl font-bold text-slate-900 mb-1 pr-10"
+					className={css({
+						fontFamily: "serif",
+						fontSize: "xl",
+						fontWeight: "bold",
+						color: "wedding.slate",
+						mb: "1",
+						pr: "10",
+					})}
 				>
 					{t("modalTitle")}
 				</h3>
-				<p className="text-xs text-slate-500 mb-5">{t("modalDesc")}</p>
+				<p className={css({ fontSize: "xs", color: "slate.500", mb: "5" })}>
+					{t("modalDesc")}
+				</p>
 
 				{created ? (
-					<div className="space-y-4">
-						<div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 space-y-2">
-							<div className="flex items-center gap-1.5 font-bold">
-								<Check className="w-4 h-4" aria-hidden="true" />{" "}
+					<div
+						className={css({
+							display: "flex",
+							flexDirection: "column",
+							gap: "4",
+						})}
+					>
+						<div
+							className={css({
+								p: "4",
+								backgroundColor: "emerald.50",
+								borderWidth: "1px",
+								borderColor: "emerald.200",
+								borderRadius: "2xl",
+								fontSize: "xs",
+								color: "emerald.800",
+								display: "flex",
+								flexDirection: "column",
+								gap: "2",
+							})}
+						>
+							<div
+								className={css({
+									display: "flex",
+									alignItems: "center",
+									gap: "1.5",
+									fontWeight: "bold",
+								})}
+							>
+								<Check className={css({ w: "4", h: "4" })} aria-hidden="true" />{" "}
 								{t("modalSuccess")}
 							</div>
 							<p>
@@ -137,7 +228,14 @@ export function CreateGalleryModal({
 							</p>
 						</div>
 
-						<div className="space-y-2 pt-2">
+						<div
+							className={css({
+								display: "flex",
+								flexDirection: "column",
+								gap: "2",
+								pt: "2",
+							})}
+						>
 							{GALLERY_LINKS.map((link) => (
 								<Link
 									key={link.path("")}
@@ -162,102 +260,148 @@ export function CreateGalleryModal({
 							))}
 						</div>
 
-						<button
+						<Button
 							type="button"
 							onClick={onClose}
-							className="w-full mt-4 py-3 bg-slate-900 text-white rounded-xl text-xs font-semibold focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
+							className={css({
+								w: "full",
+								mt: "4",
+								py: "3",
+								backgroundColor: "slate.900",
+								_hover: { backgroundColor: "slate.800" },
+								color: "white",
+								borderRadius: "xl",
+								fontSize: "xs",
+								fontWeight: "semibold",
+								cursor: "pointer",
+							})}
 						>
 							{t("modalCloseBtn")}
-						</button>
+						</Button>
 					</div>
 				) : (
-					<form onSubmit={handleSubmit} className="space-y-3 text-xs">
+					<form
+						onSubmit={handleSubmit}
+						className={css({
+							display: "flex",
+							flexDirection: "column",
+							gap: "3",
+							fontSize: "xs",
+						})}
+					>
 						{error && (
 							<div
 								role="alert"
-								className="p-3 bg-red-50 text-red-700 rounded-xl border border-red-200"
+								className={css({
+									p: "3",
+									backgroundColor: "red.50",
+									color: "red.700",
+									borderRadius: "xl",
+									borderWidth: "1px",
+									borderColor: "red.200",
+								})}
 							>
 								{error}
 							</div>
 						)}
 
 						<div>
-							<label htmlFor="admin-couple-names" className={LABEL_CLASS}>
+							<label htmlFor="admin-couple-names" className={labelStyle}>
 								{t("formCouple")}
 							</label>
-							<input
+							<Input
 								id="admin-couple-names"
 								type="text"
 								required
 								placeholder={t("formCouplePlaceholder")}
 								{...field("coupleNames")}
-								className={INPUT_CLASS}
+								className={inputStyle}
 							/>
 						</div>
 
-						<div className="grid grid-cols-2 gap-3">
+						<div
+							className={css({
+								display: "grid",
+								gridTemplateColumns: "repeat(2, 1fr)",
+								gap: "3",
+							})}
+						>
 							<div>
-								<label htmlFor="admin-wedding-date" className={LABEL_CLASS}>
+								<label htmlFor="admin-wedding-date" className={labelStyle}>
 									{t("formDate")}
 								</label>
-								<input
+								<Input
 									id="admin-wedding-date"
 									type="date"
 									required
 									{...field("weddingDate")}
-									className={INPUT_CLASS}
+									className={inputStyle}
 								/>
 							</div>
 
 							<div>
-								<label htmlFor="admin-custom-slug" className={LABEL_CLASS}>
+								<label htmlFor="admin-custom-slug" className={labelStyle}>
 									{t("formSlug")}
 								</label>
-								<input
+								<Input
 									id="admin-custom-slug"
 									type="text"
 									placeholder={t("formSlugPlaceholder")}
 									{...field("customSlug")}
-									className={INPUT_CLASS}
+									className={inputStyle}
 								/>
 							</div>
 						</div>
 
 						<div>
-							<label htmlFor="admin-owner-email" className={LABEL_CLASS}>
+							<label htmlFor="admin-owner-email" className={labelStyle}>
 								{t("formEmail")}
 							</label>
-							<input
+							<Input
 								id="admin-owner-email"
 								type="email"
 								required
 								placeholder="kontakt@kasiaitomek.pl"
 								{...field("ownerEmail")}
-								className={INPUT_CLASS}
+								className={inputStyle}
 							/>
 						</div>
 
 						<div>
-							<label htmlFor="admin-owner-password" className={LABEL_CLASS}>
+							<label htmlFor="admin-owner-password" className={labelStyle}>
 								{t("formPassword")}
 							</label>
-							<input
+							<Input
 								id="admin-owner-password"
 								type="password"
 								required
 								placeholder={t("formPasswordPlaceholder")}
 								{...field("ownerPassword")}
-								className={INPUT_CLASS}
+								className={inputStyle}
 							/>
 						</div>
 
-						<button
+						<Button
 							type="submit"
 							disabled={submitting}
-							className="w-full mt-4 py-3 bg-gradient-to-r from-amber-600 to-amber-500 text-white rounded-xl font-semibold shadow-md disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
+							className={css({
+								w: "full",
+								mt: "4",
+								py: "3",
+								background: "linear-gradient(to right, #b45309, #d97706)",
+								_hover: {
+									background: "linear-gradient(to right, #92400e, #b45309)",
+								},
+								_disabled: { opacity: 0.6, cursor: "not-allowed" },
+								color: "white",
+								borderRadius: "xl",
+								fontWeight: "semibold",
+								boxShadow: "md",
+								cursor: "pointer",
+							})}
 						>
 							{t("formSubmit")}
-						</button>
+						</Button>
 					</form>
 				)}
 			</div>

@@ -3,6 +3,8 @@
 import { Trophy } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo } from "react";
+import { css } from "styled-system/css";
+import { Badge } from "@/components/ui/badge";
 import type { MediaItemData } from "@/lib/gallery-types";
 import { computeLeaderboard } from "@/lib/leaderboard";
 
@@ -34,33 +36,115 @@ export default function ContributorLeaderboard({
 	return (
 		<section
 			aria-label={t("leaderboardTitle")}
-			className="max-w-6xl mx-auto px-4 sm:px-6 mb-5"
+			className={css({
+				maxW: "6xl",
+				mx: "auto",
+				px: { base: "4", sm: "6" },
+				mb: "5",
+			})}
 		>
-			<div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-amber-100 shadow-xs px-4 py-3 sm:px-5 sm:py-4">
-				<h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-amber-700 mb-3">
-					<Trophy className="w-3.5 h-3.5" aria-hidden="true" />
+			<div
+				className={css({
+					bg: "rgba(255, 255, 255, 0.8)",
+					backdropFilter: "blur(4px)",
+					borderRadius: "2xl",
+					borderWidth: "1px",
+					borderColor: "amber.100",
+					boxShadow: "xs",
+					px: { base: "4", sm: "5" },
+					py: { base: "3", sm: "4" },
+				})}
+			>
+				<h2
+					className={css({
+						display: "flex",
+						alignItems: "center",
+						gap: "1.5",
+						fontSize: "xs",
+						fontWeight: "semibold",
+						textTransform: "uppercase",
+						letterSpacing: "wider",
+						color: "wedding.gold",
+						mb: "3",
+					})}
+				>
+					<Trophy className={css({ w: "3.5", h: "3.5" })} aria-hidden="true" />
 					{t("leaderboardTitle")}
 				</h2>
-				<ol className="flex flex-col gap-2">
+				<ol
+					className={css({
+						display: "flex",
+						flexDirection: "column",
+						gap: "2",
+					})}
+				>
 					{leaderboard.map((entry, index) => (
 						<li
 							key={entry.name.toLowerCase()}
-							className="flex items-center justify-between gap-3 text-sm"
+							className={css({
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "space-between",
+								gap: "3",
+								fontSize: "sm",
+							})}
 						>
-							<span className="flex items-center gap-2 min-w-0">
-								<span aria-hidden="true" className="text-lg leading-none">
+							<span
+								className={css({
+									display: "flex",
+									alignItems: "center",
+									gap: "2",
+									minW: "0",
+								})}
+							>
+								<span
+									aria-hidden="true"
+									className={css({ fontSize: "lg", lineHeight: "none" })}
+								>
 									{RANK_MEDALS[index]}
 								</span>
-								<span className="sr-only">
+								<span
+									className={css({
+										position: "absolute",
+										width: "1px",
+										height: "1px",
+										padding: "0",
+										margin: "-1px",
+										overflow: "hidden",
+										clip: "rect(0, 0, 0, 0)",
+										whiteSpace: "nowrap",
+										borderWidth: "0",
+									})}
+								>
 									{t("leaderboardRankAria", { rank: index + 1 })}
 								</span>
-								<span className="font-medium text-slate-800 truncate">
+								<span
+									className={css({
+										fontWeight: "medium",
+										color: "wedding.slate",
+										overflow: "hidden",
+										textOverflow: "ellipsis",
+										whiteSpace: "nowrap",
+									})}
+								>
 									{entry.name}
 								</span>
 							</span>
-							<span className="shrink-0 text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+							<Badge
+								size="sm"
+								className={css({
+									flexShrink: "0",
+									fontSize: "xs",
+									fontWeight: "semibold",
+									color: "wedding.gold",
+									bg: "amber.50",
+									px: "2",
+									py: "0.5",
+									borderRadius: "full",
+								})}
+							>
 								{t("leaderboardCount", { count: entry.count })}
-							</span>
+							</Badge>
 						</li>
 					))}
 				</ol>

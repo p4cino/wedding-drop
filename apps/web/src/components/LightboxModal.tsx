@@ -3,10 +3,10 @@
 import { ChevronLeft, ChevronRight, Download, User, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import React, { useEffect } from "react";
+import { css } from "styled-system/css";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { useSwipe } from "@/hooks/useSwipe";
-
 import type { MediaItemData } from "@/lib/gallery-types";
 
 export type { MediaItemData };
@@ -39,7 +39,24 @@ function NavButton({
 			}}
 			title={label}
 			aria-label={label}
-			className={`absolute ${side === "left" ? "left-2 sm:left-4" : "right-2 sm:right-4"} p-2.5 sm:p-3 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 text-white transition z-20 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none`}
+			className={css({
+				position: "absolute",
+				left: side === "left" ? { base: "2", sm: "4" } : undefined,
+				right: side === "right" ? { base: "2", sm: "4" } : undefined,
+				p: { base: "2.5", sm: "3" },
+				borderRadius: "full",
+				backgroundColor: "rgba(255, 255, 255, 0.15)",
+				_hover: { backgroundColor: "rgba(255, 255, 255, 0.25)" },
+				_active: { transform: "scale(0.95)" },
+				color: "white",
+				transition: "all 0.15s ease",
+				zIndex: "20",
+				cursor: "pointer",
+				_focusVisible: {
+					outline: "2px solid",
+					outlineColor: "amber.400",
+				},
+			})}
 		>
 			{icon}
 		</button>
@@ -98,11 +115,37 @@ export default function LightboxModal({
 			aria-modal="true"
 			aria-label={t("lightboxAria", { name: current.originalFileName })}
 			tabIndex={-1}
-			className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md select-none touch-none focus:outline-none"
+			className={css({
+				position: "fixed",
+				inset: "0",
+				zIndex: "50",
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				backgroundColor: "rgba(0, 0, 0, 0.95)",
+				backdropFilter: "blur(12px)",
+				userSelect: "none",
+				touchAction: "none",
+				_focus: { outline: "none" },
+			})}
 			{...swipe}
 		>
 			{/* Region dostępny dla czytników ekranu anonsujący zmianę slajdu */}
-			<div className="sr-only" aria-live="polite" aria-atomic="true">
+			<div
+				className={css({
+					position: "absolute",
+					width: "1px",
+					height: "1px",
+					padding: "0",
+					margin: "-1px",
+					overflow: "hidden",
+					clip: "rect(0, 0, 0, 0)",
+					whiteSpace: "nowrap",
+					borderWidth: "0",
+				})}
+				aria-live="polite"
+				aria-atomic="true"
+			>
 				{t("slideAnnouncement", {
 					current: currentIndex + 1,
 					total: items.length,
@@ -111,51 +154,144 @@ export default function LightboxModal({
 			</div>
 
 			{/* Górny pasek nawigacji */}
-			<div className="absolute top-0 inset-x-0 p-4 flex justify-between items-center z-20 bg-gradient-to-b from-black/80 to-transparent">
-				<div className="text-white text-xs space-y-0.5">
-					<div className="flex items-center gap-2">
-						<User className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
-						<span className="font-semibold text-sm">
+			<div
+				className={css({
+					position: "absolute",
+					top: "0",
+					left: "0",
+					right: "0",
+					p: "4",
+					display: "flex",
+					justifyContent: "space-between",
+					alignItems: "center",
+					zIndex: "20",
+					background:
+						"linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)",
+				})}
+			>
+				<div
+					className={css({
+						color: "white",
+						fontSize: "xs",
+						display: "flex",
+						flexDirection: "column",
+						gap: "0.5",
+					})}
+				>
+					<div
+						className={css({
+							display: "flex",
+							alignItems: "center",
+							gap: "2",
+						})}
+					>
+						<User
+							className={css({
+								w: "3.5",
+								h: "3.5",
+								color: "amber.400",
+							})}
+							aria-hidden="true"
+						/>
+						<span
+							className={css({
+								fontWeight: "semibold",
+								fontSize: "sm",
+							})}
+						>
 							{current.uploaderName}
 						</span>
 					</div>
-					<p className="text-slate-400 text-[11px] truncate max-w-[200px] sm:max-w-md">
+					<p
+						className={css({
+							color: "slate.400",
+							fontSize: "11px",
+							overflow: "hidden",
+							textOverflow: "ellipsis",
+							whiteSpace: "nowrap",
+							maxWidth: { base: "200px", sm: "md" },
+						})}
+					>
 						{current.originalFileName}
 					</p>
 				</div>
 
-				<div className="flex items-center gap-3">
+				<div
+					className={css({
+						display: "flex",
+						alignItems: "center",
+						gap: "3",
+					})}
+				>
 					{allowDownloads && (
 						<a
 							href={current.rawUrl}
 							download={current.originalFileName}
-							className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition backdrop-blur-sm focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
+							className={css({
+								p: "2.5",
+								borderRadius: "full",
+								backgroundColor: "rgba(255, 255, 255, 0.1)",
+								_hover: {
+									backgroundColor: "rgba(255, 255, 255, 0.2)",
+								},
+								color: "white",
+								transition: "all 0.15s ease",
+								backdropFilter: "blur(4px)",
+								_focusVisible: {
+									outline: "2px solid",
+									outlineColor: "amber.400",
+								},
+							})}
 							title={t("downloadOriginal")}
 							aria-label={t("downloadOriginal")}
 						>
-							<Download className="w-5 h-5" aria-hidden="true" />
+							<Download
+								className={css({ w: "5", h: "5" })}
+								aria-hidden="true"
+							/>
 						</a>
 					)}
 					<button
 						type="button"
 						onClick={onClose}
-						className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition backdrop-blur-sm focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
+						className={css({
+							p: "2.5",
+							borderRadius: "full",
+							backgroundColor: "rgba(255, 255, 255, 0.1)",
+							_hover: {
+								backgroundColor: "rgba(255, 255, 255, 0.2)",
+							},
+							color: "white",
+							transition: "all 0.15s ease",
+							backdropFilter: "blur(4px)",
+							cursor: "pointer",
+							_focusVisible: {
+								outline: "2px solid",
+								outlineColor: "amber.400",
+							},
+						})}
 						title={t("closeLightbox")}
 						aria-label={t("closeLightbox")}
 					>
-						<X className="w-5 h-5" aria-hidden="true" />
+						<X className={css({ w: "5", h: "5" })} aria-hidden="true" />
 					</button>
 				</div>
 			</div>
 
-			{/* Strzałki poprzedni/następny (zoptymalizowane pod desktop i mobile) */}
+			{/* Strzałki poprzedni/następny */}
 			{hasPrev && (
 				<NavButton
 					side="left"
 					label={t("prevMedia")}
 					onClick={goPrev}
 					icon={
-						<ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" aria-hidden="true" />
+						<ChevronLeft
+							className={css({
+								w: { base: "5", sm: "6" },
+								h: { base: "5", sm: "6" },
+							})}
+							aria-hidden="true"
+						/>
 					}
 				/>
 			)}
@@ -167,7 +303,10 @@ export default function LightboxModal({
 					onClick={goNext}
 					icon={
 						<ChevronRight
-							className="w-5 h-5 sm:w-6 sm:h-6"
+							className={css({
+								w: { base: "5", sm: "6" },
+								h: { base: "5", sm: "6" },
+							})}
 							aria-hidden="true"
 						/>
 					}
@@ -175,7 +314,16 @@ export default function LightboxModal({
 			)}
 
 			{/* Podgląd nośnika */}
-			<div className="w-full h-full flex items-center justify-center p-2 sm:p-12">
+			<div
+				className={css({
+					width: "full",
+					height: "full",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					p: { base: "2", sm: "12" },
+				})}
+			>
 				{current.fileType === "video" ? (
 					<video
 						src={current.rawUrl}
@@ -183,13 +331,25 @@ export default function LightboxModal({
 						autoPlay
 						playsInline
 						aria-label={`${t("videoAria")}: ${current.originalFileName}`}
-						className="max-w-full max-h-[85vh] rounded-xl shadow-2xl"
+						className={css({
+							maxWidth: "full",
+							maxHeight: "85vh",
+							borderRadius: "xl",
+							boxShadow: "2xl",
+						})}
 					/>
 				) : (
 					<img
 						src={current.rawUrl}
 						alt={current.originalFileName}
-						className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl transition duration-300"
+						className={css({
+							maxWidth: "full",
+							maxHeight: "85vh",
+							objectFit: "contain",
+							borderRadius: "xl",
+							boxShadow: "2xl",
+							transition: "all 0.3s ease",
+						})}
 					/>
 				)}
 			</div>
@@ -197,9 +357,22 @@ export default function LightboxModal({
 			{/* Dolny wskaźnik pozycji */}
 			<div
 				aria-hidden="true"
-				className="absolute bottom-4 inset-x-0 text-center text-xs text-slate-400 font-medium pointer-events-none"
+				className={css({
+					position: "absolute",
+					bottom: "4",
+					left: "0",
+					right: "0",
+					textAlign: "center",
+					fontSize: "xs",
+					color: "slate.400",
+					fontWeight: "medium",
+					pointerEvents: "none",
+				})}
 			>
-				{t("progressCount", { current: currentIndex + 1, total: items.length })}
+				{t("progressCount", {
+					current: currentIndex + 1,
+					total: items.length,
+				})}
 			</div>
 		</div>
 	);

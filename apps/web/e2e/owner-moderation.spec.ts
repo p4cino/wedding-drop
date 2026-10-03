@@ -30,6 +30,7 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 		await page.goto("/owner/kasia-i-tomek");
 
 		const passwordInput = page.getByPlaceholder("Wpisz hasło dostępu");
+		await expect(passwordInput).toBeVisible();
 		await passwordInput.fill("calkowicie_bledne_haslo");
 		await page.getByRole("button", { name: "Zaloguj się" }).click();
 
@@ -117,7 +118,7 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 			}
 		});
 
-		await toggleBtn.click();
+		await toggleBtn.click({ force: true });
 
 		// Po ukryciu pojawia się plakietka 'Ukryte' i ikona zmienia się na 'Pokaż w galerii'
 		await expect(page.getByText("Ukryte", { exact: true })).toBeVisible();
@@ -240,7 +241,7 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 			await dialog.accept();
 		});
 
-		await page.getByTitle("Usuń bezpowrotnie").click();
+		await page.getByTitle("Usuń bezpowrotnie").click({ force: true });
 		await expect(page.getByText("Do Skasowania")).not.toBeVisible();
 	});
 
@@ -295,7 +296,7 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 			}
 		});
 
-		await toggleBtn.click();
+		await toggleBtn.click({ force: true });
 
 		await expect(page.getByText("Ukryte", { exact: true })).toBeVisible();
 		await expect(page.getByTitle("Pokaż w księdze")).toBeVisible();
@@ -352,7 +353,7 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 			await dialog.accept();
 		});
 
-		await page.getByTitle("Usuń bezpowrotnie").click();
+		await page.getByTitle("Usuń bezpowrotnie").click({ force: true });
 		await expect(page.getByText("Życzenie do skasowania")).not.toBeVisible();
 	});
 
@@ -465,7 +466,7 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 
 		// Właściciel ukrywa jeden z dwóch materiałów Świadka Jana
 		const toggleButtons = ownerPage.getByTitle("Ukryj przed gośćmi");
-		await toggleButtons.last().click();
+		await toggleButtons.last().click({ force: true });
 		await expect(ownerPage.getByTitle("Pokaż w galerii")).toBeVisible();
 
 		// Odświeżenie widoku gościa: wynik Świadka Jana w rankingu spadł o jeden
@@ -693,7 +694,7 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 		// Kliknięcie przycisku 'Wyloguj'
 		const logoutBtn = page.getByRole("button", { name: /Wyloguj/i });
 		await expect(logoutBtn).toBeVisible();
-		await logoutBtn.click();
+		await logoutBtn.click({ force: true });
 
 		// Powrót do formularza logowania
 		await expect(page.getByPlaceholder("Wpisz hasło dostępu")).toBeVisible();

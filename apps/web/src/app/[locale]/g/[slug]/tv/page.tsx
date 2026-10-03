@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import QRCode from "qrcode";
 import { useCallback, useEffect, useState } from "react";
+import { css } from "styled-system/css";
 import GalleryStatusScreen from "@/components/GalleryStatusScreen";
 import { useLiveGallery } from "@/hooks/useLiveGallery";
 import type { LiveEvent } from "@/lib/live-gallery";
@@ -78,20 +79,63 @@ export default function TvSlideshowPage() {
 	const current = items[currentIndex] ?? null;
 
 	return (
-		<div className="fixed inset-0 bg-black overflow-hidden select-none">
+		<div
+			className={css({
+				position: "fixed",
+				inset: "0",
+				backgroundColor: "black",
+				overflow: "hidden",
+				userSelect: "none",
+			})}
+		>
 			{/* Prezentowany materiał — dla wideo pokazujemy statyczną miniaturę bez dźwięku (zob. design.md) */}
 			{current ? (
 				<img
 					key={current.id}
 					src={current.fileType === "video" ? current.thumbUrl : current.rawUrl}
 					alt=""
-					className="absolute inset-0 w-full h-full object-contain"
+					className={css({
+						position: "absolute",
+						inset: "0",
+						w: "full",
+						h: "full",
+						objectFit: "contain",
+					})}
 				/>
 			) : (
-				<div className="absolute inset-0 flex items-center justify-center">
-					<div className="text-center space-y-3">
-						<Heart className="w-14 h-14 text-amber-500 animate-pulse mx-auto" />
-						<p className="font-serif-luxury text-2xl text-white">
+				<div
+					className={css({
+						position: "absolute",
+						inset: "0",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+					})}
+				>
+					<div
+						className={css({
+							textAlign: "center",
+							display: "flex",
+							flexDirection: "column",
+							gap: "3",
+						})}
+					>
+						<Heart
+							className={css({
+								w: "14",
+								h: "14",
+								color: "wedding.gold",
+								animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+								mx: "auto",
+							})}
+						/>
+						<p
+							className={css({
+								fontFamily: "serif",
+								fontSize: "2xl",
+								color: "white",
+							})}
+						>
 							{t("waitingForFirstPhoto")}
 						</p>
 					</div>
@@ -99,17 +143,53 @@ export default function TvSlideshowPage() {
 			)}
 
 			{/* Nagłówek: imiona pary młodej i status na żywo */}
-			<div className="absolute top-8 left-8 flex items-center gap-3">
-				<span className="font-serif-luxury text-2xl md:text-3xl font-bold text-white drop-shadow-lg">
+			<div
+				className={css({
+					position: "absolute",
+					top: "8",
+					left: "8",
+					display: "flex",
+					alignItems: "center",
+					gap: "3",
+				})}
+			>
+				<span
+					className={css({
+						fontFamily: "serif",
+						fontSize: { base: "2xl", md: "3xl" },
+						fontWeight: "bold",
+						color: "white",
+						filter: "drop-shadow(0 10px 8px rgba(0, 0, 0, 0.4))",
+					})}
+				>
 					{gallery.coupleNames}
 				</span>
 				<span
 					role="status"
 					aria-live="polite"
-					className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/40 backdrop-blur-sm text-xs text-white"
+					className={css({
+						display: "flex",
+						alignItems: "center",
+						gap: "1.5",
+						px: "3",
+						py: "1",
+						borderRadius: "full",
+						backgroundColor: "rgba(0, 0, 0, 0.4)",
+						backdropFilter: "blur(4px)",
+						fontSize: "xs",
+						color: "white",
+					})}
 				>
 					<span
-						className={`w-2 h-2 rounded-full ${isLive ? "bg-emerald-400 animate-pulse" : "bg-slate-400"}`}
+						className={css({
+							w: "2",
+							h: "2",
+							borderRadius: "full",
+							backgroundColor: isLive ? "emerald.400" : "slate.400",
+							animation: isLive
+								? "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite"
+								: undefined,
+						})}
 						aria-hidden="true"
 					/>
 					<span>{isLive ? t("live") : t("offline")}</span>
@@ -118,21 +198,62 @@ export default function TvSlideshowPage() {
 
 			{/* Podpis autora bieżącego zdjęcia */}
 			{current?.uploaderName && (
-				<div className="absolute bottom-8 left-8 px-4 py-2 rounded-xl bg-black/40 backdrop-blur-sm text-white text-sm max-w-[60%]">
+				<div
+					className={css({
+						position: "absolute",
+						bottom: "8",
+						left: "8",
+						px: "4",
+						py: "2",
+						borderRadius: "xl",
+						backgroundColor: "rgba(0, 0, 0, 0.4)",
+						backdropFilter: "blur(4px)",
+						color: "white",
+						fontSize: "sm",
+						maxW: "60%",
+					})}
+				>
 					{t("uploaderPrefix")} {current.uploaderName}
 				</div>
 			)}
 
 			{/* Stały kod QR do dołączenia — widoczny niezależnie od aktualnego slajdu */}
-			<div className="absolute bottom-8 right-8 bg-white rounded-2xl p-4 shadow-2xl flex flex-col items-center gap-2 w-[170px]">
+			<div
+				className={css({
+					position: "absolute",
+					bottom: "8",
+					right: "8",
+					backgroundColor: "white",
+					borderRadius: "2xl",
+					p: "4",
+					boxShadow: "2xl",
+					display: "flex",
+					flexDirection: "column",
+					alignItems: "center",
+					gap: "2",
+					w: "170px",
+				})}
+			>
 				{qrSvg && (
 					<div
-						className="w-32 h-32 [&>svg]:w-full [&>svg]:h-full"
+						className={css({
+							w: "32",
+							h: "32",
+							"& > svg": { w: "full", h: "full" },
+						})}
 						// biome-ignore lint/security/noDangerouslySetInnerHtml: SVG generowany lokalnie przez zaufaną bibliotekę `qrcode` na podstawie sluga, brak danych od użytkownika
 						dangerouslySetInnerHTML={{ __html: qrSvg }}
 					/>
 				)}
-				<p className="text-[11px] font-semibold text-slate-800 text-center leading-tight">
+				<p
+					className={css({
+						fontSize: "11px",
+						fontWeight: "semibold",
+						color: "wedding.slate",
+						textAlign: "center",
+						lineHeight: "tight",
+					})}
+				>
 					{t("qrHint")}
 				</p>
 			</div>

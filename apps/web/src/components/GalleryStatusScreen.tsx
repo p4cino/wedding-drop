@@ -2,6 +2,8 @@
 
 import { Heart } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { css } from "styled-system/css";
+import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/routing";
 
 interface GalleryStatusScreenProps {
@@ -11,8 +13,21 @@ interface GalleryStatusScreenProps {
 	onRetry?: () => void;
 }
 
-const BUTTON_CLASS =
-	"inline-block px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-semibold hover:bg-slate-800 transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none";
+const buttonStyle = css({
+	display: "inline-block",
+	px: "6",
+	py: "2.5",
+	backgroundColor: "slate.900",
+	color: "white",
+	borderRadius: "xl",
+	fontSize: "sm",
+	fontWeight: "semibold",
+	textDecoration: "none",
+	transition: "background-color 0.15s ease",
+	cursor: "pointer",
+	_hover: { backgroundColor: "slate.800" },
+	_focusVisible: { outline: "2px solid", outlineColor: "slate.900" },
+});
 
 export default function GalleryStatusScreen({
 	variant,
@@ -21,17 +36,42 @@ export default function GalleryStatusScreen({
 }: GalleryStatusScreenProps) {
 	const t = useTranslations("GuestGallery");
 	const tCommon = useTranslations("Common");
-	const background = dark ? "bg-black" : "bg-[#FAF8F5]";
+	const background = dark ? "black" : "#FAF8F5";
 
 	if (variant === "loading") {
 		return (
 			<div
-				className={`min-h-screen flex items-center justify-center ${background}`}
+				className={css({
+					minH: "100vh",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+				})}
+				style={{ backgroundColor: background }}
 			>
-				<div className="text-center space-y-3">
-					<Heart className="w-10 h-10 text-amber-500 animate-pulse mx-auto" />
+				<div
+					className={css({
+						textAlign: "center",
+						display: "flex",
+						flexDirection: "column",
+						gap: "3",
+					})}
+				>
+					<Heart
+						className={css({
+							w: "10",
+							h: "10",
+							color: "wedding.gold",
+							animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+							mx: "auto",
+						})}
+					/>
 					<p
-						className={`font-serif-luxury text-lg ${dark ? "text-white" : "text-slate-700"}`}
+						className={css({
+							fontFamily: "serif",
+							fontSize: "lg",
+							color: dark ? "white" : "slate.700",
+						})}
 					>
 						{tCommon("loading")}
 					</p>
@@ -43,21 +83,53 @@ export default function GalleryStatusScreen({
 	const isError = variant === "error";
 	return (
 		<div
-			className={`min-h-screen flex items-center justify-center ${background} p-6 text-center`}
+			className={css({
+				minH: "100vh",
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				p: "6",
+				textAlign: "center",
+			})}
+			style={{ backgroundColor: background }}
 		>
-			<div className="max-w-md bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
-				<h2 className="font-serif-luxury text-2xl font-bold text-slate-900 mb-2">
+			<div
+				className={css({
+					maxW: "md",
+					backgroundColor: "white",
+					p: "8",
+					borderRadius: "3xl",
+					boxShadow: "sm",
+					borderWidth: "1px",
+					borderColor: "slate.200",
+				})}
+			>
+				<h2
+					className={css({
+						fontFamily: "serif",
+						fontSize: "2xl",
+						fontWeight: "bold",
+						color: "wedding.slate",
+						mb: "2",
+					})}
+				>
 					{isError ? tCommon("loadError") : t("notFoundTitle")}
 				</h2>
-				<p className="text-sm text-slate-500 mb-6">
+				<p
+					className={css({
+						fontSize: "sm",
+						color: "slate.500",
+						mb: "6",
+					})}
+				>
 					{isError ? tCommon("loadErrorDesc") : t("notFoundDesc")}
 				</p>
 				{isError && onRetry ? (
-					<button type="button" onClick={onRetry} className={BUTTON_CLASS}>
+					<Button type="button" onClick={onRetry} className={buttonStyle}>
 						{tCommon("retryBtn")}
-					</button>
+					</Button>
 				) : (
-					<Link href="/" className={BUTTON_CLASS}>
+					<Link href="/" className={buttonStyle}>
 						{t("homeBtn")}
 					</Link>
 				)}

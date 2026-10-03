@@ -1,6 +1,7 @@
 "use client";
 
 import { Eye, EyeOff, Trash2 } from "lucide-react";
+import { css } from "styled-system/css";
 import type { ModerationStatus } from "@/lib/moderation";
 
 interface ModerationActionsProps {
@@ -26,22 +27,41 @@ export function ModerationActions({
 }: ModerationActionsProps) {
 	const isReady = status === "ready";
 	return (
-		<div className="flex items-center gap-1 shrink-0">
+		<div
+			className={css({
+				display: "flex",
+				alignItems: "center",
+				gap: "1",
+				flexShrink: 0,
+			})}
+		>
 			<button
 				type="button"
 				onClick={onToggle}
 				title={toggleTitle ?? toggleLabel}
 				aria-label={toggleLabel}
-				className={`p-1.5 rounded-lg transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none ${
-					isReady
-						? "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-						: "text-amber-600 bg-amber-50 hover:bg-amber-100"
-				}`}
+				className={css({
+					p: "1.5",
+					borderRadius: "lg",
+					transition: "all 0.15s ease",
+					cursor: "pointer",
+					borderWidth: "0",
+					color: isReady ? "slate.600" : "wedding.gold",
+					backgroundColor: isReady ? "transparent" : "amber.50",
+					_hover: {
+						color: isReady ? "slate.900" : "wedding.gold",
+						backgroundColor: isReady ? "slate.100" : "amber.100",
+					},
+					_focusVisible: {
+						outline: "2px solid",
+						outlineColor: "wedding.gold",
+					},
+				})}
 			>
 				{isReady ? (
-					<Eye className="w-3.5 h-3.5" aria-hidden="true" />
+					<Eye className={css({ w: "3.5", h: "3.5" })} aria-hidden="true" />
 				) : (
-					<EyeOff className="w-3.5 h-3.5" aria-hidden="true" />
+					<EyeOff className={css({ w: "3.5", h: "3.5" })} aria-hidden="true" />
 				)}
 			</button>
 
@@ -50,9 +70,25 @@ export function ModerationActions({
 				onClick={onDelete}
 				title={deleteTitle ?? deleteLabel}
 				aria-label={deleteLabel}
-				className="p-1.5 rounded-lg text-slate-600 hover:text-red-600 hover:bg-red-50 transition focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
+				className={css({
+					p: "1.5",
+					borderRadius: "lg",
+					color: "slate.600",
+					backgroundColor: "transparent",
+					borderWidth: "0",
+					cursor: "pointer",
+					transition: "all 0.15s ease",
+					_hover: {
+						color: "red.600",
+						backgroundColor: "red.50",
+					},
+					_focusVisible: {
+						outline: "2px solid",
+						outlineColor: "red.500",
+					},
+				})}
 			>
-				<Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+				<Trash2 className={css({ w: "3.5", h: "3.5" })} aria-hidden="true" />
 			</button>
 		</div>
 	);

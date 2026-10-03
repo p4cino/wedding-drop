@@ -1,5 +1,6 @@
 "use client";
 
+import { css } from "styled-system/css";
 import type { ModerationFilter } from "@/lib/moderation";
 
 interface ModerationFilterBarProps {
@@ -26,24 +27,53 @@ export function ModerationFilterBar({
 		<div
 			role="group"
 			aria-label={groupLabel}
-			className="flex items-center gap-2 text-xs font-medium"
+			className={css({
+				display: "flex",
+				alignItems: "center",
+				gap: "2",
+				fontSize: "xs",
+				fontWeight: "medium",
+			})}
 		>
-			<span className="text-slate-600 mr-1 font-semibold">{title}</span>
-			{FILTERS.map((filter) => (
-				<button
-					key={filter}
-					type="button"
-					onClick={() => onChange(filter)}
-					aria-pressed={value === filter}
-					className={`px-3 py-1.5 rounded-xl transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none ${
-						value === filter
-							? "bg-slate-900 text-white"
-							: "bg-slate-100 text-slate-600 hover:bg-slate-200"
-					}`}
-				>
-					{labels[filter]}
-				</button>
-			))}
+			<span
+				className={css({
+					color: "slate.600",
+					mr: "1",
+					fontWeight: "semibold",
+				})}
+			>
+				{title}
+			</span>
+			{FILTERS.map((filter) => {
+				const isSelected = value === filter;
+				return (
+					<button
+						key={filter}
+						type="button"
+						onClick={() => onChange(filter)}
+						aria-pressed={isSelected}
+						className={css({
+							px: "3",
+							py: "1.5",
+							borderRadius: "xl",
+							transition: "all 0.15s ease",
+							cursor: "pointer",
+							borderWidth: "0",
+							backgroundColor: isSelected ? "slate.900" : "slate.100",
+							color: isSelected ? "white" : "slate.600",
+							_hover: {
+								backgroundColor: isSelected ? "slate.800" : "slate.200",
+							},
+							_focusVisible: {
+								outline: "2px solid",
+								outlineColor: "wedding.gold",
+							},
+						})}
+					>
+						{labels[filter]}
+					</button>
+				);
+			})}
 		</div>
 	);
 }

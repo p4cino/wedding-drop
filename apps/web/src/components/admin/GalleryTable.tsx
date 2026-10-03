@@ -2,6 +2,7 @@
 
 import { Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { css } from "styled-system/css";
 import NewTabLabel from "@/components/NewTabLabel";
 import { Link } from "@/i18n/routing";
 import type { GalleryRow } from "@/lib/admin-types";
@@ -25,45 +26,147 @@ interface GalleryTableProps {
 export function GalleryTable({ galleries, onDelete }: GalleryTableProps) {
 	const t = useTranslations("AdminPanel");
 	return (
-		<div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-			<div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-				<h3 className="font-bold text-slate-800 text-sm">{t("tableTitle")}</h3>
-				<span className="text-xs text-slate-500">
+		<div
+			className={css({
+				backgroundColor: "white",
+				borderRadius: "2xl",
+				borderWidth: "1px",
+				borderColor: "slate.200",
+				boxShadow: "xs",
+				overflow: "hidden",
+			})}
+		>
+			<div
+				className={css({
+					px: "6",
+					py: "4",
+					borderBottomWidth: "1px",
+					borderBottomColor: "slate.100",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "space-between",
+				})}
+			>
+				<h3
+					className={css({
+						fontWeight: "bold",
+						color: "wedding.slate",
+						fontSize: "sm",
+					})}
+				>
+					{t("tableTitle")}
+				</h3>
+				<span className={css({ fontSize: "xs", color: "slate.500" })}>
 					{t("tableRecords", { count: galleries.length })}
 				</span>
 			</div>
 
-			{/* `relative`: elementy sr-only (absolute) muszą mieć tu punkt odniesienia, inaczej poszerzają stronę na telefonie */}
-			<div className="relative overflow-x-auto">
-				<table className="w-full text-left text-xs" aria-label={t("tableAria")}>
-					<thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-100">
+			{/* `relative`: elementy sr-only (absolute) muszą mieć tu punkt odniesienia */}
+			<div
+				className={css({
+					position: "relative",
+					overflowX: "auto",
+				})}
+			>
+				<table
+					className={css({
+						w: "full",
+						textAlign: "left",
+						fontSize: "xs",
+					})}
+					aria-label={t("tableAria")}
+				>
+					<thead
+						className={css({
+							backgroundColor: "slate.50",
+							color: "slate.600",
+							fontWeight: "semibold",
+							borderBottomWidth: "1px",
+							borderBottomColor: "slate.100",
+						})}
+					>
 						<tr>
 							{COLUMNS.map((key) => (
-								<th key={key} scope="col" className="px-6 py-3">
+								<th key={key} scope="col" className={css({ px: "6", py: "3" })}>
 									{t(key)}
 								</th>
 							))}
-							<th scope="col" className="px-6 py-3 text-right">
+							<th
+								scope="col"
+								className={css({ px: "6", py: "3", textAlign: "right" })}
+							>
 								{t("thActions")}
 							</th>
 						</tr>
 					</thead>
-					<tbody className="divide-y divide-slate-100">
+					<tbody
+						className={css({
+							"& tr:not(:last-child)": {
+								borderBottomWidth: "1px",
+								borderBottomColor: "slate.100",
+							},
+						})}
+					>
 						{galleries.map((g) => (
-							<tr key={g.id} className="hover:bg-slate-50/80 transition">
-								<td className="px-6 py-3.5 font-bold text-slate-900">
+							<tr
+								key={g.id}
+								className={css({
+									transition: "background-color 0.15s ease",
+									_hover: { backgroundColor: "slate.50" },
+								})}
+							>
+								<td
+									className={css({
+										px: "6",
+										py: "3.5",
+										fontWeight: "bold",
+										color: "wedding.slate",
+									})}
+								>
 									{g.coupleNames}
 								</td>
-								<td className="px-6 py-3.5 text-slate-600">{g.weddingDate}</td>
-								<td className="px-6 py-3.5 font-mono text-amber-700">
+								<td className={css({ px: "6", py: "3.5", color: "slate.600" })}>
+									{g.weddingDate}
+								</td>
+								<td
+									className={css({
+										px: "6",
+										py: "3.5",
+										fontFamily: "mono",
+										color: "wedding.gold",
+									})}
+								>
 									{g.slug}
 								</td>
-								<td className="px-6 py-3.5 text-slate-600">{g.ownerEmail}</td>
-								<td className="px-6 py-3.5 font-medium">{g.totalFiles}</td>
-								<td className="px-6 py-3.5 font-medium text-slate-600">
+								<td className={css({ px: "6", py: "3.5", color: "slate.600" })}>
+									{g.ownerEmail}
+								</td>
+								<td
+									className={css({ px: "6", py: "3.5", fontWeight: "medium" })}
+								>
+									{g.totalFiles}
+								</td>
+								<td
+									className={css({
+										px: "6",
+										py: "3.5",
+										fontWeight: "medium",
+										color: "slate.600",
+									})}
+								>
 									{formatMegabytes(Number(g.totalBytes || 0))} MB
 								</td>
-								<td className="px-6 py-3.5 text-right space-x-2">
+								<td
+									className={css({
+										px: "6",
+										py: "3.5",
+										textAlign: "right",
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "flex-end",
+										gap: "2",
+									})}
+								>
 									{GALLERY_LINKS.map((link) => (
 										<Link
 											key={link.path("")}
@@ -86,9 +189,29 @@ export function GalleryTable({ galleries, onDelete }: GalleryTableProps) {
 										onClick={() => onDelete(g)}
 										title={t("actionDelete")}
 										aria-label={`${t("actionDelete")} (${g.slug})`}
-										className="inline-block p-1.5 rounded-lg text-slate-600 hover:text-red-600 hover:bg-red-50 transition focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
+										className={css({
+											display: "inline-block",
+											p: "1.5",
+											borderRadius: "lg",
+											color: "slate.600",
+											borderWidth: "0",
+											backgroundColor: "transparent",
+											cursor: "pointer",
+											transition: "all 0.15s ease",
+											_hover: {
+												color: "red.600",
+												backgroundColor: "red.50",
+											},
+											_focusVisible: {
+												outline: "2px solid",
+												outlineColor: "red.500",
+											},
+										})}
 									>
-										<Trash2 className="w-4 h-4" aria-hidden="true" />
+										<Trash2
+											className={css({ w: "4", h: "4" })}
+											aria-hidden="true"
+										/>
 									</button>
 								</td>
 							</tr>

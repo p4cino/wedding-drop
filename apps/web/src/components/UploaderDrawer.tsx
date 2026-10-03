@@ -3,7 +3,10 @@
 import { Camera, CheckCircle2, Loader2, Upload, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
+import { css, cx } from "styled-system/css";
 import CameraCapture from "@/components/CameraCapture";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import FilePickerDropzone from "@/components/upload/FilePickerDropzone";
 import UploadFileRow from "@/components/upload/UploadFileRow";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
@@ -88,19 +91,66 @@ export default function UploaderDrawer({
 			aria-modal="true"
 			aria-labelledby="uploader-drawer-title"
 			aria-describedby="uploader-drawer-desc"
-			className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-200"
+			className={css({
+				position: "fixed",
+				inset: "0",
+				zIndex: "50",
+				display: "flex",
+				alignItems: { base: "flex-end", sm: "center" },
+				justifyContent: "center",
+				backgroundColor: "rgba(0, 0, 0, 0.6)",
+				backdropFilter: "blur(4px)",
+				p: { base: "0", sm: "4" },
+			})}
 		>
-			<div className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+			<div
+				className={css({
+					width: "full",
+					maxWidth: "lg",
+					backgroundColor: "white",
+					borderTopRadius: { base: "3xl", sm: "3xl" },
+					borderBottomRadius: { base: "none", sm: "3xl" },
+					boxShadow: "2xl",
+					overflow: "hidden",
+					maxHeight: "90vh",
+					display: "flex",
+					flexDirection: "column",
+				})}
+			>
 				{/* Nagłówek Drawer */}
-				<div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-[#FAF8F5]">
+				<div
+					className={css({
+						px: "6",
+						py: "4",
+						borderBottomWidth: "1px",
+						borderColor: "slate.100",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "space-between",
+						backgroundColor: "#FAF8F5",
+					})}
+				>
 					<div>
 						<h3
 							id="uploader-drawer-title"
-							className="font-serif-luxury text-xl font-bold text-slate-900"
+							className={cx(
+								"font-serif-luxury",
+								css({
+									fontSize: "xl",
+									fontWeight: "bold",
+									color: "slate.900",
+								}),
+							)}
 						>
 							{t("drawerTitle")}
 						</h3>
-						<p id="uploader-drawer-desc" className="text-xs text-slate-500">
+						<p
+							id="uploader-drawer-desc"
+							className={css({
+								fontSize: "xs",
+								color: "slate.500",
+							})}
+						>
 							{t("drawerSubtitle")}
 						</p>
 					</div>
@@ -110,30 +160,56 @@ export default function UploaderDrawer({
 						disabled={isUploading}
 						aria-label={t("drawerCloseTitle")}
 						title={t("drawerCloseTitle")}
-						className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200/50 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
+						className={css({
+							p: "2",
+							color: "slate.400",
+							borderRadius: "full",
+							cursor: "pointer",
+							_hover: { color: "slate.600", bg: "slate.100" },
+							_focusVisible: {
+								outline: "2px solid",
+								outlineColor: "amber.500",
+							},
+						})}
 					>
-						<X className="w-5 h-5" aria-hidden="true" />
+						<X className={css({ w: "5", h: "5" })} aria-hidden="true" />
 					</button>
 				</div>
 
 				{/* Zawartość */}
-				<div className="p-6 overflow-y-auto space-y-5 flex-1">
+				<div
+					className={css({
+						p: "6",
+						overflowY: "auto",
+						display: "flex",
+						flexDirection: "column",
+						gap: "5",
+						flex: "1",
+					})}
+				>
 					{/* Podpis gościa */}
 					<div>
 						<label
 							htmlFor="uploader-name-input"
-							className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5"
+							className={css({
+								display: "block",
+								fontSize: "xs",
+								fontWeight: "semibold",
+								textTransform: "uppercase",
+								letterSpacing: "wider",
+								color: "slate.600",
+								mb: "1.5",
+							})}
 						>
 							{t("signatureLabel")}
 						</label>
-						<input
+						<Input
 							id="uploader-name-input"
 							type="text"
 							placeholder={t("signaturePlaceholder")}
 							value={uploaderName}
 							onChange={(e) => setUploaderName(e.target.value)}
 							disabled={isUploading}
-							className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition text-sm bg-slate-50/50"
 						/>
 					</div>
 
@@ -156,23 +232,40 @@ export default function UploaderDrawer({
 							/>
 
 							{cameraSupported && (
-								<button
+								<Button
 									type="button"
+									variant="outline"
 									disabled={isUploading}
 									onClick={() => setIsCameraMode(true)}
 									aria-label={t("cameraOptionBtn")}
-									className="w-full py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+									className={css({
+										w: "full",
+										py: "2.5",
+										borderRadius: "xl",
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "center",
+										gap: "2",
+									})}
 								>
-									<Camera className="w-4 h-4" aria-hidden="true" />
+									<Camera
+										className={css({ w: "4", h: "4" })}
+										aria-hidden="true"
+									/>
 									{t("cameraOptionBtn")}
-								</button>
+								</Button>
 							)}
 						</>
 					)}
 
 					{justFinished && files.length === 0 && (
 						<p
-							className="text-sm text-emerald-600 font-semibold text-center"
+							className={css({
+								fontSize: "sm",
+								color: "emerald.600",
+								fontWeight: "semibold",
+								textAlign: "center",
+							})}
 							aria-live="polite"
 						>
 							{t("allUploaded")}
@@ -181,22 +274,48 @@ export default function UploaderDrawer({
 
 					{/* Lista wybranych plików */}
 					{files.length > 0 && (
-						<div className="space-y-2.5">
+						<div
+							className={css({
+								display: "flex",
+								flexDirection: "column",
+								gap: "2.5",
+							})}
+						>
 							<div
-								className="flex justify-between items-center text-xs text-slate-500 px-1"
+								className={css({
+									display: "flex",
+									justifyContent: "space-between",
+									alignItems: "center",
+									fontSize: "xs",
+									color: "slate.500",
+									px: "1",
+								})}
 								aria-live="polite"
 							>
 								<span>{t("selectedCount", { count: files.length })}</span>
 							</div>
 
-							<div className="max-h-48 overflow-y-auto space-y-2 pr-1">
+							<div
+								className={css({
+									maxHeight: "48",
+									overflowY: "auto",
+									display: "flex",
+									flexDirection: "column",
+									gap: "2",
+									pr: "1",
+								})}
+							>
 								{files.map((item) => (
 									<UploadFileRow
 										key={item.id}
 										item={item}
 										isUploading={isUploading}
-										progressAria={t("progressAria", { name: item.file.name })}
-										removeTitle={t("removeFileTitle", { name: item.file.name })}
+										progressAria={t("progressAria", {
+											name: item.file.name,
+										})}
+										removeTitle={t("removeFileTitle", {
+											name: item.file.name,
+										})}
 										onRemove={queue.remove}
 									/>
 								))}
@@ -206,38 +325,83 @@ export default function UploaderDrawer({
 				</div>
 
 				{/* Dolny przycisk akcji */}
-				<div className="p-4 bg-white border-t border-slate-100 flex gap-3">
+				<div
+					className={css({
+						p: "4",
+						backgroundColor: "white",
+						borderTopWidth: "1px",
+						borderColor: "slate.100",
+						display: "flex",
+						gap: "3",
+					})}
+				>
 					{justFinished ? (
-						<button
+						<Button
 							type="button"
 							onClick={handleClose}
-							className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-semibold shadow-lg shadow-emerald-600/20 transition flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
+							className={css({
+								w: "full",
+								py: "3.5",
+								bg: "emerald.600",
+								_hover: { bg: "emerald.700" },
+								color: "white",
+								borderRadius: "2xl",
+								fontWeight: "semibold",
+								boxShadow: "lg",
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+								gap: "2",
+							})}
 						>
-							<CheckCircle2 className="w-5 h-5" aria-hidden="true" />
+							<CheckCircle2
+								className={css({ w: "5", h: "5" })}
+								aria-hidden="true"
+							/>
 							{t("doneBtn")}
-						</button>
+						</Button>
 					) : (
-						<button
+						<Button
 							type="button"
 							onClick={startUpload}
 							disabled={files.length === 0 || isUploading}
-							className="w-full py-3.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white rounded-2xl font-semibold shadow-lg shadow-amber-600/25 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
+							className={css({
+								w: "full",
+								py: "3.5",
+								bg: "amber.600",
+								_hover: { bg: "amber.700" },
+								color: "white",
+								borderRadius: "2xl",
+								fontWeight: "semibold",
+								boxShadow: "lg",
+								_disabled: {
+									opacity: "0.5",
+									cursor: "not-allowed",
+								},
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+								gap: "2",
+							})}
 						>
 							{isUploading ? (
 								<>
 									<Loader2
-										className="w-5 h-5 animate-spin"
+										className={cx(css({ w: "5", h: "5" }), "animate-spin")}
 										aria-hidden="true"
 									/>
 									{t("uploadingBtn")}
 								</>
 							) : (
 								<>
-									<Upload className="w-5 h-5" aria-hidden="true" />
+									<Upload
+										className={css({ w: "5", h: "5" })}
+										aria-hidden="true"
+									/>
 									{t("submitBtn", { count: files.length })}
 								</>
 							)}
-						</button>
+						</Button>
 					)}
 				</div>
 			</div>

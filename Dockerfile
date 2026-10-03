@@ -18,7 +18,7 @@ COPY --from=pruner /app/out/json/ .
 COPY pnpm-lock.yaml ./pnpm-lock.yaml
 COPY pnpm-workspace.yaml ./pnpm-workspace.yaml
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # Kopiowanie kodu źródłowego
 COPY --from=pruner /app/out/full/ .
@@ -39,7 +39,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY --from=pruner /app/out/json/ .
 COPY pnpm-lock.yaml ./pnpm-lock.yaml
 COPY pnpm-workspace.yaml ./pnpm-workspace.yaml
-RUN npm pkg delete scripts.prepare && pnpm install --prod --frozen-lockfile
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
 # 4. Etap produkcyjny (Minimalny Runner zoptymalizowany pod Intel N100)
 FROM node:24-alpine AS runner

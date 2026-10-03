@@ -12,7 +12,10 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type React from "react";
+import { css } from "styled-system/css";
 import NewTabLabel from "@/components/NewTabLabel";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { formatMegabytes } from "@/lib/format";
 import type { GDriveState } from "@/lib/owner-types";
 
@@ -54,86 +57,254 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 	const t = useTranslations("OwnerPanel");
 
 	return (
-		<div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-			<div className="p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-r from-amber-500/5 via-amber-50/20 to-transparent border-b border-slate-100">
-				<div className="flex items-start gap-4">
-					<div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 shadow-xs">
-						<Cloud className="w-6 h-6" />
+		<div
+			className={css({
+				backgroundColor: "white",
+				borderRadius: "3xl",
+				borderWidth: "1px",
+				borderColor: "slate.200",
+				boxShadow: "sm",
+				overflow: "hidden",
+			})}
+		>
+			<div
+				className={css({
+					p: { base: "6", sm: "8" },
+					display: "flex",
+					flexDirection: { base: "column", md: "row" },
+					alignItems: { base: "stretch", md: "center" },
+					justifyContent: "space-between",
+					gap: "6",
+					background:
+						"linear-gradient(to right, rgba(245, 158, 11, 0.05), rgba(254, 243, 199, 0.2), transparent)",
+					borderBottomWidth: "1px",
+					borderBottomColor: "slate.100",
+				})}
+			>
+				<div
+					className={css({
+						display: "flex",
+						alignItems: "flex-start",
+						gap: "4",
+					})}
+				>
+					<div
+						className={css({
+							w: "12",
+							h: "12",
+							borderRadius: "2xl",
+							backgroundColor: "amber.100",
+							color: "amber.800",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							flexShrink: 0,
+							boxShadow: "xs",
+						})}
+					>
+						<Cloud className={css({ w: "6", h: "6" })} />
 					</div>
 					<div>
-						<div className="flex items-center gap-2 mb-1 flex-wrap">
-							<h2 className="text-lg font-bold text-slate-900 font-serif-luxury">
+						<div
+							className={css({
+								display: "flex",
+								alignItems: "center",
+								gap: "2",
+								mb: "1",
+								flexWrap: "wrap",
+							})}
+						>
+							<h2
+								className={css({
+									fontSize: "lg",
+									fontWeight: "bold",
+									color: "wedding.slate",
+									fontFamily: "serif",
+								})}
+							>
 								{t("gdriveCardTitle")}
 							</h2>
 							{hasGDrive ? (
-								<span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">
-									<CheckCircle2 className="w-3 h-3" />
+								<Badge
+									size="sm"
+									className={css({
+										display: "inline-flex",
+										alignItems: "center",
+										gap: "1",
+										px: "2.5",
+										py: "0.5",
+										borderRadius: "full",
+										fontSize: "11px",
+										fontWeight: "semibold",
+										backgroundColor: "emerald.100",
+										color: "emerald.800",
+									})}
+								>
+									<CheckCircle2 className={css({ w: "3", h: "3" })} />
 									{t("connected", {
 										email: gdriveEmail || t("defaultAccount"),
 									})}
-								</span>
+								</Badge>
 							) : (
-								<span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600">
+								<Badge
+									size="sm"
+									className={css({
+										display: "inline-flex",
+										alignItems: "center",
+										gap: "1",
+										px: "2.5",
+										py: "0.5",
+										borderRadius: "full",
+										fontSize: "11px",
+										fontWeight: "semibold",
+										backgroundColor: "slate.100",
+										color: "slate.600",
+									})}
+								>
 									{t("notConnected")}
-								</span>
+								</Badge>
 							)}
 						</div>
-						<p className="text-xs text-slate-500 max-w-xl">{t("gdriveDesc")}</p>
+						<p
+							className={css({
+								fontSize: "xs",
+								color: "slate.500",
+								maxW: "xl",
+							})}
+						>
+							{t("gdriveDesc")}
+						</p>
 					</div>
 				</div>
 
 				{/* Przyciski główne akcji */}
-				<div className="flex items-center gap-3 shrink-0 flex-wrap">
+				<div
+					className={css({
+						display: "flex",
+						alignItems: "center",
+						gap: "3",
+						flexShrink: 0,
+						flexWrap: "wrap",
+					})}
+				>
 					{!hasGDrive ? (
-						<button
+						<Button
 							type="button"
 							onClick={onConnect}
 							disabled={!isGDriveConfigured}
-							className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-bold shadow-sm transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none ${
-								isGDriveConfigured
-									? "bg-slate-900 hover:bg-slate-800 text-white"
-									: "bg-slate-200 text-slate-400 cursor-not-allowed"
-							}`}
+							className={css({
+								display: "inline-flex",
+								alignItems: "center",
+								gap: "2",
+								px: "5",
+								py: "3",
+								borderRadius: "2xl",
+								fontSize: "xs",
+								fontWeight: "bold",
+								boxShadow: "sm",
+								transition: "all 0.15s ease",
+								cursor: isGDriveConfigured ? "pointer" : "not-allowed",
+								backgroundColor: isGDriveConfigured ? "slate.900" : "slate.200",
+								color: isGDriveConfigured ? "white" : "slate.400",
+								_hover: {
+									backgroundColor: isGDriveConfigured
+										? "slate.800"
+										: "slate.200",
+								},
+							})}
 						>
-							<Cloud className="w-4 h-4" aria-hidden="true" />
+							<Cloud className={css({ w: "4", h: "4" })} aria-hidden="true" />
 							<span>{t("connectBtn")}</span>
-						</button>
+						</Button>
 					) : (
-						<div className="flex items-center gap-2 flex-wrap">
+						<div
+							className={css({
+								display: "flex",
+								alignItems: "center",
+								gap: "2",
+								flexWrap: "wrap",
+							})}
+						>
 							{gdriveFolderId && (
 								<a
 									href={`https://drive.google.com/drive/folders/${gdriveFolderId}`}
 									target="_blank"
 									rel="noopener noreferrer"
-									className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
+									className={css({
+										display: "inline-flex",
+										alignItems: "center",
+										gap: "1.5",
+										px: "4",
+										py: "2.5",
+										borderRadius: "xl",
+										fontSize: "xs",
+										fontWeight: "bold",
+										backgroundColor: "amber.50",
+										color: "amber.900",
+										borderWidth: "1px",
+										borderColor: "amber.200",
+										textDecoration: "none",
+										transition: "all 0.15s ease",
+										_hover: { backgroundColor: "amber.100" },
+										_focusVisible: {
+											outline: "2px solid",
+											outlineColor: "wedding.gold",
+										},
+									})}
 								>
-									<ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+									<ArrowUpRight
+										className={css({ w: "4", h: "4" })}
+										aria-hidden="true"
+									/>
 									<span>{t("openFolder")}</span>
 									<NewTabLabel />
 								</a>
 							)}
 
-							<button
+							<Button
 								type="button"
 								onClick={onOpenExportModal}
 								disabled={gdriveStatus === "running"}
-								className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none ${
-									gdriveStatus === "running"
-										? "bg-slate-200 text-slate-400 cursor-not-allowed"
-										: "bg-emerald-600 hover:bg-emerald-700 text-white"
-								}`}
+								className={css({
+									display: "inline-flex",
+									alignItems: "center",
+									gap: "2",
+									px: "5",
+									py: "2.5",
+									borderRadius: "xl",
+									fontSize: "xs",
+									fontWeight: "bold",
+									boxShadow: "sm",
+									transition: "all 0.15s ease",
+									cursor:
+										gdriveStatus === "running" ? "not-allowed" : "pointer",
+									backgroundColor:
+										gdriveStatus === "running" ? "slate.200" : "emerald.600",
+									color: gdriveStatus === "running" ? "slate.400" : "white",
+									_hover: {
+										backgroundColor:
+											gdriveStatus === "running" ? "slate.200" : "emerald.700",
+									},
+								})}
 							>
 								{gdriveStatus === "running" ? (
 									<>
 										<Loader2
-											className="w-4 h-4 animate-spin"
+											className={css({
+												w: "4",
+												h: "4",
+												animation: "spin 1s linear infinite",
+											})}
 											aria-hidden="true"
 										/>
 										<span>{t("exporting")}</span>
 									</>
 								) : (
 									<>
-										<Play className="w-3.5 h-3.5" aria-hidden="true" />
+										<Play
+											className={css({ w: "3.5", h: "3.5" })}
+											aria-hidden="true"
+										/>
 										<span>
 											{gdriveStatus === "interrupted"
 												? t("resumeExport")
@@ -141,16 +312,35 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 										</span>
 									</>
 								)}
-							</button>
+							</Button>
 
 							<button
 								type="button"
 								onClick={onDisconnect}
 								title={t("disconnectBtn")}
 								aria-label={t("disconnectBtn")}
-								className="p-2.5 rounded-xl text-slate-600 hover:text-red-600 hover:bg-red-50 transition focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
+								className={css({
+									p: "2.5",
+									borderRadius: "xl",
+									color: "slate.600",
+									backgroundColor: "transparent",
+									borderWidth: "0",
+									cursor: "pointer",
+									transition: "all 0.15s ease",
+									_hover: {
+										color: "red.600",
+										backgroundColor: "red.50",
+									},
+									_focusVisible: {
+										outline: "2px solid",
+										outlineColor: "red.500",
+									},
+								})}
 							>
-								<Unlink className="w-4 h-4" aria-hidden="true" />
+								<Unlink
+									className={css({ w: "4", h: "4" })}
+									aria-hidden="true"
+								/>
 							</button>
 						</div>
 					)}
@@ -158,9 +348,26 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 			</div>
 
 			{!isGDriveConfigured && !hasGDrive && (
-				<div className="p-4 bg-amber-50/60 border-t border-amber-200/60 text-xs text-amber-800 flex items-center gap-2">
+				<div
+					className={css({
+						p: "4",
+						backgroundColor: "rgba(254, 243, 199, 0.6)",
+						borderTopWidth: "1px",
+						borderTopColor: "rgba(253, 230, 138, 0.6)",
+						fontSize: "xs",
+						color: "amber.800",
+						display: "flex",
+						alignItems: "center",
+						gap: "2",
+					})}
+				>
 					<AlertTriangle
-						className="w-4 h-4 text-amber-600 shrink-0"
+						className={css({
+							w: "4",
+							h: "4",
+							color: "amber.600",
+							flexShrink: 0,
+						})}
 						aria-hidden="true"
 					/>
 					<span>{t("envWarning")}</span>
@@ -169,16 +376,52 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 
 			{/* Podgląd stanu i paska postępu eksportu */}
 			{hasGDrive && (
-				<div className="p-6 sm:p-8 space-y-4">
+				<div
+					className={css({
+						p: { base: "6", sm: "8" },
+						display: "flex",
+						flexDirection: "column",
+						gap: "4",
+					})}
+				>
 					{gdriveStatus === "running" && (
 						<div
-							className="p-5 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-3"
+							className={css({
+								p: "5",
+								borderRadius: "2xl",
+								backgroundColor: "rgba(254, 243, 199, 0.8)",
+								borderWidth: "1px",
+								borderColor: "amber.200",
+								display: "flex",
+								flexDirection: "column",
+								gap: "3",
+							})}
 							aria-live="polite"
 						>
-							<div className="flex items-center justify-between text-xs font-semibold text-amber-900">
-								<span className="flex items-center gap-2">
+							<div
+								className={css({
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "space-between",
+									fontSize: "xs",
+									fontWeight: "semibold",
+									color: "amber.900",
+								})}
+							>
+								<span
+									className={css({
+										display: "flex",
+										alignItems: "center",
+										gap: "2",
+									})}
+								>
 									<Loader2
-										className="w-4 h-4 animate-spin text-amber-700"
+										className={css({
+											w: "4",
+											h: "4",
+											animation: "spin 1s linear infinite",
+											color: "amber.700",
+										})}
 										aria-hidden="true"
 									/>
 									{t("exportProgressTitle")}
@@ -199,16 +442,42 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 								aria-valuemin={0}
 								aria-valuemax={100}
 								aria-label={t("progressAria")}
-								className="w-full h-3 bg-amber-200/70 rounded-full overflow-hidden"
+								className={css({
+									w: "full",
+									h: "3",
+									backgroundColor: "rgba(253, 230, 138, 0.7)",
+									borderRadius: "full",
+									overflow: "hidden",
+								})}
 							>
 								<div
-									className="h-full bg-amber-600 transition-all duration-500 rounded-full"
+									className={css({
+										h: "full",
+										backgroundColor: "amber.600",
+										transition: "all 0.5s ease",
+										borderRadius: "full",
+									})}
 									style={{ width: `${progressPercent}%` }}
 								/>
 							</div>
 
-							<div className="flex items-center justify-between text-[11px] text-amber-800/80">
-								<span className="truncate max-w-md">
+							<div
+								className={css({
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "space-between",
+									fontSize: "11px",
+									color: "rgba(146, 64, 14, 0.8)",
+								})}
+							>
+								<span
+									className={css({
+										overflow: "hidden",
+										textOverflow: "ellipsis",
+										whiteSpace: "nowrap",
+										maxW: "md",
+									})}
+								>
 									{gdriveProgress?.currentFile
 										? t("uploadingFile", { file: gdriveProgress.currentFile })
 										: t("processing")}
@@ -218,24 +487,66 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 								</span>
 							</div>
 
-							<p className="text-[11px] text-amber-700/70 italic">
+							<p
+								className={css({
+									fontSize: "11px",
+									color: "rgba(180, 83, 9, 0.7)",
+									fontStyle: "italic",
+								})}
+							>
 								{t("backgroundNote")}
 							</p>
 						</div>
 					)}
 
 					{gdriveStatus === "interrupted" && (
-						<div className="p-4 rounded-2xl bg-orange-50 border border-orange-200 flex items-start justify-between gap-4">
-							<div className="flex items-start gap-3">
+						<div
+							className={css({
+								p: "4",
+								borderRadius: "2xl",
+								backgroundColor: "orange.50",
+								borderWidth: "1px",
+								borderColor: "orange.200",
+								display: "flex",
+								alignItems: "flex-start",
+								justifyContent: "space-between",
+								gap: "4",
+							})}
+						>
+							<div
+								className={css({
+									display: "flex",
+									alignItems: "flex-start",
+									gap: "3",
+								})}
+							>
 								<AlertTriangle
-									className="w-5 h-5 text-orange-600 shrink-0 mt-0.5"
+									className={css({
+										w: "5",
+										h: "5",
+										color: "orange.600",
+										flexShrink: 0,
+										mt: "0.5",
+									})}
 									aria-hidden="true"
 								/>
 								<div>
-									<h3 className="text-xs font-bold text-orange-900">
+									<h3
+										className={css({
+											fontSize: "xs",
+											fontWeight: "bold",
+											color: "orange.900",
+										})}
+									>
 										{t("interruptedTitle")}
 									</h3>
-									<p className="text-xs text-orange-700 mt-0.5">
+									<p
+										className={css({
+											fontSize: "xs",
+											color: "orange.700",
+											mt: "0.5",
+										})}
+									>
 										{t("interruptedDesc")}
 									</p>
 								</div>
@@ -245,18 +556,45 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 
 					{gdriveStatus === "failed" && (
 						<div
-							className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3"
+							className={css({
+								p: "4",
+								borderRadius: "2xl",
+								backgroundColor: "red.50",
+								borderWidth: "1px",
+								borderColor: "red.200",
+								display: "flex",
+								alignItems: "flex-start",
+								gap: "3",
+							})}
 							role="alert"
 						>
 							<AlertCircle
-								className="w-5 h-5 text-red-600 shrink-0 mt-0.5"
+								className={css({
+									w: "5",
+									h: "5",
+									color: "red.600",
+									flexShrink: 0,
+									mt: "0.5",
+								})}
 								aria-hidden="true"
 							/>
 							<div>
-								<h3 className="text-xs font-bold text-red-900">
+								<h3
+									className={css({
+										fontSize: "xs",
+										fontWeight: "bold",
+										color: "red.900",
+									})}
+								>
 									{t("failedTitle")}
 								</h3>
-								<p className="text-xs text-red-700 mt-0.5">
+								<p
+									className={css({
+										fontSize: "xs",
+										color: "red.700",
+										mt: "0.5",
+									})}
+								>
 									{gdriveProgress?.error || t("defaultError")}
 								</p>
 							</div>
@@ -264,17 +602,47 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 					)}
 
 					{gdriveStatus === "completed" && (
-						<div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-4 flex-wrap">
-							<div className="flex items-center gap-3">
+						<div
+							className={css({
+								p: "4",
+								borderRadius: "2xl",
+								backgroundColor: "emerald.50",
+								borderWidth: "1px",
+								borderColor: "emerald.200",
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "space-between",
+								gap: "4",
+								flexWrap: "wrap",
+							})}
+						>
+							<div
+								className={css({
+									display: "flex",
+									alignItems: "center",
+									gap: "3",
+								})}
+							>
 								<CheckCircle2
-									className="w-5 h-5 text-emerald-600 shrink-0"
+									className={css({
+										w: "5",
+										h: "5",
+										color: "emerald.600",
+										flexShrink: 0,
+									})}
 									aria-hidden="true"
 								/>
 								<div>
-									<h3 className="text-xs font-bold text-emerald-900">
+									<h3
+										className={css({
+											fontSize: "xs",
+											fontWeight: "bold",
+											color: "emerald.900",
+										})}
+									>
 										{t("completedTitle")}
 									</h3>
-									<p className="text-xs text-emerald-700">
+									<p className={css({ fontSize: "xs", color: "emerald.700" })}>
 										{gdriveExportedAt
 											? t("lastExport", {
 													date: new Date(gdriveExportedAt).toLocaleString(
@@ -291,9 +659,31 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 									href={`https://drive.google.com/drive/folders/${gdriveFolderId}`}
 									target="_blank"
 									rel="noopener noreferrer"
-									className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
+									className={css({
+										display: "inline-flex",
+										alignItems: "center",
+										gap: "1.5",
+										px: "4",
+										py: "2",
+										borderRadius: "xl",
+										fontSize: "xs",
+										fontWeight: "bold",
+										backgroundColor: "emerald.600",
+										color: "white",
+										boxShadow: "xs",
+										textDecoration: "none",
+										transition: "all 0.15s ease",
+										_hover: { backgroundColor: "emerald.700" },
+										_focusVisible: {
+											outline: "2px solid",
+											outlineColor: "emerald.500",
+										},
+									})}
 								>
-									<ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+									<ArrowUpRight
+										className={css({ w: "4", h: "4" })}
+										aria-hidden="true"
+									/>
 									<span>{t("viewGDrive")}</span>
 									<NewTabLabel />
 								</a>
@@ -302,12 +692,22 @@ export const GDriveBackupCard: React.FC<GDriveBackupCardProps> = ({
 					)}
 
 					{gdriveStatus === "idle" && (
-						<div className="text-xs text-slate-500 flex items-center justify-between flex-wrap gap-2">
+						<div
+							className={css({
+								fontSize: "xs",
+								color: "slate.500",
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "space-between",
+								flexWrap: "wrap",
+								gap: "2",
+							})}
+						>
 							<span>
 								{t("idleDesc", { email: gdriveEmail || t("defaultAccount") })}
 							</span>
 							{gdriveExportedAt && (
-								<span className="text-[11px] text-slate-400">
+								<span className={css({ fontSize: "11px", color: "slate.400" })}>
 									{t("idleLastExport", {
 										date: new Date(gdriveExportedAt).toLocaleString("pl-PL"),
 									})}
