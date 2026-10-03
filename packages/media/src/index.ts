@@ -1,3 +1,4 @@
+export * from "./file-validator";
 export * from "./gdrive-exporter";
 export * from "./google-drive";
 export * from "./media-processor";

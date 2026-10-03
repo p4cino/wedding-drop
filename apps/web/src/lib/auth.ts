@@ -76,17 +76,30 @@ export function readOwnerToken(
 	return null;
 }
 
+let runtimeFallbackSecret: string | null = null;
+
+function getRuntimeFallbackSecret(): string {
+	if (!runtimeFallbackSecret) {
+		runtimeFallbackSecret = crypto.randomBytes(32).toString("hex");
+	}
+	return runtimeFallbackSecret;
+}
+
 export function getAdminSecret(): string {
+	return process.env.ADMIN_SECRET || getRuntimeFallbackSecret();
+}
+
+export function getOwnerSecret(): string {
 	return (
+		process.env.OWNER_SECRET ||
 		process.env.ADMIN_SECRET ||
-		process.env.ADMIN_PASSWORD ||
-		"wedding-admin-secret-fallback-key"
+		getRuntimeFallbackSecret()
 	);
 }
 
 export function generateAdminToken(username: string): string {
 	const timestamp = Date.now();
-	const payload = `${timestamp}.${username}`;
+	const payload = `admin:${timestamp}.${username}`;
 	const hmac = crypto
 		.createHmac("sha256", getAdminSecret())
 		.update(payload)
@@ -112,7 +125,7 @@ export function verifyAdminToken(token: string | null | undefined): boolean {
 		return false;
 	}
 
-	const payload = `${timestamp}.${username}`;
+	const payload = `admin:${timestamp}.${username}`;
 	const expectedHmac = crypto
 		.createHmac("sha256", getAdminSecret())
 		.update(payload)
@@ -130,9 +143,9 @@ export function verifyAdminToken(token: string | null | undefined): boolean {
 
 export function generateOwnerToken(slug: string): string {
 	const timestamp = Date.now();
-	const payload = `${timestamp}.${slug}`;
+	const payload = `owner:${timestamp}.${slug}`;
 	const hmac = crypto
-		.createHmac("sha256", getAdminSecret())
+		.createHmac("sha256", getOwnerSecret())
 		.update(payload)
 		.digest("hex");
 	return `owner_${timestamp}_${Buffer.from(slug).toString("base64")}_${hmac}`;
@@ -161,9 +174,9 @@ export function verifyOwnerToken(
 		return false;
 	}
 
-	const payload = `${timestamp}.${slug}`;
+	const payload = `owner:${timestamp}.${slug}`;
 	const expectedHmac = crypto
-		.createHmac("sha256", getAdminSecret())
+		.createHmac("sha256", getOwnerSecret())
 		.update(payload)
 		.digest("hex");
 

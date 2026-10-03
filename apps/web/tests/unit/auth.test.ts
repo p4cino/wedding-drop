@@ -45,6 +45,23 @@ describe("Auth HMAC Tokens", () => {
 			"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
 		expect(verifyOwnerToken(parts.join("_"), slug)).toBe(false);
 	});
+
+	it("powinien uniemożliwić eskalację uprawnień przez zamianę prefiksu owner_ na admin_ (Token Prefix Swap)", () => {
+		const username = "admin";
+		const ownerTokenForAdminSlug = generateOwnerToken(username);
+		// Próba zamiany prefiksu owner_ na admin_
+		const forgedAdminToken = ownerTokenForAdminSlug.replace(
+			/^owner_/,
+			"admin_",
+		);
+		expect(verifyAdminToken(forgedAdminToken)).toBe(false);
+	});
+
+	it("powinien uniemożliwić użycie tokenu admin_ jako tokenu właściciela", () => {
+		const adminToken = generateAdminToken("kasia-i-tomek");
+		const forgedOwnerToken = adminToken.replace(/^admin_/, "owner_");
+		expect(verifyOwnerToken(forgedOwnerToken, "kasia-i-tomek")).toBe(false);
+	});
 });
 
 describe("verifyOwnerCredentialsForTus (adapter wstrzykiwany do packages/media)", () => {

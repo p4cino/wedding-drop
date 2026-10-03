@@ -6,6 +6,7 @@ import { initTusServer, recoverInterruptedExports } from "@wedding-drop/media";
 import dotenv from "dotenv";
 import next from "next";
 import { verifyOwnerCredentialsForTus } from "./src/lib/auth";
+import { handleMediaFileRequest } from "./src/lib/media-file-handler";
 
 dotenv.config();
 
@@ -39,7 +40,7 @@ async function bootstrap() {
 	await app.prepare();
 
 	// 5. Utworzenie serwera HTTP
-	const server = createServer((req, res) => {
+	const server = createServer(async (req, res) => {
 		const url = req.url || "/";
 
 		// A. Obsługa wznawialnego protokołu TUS
@@ -47,7 +48,18 @@ async function bootstrap() {
 			return tusServer.handle(req, res);
 		}
 
-		// B. Bezpośrednie serwowanie plików przeniesiono na poziom Caddy (patrz: Caddyfile)
+		// B. Bezpieczne serwowanie plików multimedialnych z weryfikacją uprawnień i Byte-Range
+		if (url.startsWith("/media-file/")) {
+			try {
+				const handled = await handleMediaFileRequest(req, res, dataDir);
+				if (handled) return;
+			} catch (err) {
+				console.error("[Server] Błąd obsługi pliku multimedialnego:", err);
+				res.writeHead(500, { "Content-Type": "text/plain" });
+				res.end("Internal Server Error");
+				return;
+			}
+		}
 
 		// C. Domyślny routing Next.js (App Router, API routes, Server Actions)
 		return nextHandler(req, res);
