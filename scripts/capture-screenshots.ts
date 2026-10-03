@@ -117,7 +117,7 @@ const MOCK_WEDDING_MEDIA = [
 	},
 	{
 		id: "media-4",
-		uploaderName: "Świadkowa Ania",
+		uploaderName: "Wujek Staszek",
 		source: "guest",
 		fileType: "image",
 		mimeType: "image/jpeg",
@@ -161,6 +161,31 @@ const MOCK_WEDDING_MEDIA = [
 			icon: "🎆",
 			title: "Zimne Ognie o Północy",
 			subtitle: "Niezapomniane wspomnienia",
+			width: 1920,
+			height: 1080,
+		}),
+	},
+	{
+		id: "media-6",
+		uploaderName: "Świadkowa Ania",
+		source: "guest",
+		fileType: "image",
+		mimeType: "image/jpeg",
+		originalFileName: "zabawa_na_parkiecie.jpg",
+		fileSize: 4456448,
+		status: "ready",
+		createdAt: "2026-09-12T23:15:00.000Z",
+		thumbUrl: createWeddingSvg({
+			bgGradient: ["#1e1b4b", "#312e81", "#4338ca"],
+			icon: "💃",
+			title: "Szał na Parkiecie",
+			subtitle: "ZABAWA DO BIAŁEGO RANA",
+		}),
+		rawUrl: createWeddingSvg({
+			bgGradient: ["#1e1b4b", "#312e81", "#4338ca"],
+			icon: "💃",
+			title: "Szał na Parkiecie",
+			subtitle: "Zabawa do białego rana",
 			width: 1920,
 			height: 1080,
 		}),
@@ -213,6 +238,7 @@ const MOCK_GALLERY = {
 	},
 };
 
+// biome-ignore lint/suspicious/noUndeclaredEnvVars: opcjonalny parametr skryptu narzędziowego
 const BASE_URL = process.env.BASE_URL || "http://localhost:3001";
 
 async function hideNextDevOverlay(page: Page) {
@@ -238,9 +264,9 @@ async function enableLiveSseMock(page: Page) {
 	// Mockujemy EventSource po stronie przeglądarki, by galeria miała natychmiast status "Na żywo"
 	await page.addInitScript(() => {
 		class MockEventSource {
-			onopen: ((e: any) => void) | null = null;
-			onmessage: ((e: any) => void) | null = null;
-			onerror: ((e: any) => void) | null = null;
+			onopen: ((e: Event) => void) | null = null;
+			onmessage: ((e: MessageEvent) => void) | null = null;
+			onerror: ((e: Event) => void) | null = null;
 			readyState = 1;
 			constructor(_url: string) {
 				setTimeout(() => {
@@ -251,7 +277,8 @@ async function enableLiveSseMock(page: Page) {
 			}
 			close() {}
 		}
-		(window as any).EventSource = MockEventSource;
+		(window as unknown as { EventSource: unknown }).EventSource =
+			MockEventSource;
 	});
 }
 
@@ -452,11 +479,6 @@ async function main() {
 			path: path.join(outputDir, "05-table-card-creator.png"),
 			fullPage: false,
 		});
-		// Zachowujemy też kompatybilność wsteczną
-		fs.copyFileSync(
-			path.join(outputDir, "05-table-card-creator.png"),
-			path.join(outputDir, "03-table-card-creator.png"),
-		);
 		console.log(
 			"✓ 05-table-card-creator.png (Generator winietek A6 z podglądem na żywo)",
 		);
@@ -499,11 +521,6 @@ async function main() {
 			path: path.join(outputDir, "06-owner-dashboard.png"),
 			fullPage: false,
 		});
-		// Kompatybilność wsteczna
-		fs.copyFileSync(
-			path.join(outputDir, "06-owner-dashboard.png"),
-			path.join(outputDir, "04-owner-dashboard.png"),
-		);
 		console.log(
 			"✓ 06-owner-dashboard.png (Panel Pary Młodej: moderacja, import fotografa, życzenia, TV)",
 		);
@@ -537,8 +554,8 @@ async function main() {
 							slug: "kasia-i-tomek",
 							coupleNames: "Kasia & Tomek",
 							weddingDate: "12.09.2026",
-							contactEmail: "kasia.tomek@example.com",
-							filesCount: 248,
+							ownerEmail: "kasia.tomek@example.com",
+							totalFiles: 248,
 							totalBytes: 1428490188,
 							status: "active",
 						},
@@ -547,8 +564,8 @@ async function main() {
 							slug: "ola-i-michal",
 							coupleNames: "Ola & Michał",
 							weddingDate: "26.09.2026",
-							contactEmail: "ola.michal@example.com",
-							filesCount: 112,
+							ownerEmail: "ola.michal@example.com",
+							totalFiles: 112,
 							totalBytes: 542113840,
 							status: "active",
 						},
@@ -557,8 +574,8 @@ async function main() {
 							slug: "magda-i-piotr",
 							coupleNames: "Magda & Piotr",
 							weddingDate: "10.10.2026",
-							contactEmail: "magda.piotr@example.com",
-							filesCount: 0,
+							ownerEmail: "magda.piotr@example.com",
+							totalFiles: 0,
 							totalBytes: 0,
 							status: "active",
 						},
@@ -578,12 +595,7 @@ async function main() {
 			await adminPwd.fill("admin123");
 			await adminPage.getByRole("button", { name: "Zaloguj się" }).click();
 			// Czekamy na załadowanie tabeli z galeriami
-			await adminPage.waitForSelector(
-				"table, [role='table'], text=Kasia & Tomek",
-				{
-					timeout: 5000,
-				},
-			);
+			await adminPage.getByText("Kasia & Tomek").waitFor({ timeout: 5000 });
 			await adminPage.waitForTimeout(500);
 		}
 
@@ -592,11 +604,6 @@ async function main() {
 			path: path.join(outputDir, "07-admin-panel.png"),
 			fullPage: false,
 		});
-		// Kompatybilność wsteczna
-		fs.copyFileSync(
-			path.join(outputDir, "07-admin-panel.png"),
-			path.join(outputDir, "05-admin-panel.png"),
-		);
 		console.log(
 			"✓ 07-admin-panel.png (Panel Administratora ze statystykami i listą galerii)",
 		);
