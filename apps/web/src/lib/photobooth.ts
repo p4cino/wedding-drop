@@ -14,8 +14,8 @@ export const DEFAULT_PRIMARY_COLOR: string = DEFAULT_CARD_COLORS.primary;
 export const DEFAULT_ACCENT_COLOR: string = DEFAULT_CARD_COLORS.accent;
 
 // Maksymalny rozmiar dłuższego boku eksportowanego zdjęcia — ogranicza rozmiar
-// pliku ze zrzutów kamer 4K na nowszych telefonach, patrz design.md „Risks”.
-export const MAX_CAPTURE_DIMENSION = 1920;
+// pliku ze zrzutów kamer 4K na nowszych telefonach (Quad HD 2560px), patrz design.md „Risks”.
+export const MAX_CAPTURE_DIMENSION = 2560;
 
 export interface PhotoboothColors {
 	primaryColor?: string | null;
@@ -29,7 +29,7 @@ export interface CanvasSize {
 
 /**
  * Wylicza wymiary canvasu na podstawie faktycznych wymiarów strumienia wideo
- * (`video.videoWidth`/`video.videoHeight`), skalując proporcjonalnie w dół,
+ * lub zdjęcia źródłowego, skalując proporcjonalnie w dół,
  * gdy dłuższy bok przekracza `maxDimension`. Nigdy nie skaluje w górę.
  */
 export function computeCaptureDimensions(
@@ -96,6 +96,37 @@ export function drawPhotoboothFrame(
 }
 
 /**
+ * Rysuje dowolne źródło obrazu (HTMLVideoElement, HTMLImageElement, ImageBitmap itp.)
+ * na `<canvas>` o zadanych wymiarach źródłowych, skalując proporcjonalnie do `maxDimension`
+ * i dokłada na wierzchu ramkę motywu wesela.
+ */
+export function captureSourceToCanvas(
+	source: CanvasImageSource,
+	sourceWidth: number,
+	sourceHeight: number,
+	canvas: HTMLCanvasElement,
+	colors?: PhotoboothColors,
+	maxDimension: number = MAX_CAPTURE_DIMENSION,
+): CanvasSize {
+	const { width, height } = computeCaptureDimensions(
+		sourceWidth,
+		sourceHeight,
+		maxDimension,
+	);
+
+	canvas.width = width;
+	canvas.height = height;
+
+	const ctx = canvas.getContext("2d");
+	if (!ctx) return { width, height };
+
+	ctx.drawImage(source, 0, 0, width, height);
+	drawPhotoboothFrame(ctx, width, height, colors);
+
+	return { width, height };
+}
+
+/**
  * Rysuje bieżącą klatkę z `<video>` na `<canvas>` (dopasowując wymiary canvasu
  * do faktycznych wymiarów strumienia, patrz `computeCaptureDimensions`) i
  * dokłada na wierzchu ramkę motywu wesela.
@@ -106,32 +137,24 @@ export function captureFrameToCanvas(
 	colors?: PhotoboothColors,
 	maxDimension: number = MAX_CAPTURE_DIMENSION,
 ): CanvasSize {
-	const { width, height } = computeCaptureDimensions(
+	return captureSourceToCanvas(
+		video,
 		video.videoWidth,
 		video.videoHeight,
+		canvas,
+		colors,
 		maxDimension,
 	);
-
-	canvas.width = width;
-	canvas.height = height;
-
-	const ctx = canvas.getContext("2d");
-	if (!ctx) return { width, height };
-
-	ctx.drawImage(video, 0, 0, width, height);
-	drawPhotoboothFrame(ctx, width, height, colors);
-
-	return { width, height };
 }
 
 /**
- * Eksportuje canvas jako `File` (JPEG, domyślnie jakość 0.92) gotowy do
+ * Eksportuje canvas jako `File` (JPEG, domyślnie jakość 0.95) gotowy do
  * przekazania do dokładnie tego samego `tus.Upload`, co plik z wyboru z dysku.
  */
 export function canvasToJpegFile(
 	canvas: HTMLCanvasElement,
 	filename: string = `photobooth_${Date.now()}.jpg`,
-	quality = 0.92,
+	quality = 0.95,
 ): Promise<File> {
 	return new Promise((resolve, reject) => {
 		canvas.toBlob(

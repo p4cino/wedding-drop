@@ -1,9 +1,19 @@
 import { vi } from "vitest";
 
-/** Strumień kamery z jedną ścieżką, której `stop` można sprawdzić w teście. */
+/** Strumień kamery z jedną ścieżką, której `stop` i `applyConstraints` można sprawdzić w teście. */
 export function createFakeStream() {
-	const track = { stop: vi.fn() };
-	const stream = { getTracks: () => [track] } as unknown as MediaStream;
+	const track = {
+		stop: vi.fn(),
+		applyConstraints: vi.fn().mockResolvedValue(undefined),
+		getCapabilities: vi.fn().mockReturnValue({
+			focusMode: ["continuous", "manual"],
+		}),
+		readyState: "live",
+	};
+	const stream = {
+		getTracks: () => [track],
+		getVideoTracks: () => [track],
+	} as unknown as MediaStream;
 	return { stream, track };
 }
 

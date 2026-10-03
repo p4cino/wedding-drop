@@ -10,12 +10,15 @@ import {
 } from "../../helpers/media-devices";
 
 const captureFrameToCanvasMock = vi.fn();
+const captureSourceToCanvasMock = vi.fn();
 const canvasToJpegFileMock = vi.fn();
 
 vi.mock("@/lib/photobooth", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@/lib/photobooth")>()),
 	captureFrameToCanvas: (...args: unknown[]) =>
 		captureFrameToCanvasMock(...args),
+	captureSourceToCanvas: (...args: unknown[]) =>
+		captureSourceToCanvasMock(...args),
 	canvasToJpegFile: (...args: unknown[]) => canvasToJpegFileMock(...args),
 }));
 
@@ -27,6 +30,7 @@ describe("CameraCapture Component", () => {
 		vi.clearAllMocks();
 		localStorage.clear();
 		captureFrameToCanvasMock.mockReturnValue({ width: 640, height: 480 });
+		captureSourceToCanvasMock.mockReturnValue({ width: 1920, height: 1080 });
 		canvasToJpegFileMock.mockResolvedValue(
 			new File(["dane"], "photobooth_1.jpg", { type: "image/jpeg" }),
 		);
@@ -74,7 +78,7 @@ describe("CameraCapture Component", () => {
 		});
 	});
 
-	it("po kliknięciu spustu migawki komponuje klatkę na canvasie i przekazuje wynikowy plik", async () => {
+	it("po kliknięciu spustu migawki komponuje klatkę na canvasie i przekazuje wynikowy plik z jakością 0.95", async () => {
 		mockGetUserMedia(async () => fakeStream());
 		const onCapture = vi.fn();
 
@@ -102,6 +106,11 @@ describe("CameraCapture Component", () => {
 			expect.anything(),
 			expect.anything(),
 			{ primaryColor: "#112233", accentColor: "#AABBCC" },
+		);
+		expect(canvasToJpegFileMock).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.stringMatching(/^photobooth_\d+\.jpg$/),
+			0.95,
 		);
 		const [capturedFile] = onCapture.mock.calls[0];
 		expect(capturedFile).toBeInstanceOf(File);
@@ -163,20 +172,37 @@ describe("CameraCapture Component", () => {
 		expect(track.stop).toHaveBeenCalled();
 	});
 
-	it("domyślnie uruchamia tylną kamerę (environment) z elastycznym ograniczeniem ideal", async () => {
+	it("domyślnie uruchamia tylną kamerę (environment) z elastycznym ograniczeniem ideal oraz Full HD", async () => {
 		const gum = mockGetUserMedia(async () => fakeStream());
 
 		render(<CameraCapture onCapture={vi.fn()} onCancel={vi.fn()} />);
 
 		await waitFor(() => {
 			expect(gum).toHaveBeenCalledWith({
-				video: { facingMode: { ideal: "environment" } },
+				video: {
+					facingMode: { ideal: "environment" },
+					width: { ideal: 1920 },
+					height: { ideal: 1080 },
+				},
 				audio: false,
 			});
 		});
 
 		const video = screen.getByTestId("camera-preview-video");
 		expect(video.className).not.toContain("scale-x-[-1]");
+	});
+
+	it("automatycznie włącza ciągły autofokus (focusMode: continuous) jeśli ścieżka wideo go wspiera", async () => {
+		const { stream, track } = createFakeStream();
+		mockGetUserMedia(async () => stream);
+
+		render(<CameraCapture onCapture={vi.fn()} onCancel={vi.fn()} />);
+
+		await waitFor(() => {
+			expect(track.applyConstraints).toHaveBeenCalledWith({
+				advanced: [{ focusMode: "continuous" }],
+			});
+		});
 	});
 
 	it("wyświetla przycisk przełączenia aparatu, gdy urządzenie posiada więcej niż jedną kamerę", async () => {
@@ -232,7 +258,11 @@ describe("CameraCapture Component", () => {
 		await waitFor(() => {
 			expect(firstTrack.stop).toHaveBeenCalled();
 			expect(gum).toHaveBeenLastCalledWith({
-				video: { facingMode: { ideal: "user" } },
+				video: {
+					facingMode: { ideal: "user" },
+					width: { ideal: 1920 },
+					height: { ideal: 1080 },
+				},
 				audio: false,
 			});
 		});
@@ -250,12 +280,60 @@ describe("CameraCapture Component", () => {
 
 		await waitFor(() => {
 			expect(gum).toHaveBeenCalledWith({
-				video: { facingMode: { ideal: "user" } },
+				video: {
+					facingMode: { ideal: "user" },
+					width: { ideal: 1920 },
+					height: { ideal: 1080 },
+				},
 				audio: false,
 			});
 		});
 
 		const video = screen.getByTestId("camera-preview-video");
 		expect(video.className).toContain("scale-x-[-1]");
+	});
+
+	it("wykorzystuje ImageCapture i captureSourceToCanvas, gdy API jest dostępne w przeglądarce", async () => {
+		const { stream } = createFakeStream();
+		mockGetUserMedia(async () => stream);
+		const onCapture = vi.fn();
+
+		const fakeBlob = new Blob(["foto"], { type: "image/jpeg" });
+		const takePhotoMock = vi.fn().mockResolvedValue(fakeBlob);
+		class MockImageCapture {
+			takePhoto = takePhotoMock;
+		}
+		(window as unknown as Record<string, unknown>).ImageCapture =
+			MockImageCapture;
+		window.createImageBitmap = vi.fn().mockResolvedValue({
+			width: 3840,
+			height: 2160,
+			close: vi.fn(),
+		});
+
+		render(<CameraCapture onCapture={onCapture} onCancel={vi.fn()} />);
+		const shutterBtn = await screen.findByRole("button", {
+			name: "cameraShutter",
+		});
+		await waitFor(() => expect(shutterBtn).toBeEnabled());
+
+		fireEvent.click(shutterBtn);
+
+		await waitFor(() => {
+			expect(onCapture).toHaveBeenCalledTimes(1);
+		});
+
+		expect(takePhotoMock).toHaveBeenCalled();
+		expect(captureSourceToCanvasMock).toHaveBeenCalledWith(
+			expect.anything(),
+			3840,
+			2160,
+			expect.anything(),
+			expect.anything(),
+		);
+
+		// Cleanup
+		delete (window as unknown as Record<string, unknown>).ImageCapture;
+		delete (window as unknown as Record<string, unknown>).createImageBitmap;
 	});
 });

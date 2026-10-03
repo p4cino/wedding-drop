@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	canvasToJpegFile,
 	captureFrameToCanvas,
+	captureSourceToCanvas,
 	isCameraSupported,
 } from "@/lib/photobooth";
 
@@ -77,7 +78,11 @@ export default function CameraCapture({
 
 			try {
 				const stream = await navigator.mediaDevices.getUserMedia({
-					video: { facingMode: { ideal: facingMode } },
+					video: {
+						facingMode: { ideal: facingMode },
+						width: { ideal: 1920 },
+						height: { ideal: 1080 },
+					},
 					audio: false,
 				});
 
@@ -87,6 +92,24 @@ export default function CameraCapture({
 				}
 
 				streamRef.current = stream;
+				const [track] = stream.getVideoTracks();
+				if (track) {
+					try {
+						const capabilities = (track.getCapabilities?.() ?? {}) as {
+							focusMode?: string[];
+						};
+						if (capabilities.focusMode?.includes("continuous")) {
+							await track.applyConstraints?.({
+								advanced: [
+									{ focusMode: "continuous" } as MediaTrackConstraintSet,
+								],
+							});
+						}
+					} catch {
+						// Ignorujemy brak wsparcia dla applyConstraints / focusMode
+					}
+				}
+
 				const video = videoRef.current;
 				if (video) {
 					try {
@@ -146,13 +169,78 @@ export default function CameraCapture({
 
 		setIsCapturing(true);
 		try {
-			captureFrameToCanvas(video, canvas, {
-				primaryColor,
-				accentColor,
-			});
+			let capturedViaImageCapture = false;
+
+			// Próba natywnego przechwycenia pełnej klatki sensora za pomocą ImageCapture API (Chromium / Android)
+			if (typeof window !== "undefined" && "ImageCapture" in window) {
+				const track = streamRef.current?.getVideoTracks()[0];
+				if (track && track.readyState === "live") {
+					try {
+						const ImageCaptureConstructor = (
+							window as unknown as {
+								ImageCapture: new (
+									t: MediaStreamTrack,
+								) => {
+									takePhoto: () => Promise<Blob>;
+								};
+							}
+						).ImageCapture;
+						const imageCapture = new ImageCaptureConstructor(track);
+						const blob: Blob = await imageCapture.takePhoto();
+
+						if (typeof createImageBitmap === "function") {
+							const bitmap = await createImageBitmap(blob);
+							try {
+								captureSourceToCanvas(
+									bitmap,
+									bitmap.width,
+									bitmap.height,
+									canvas,
+									{ primaryColor, accentColor },
+								);
+								capturedViaImageCapture = true;
+							} finally {
+								bitmap.close?.();
+							}
+						} else {
+							const img = new Image();
+							const url = URL.createObjectURL(blob);
+							await new Promise<void>((resolve, reject) => {
+								img.onload = () => resolve();
+								img.onerror = reject;
+								img.src = url;
+							});
+							URL.revokeObjectURL(url);
+							captureSourceToCanvas(
+								img,
+								img.naturalWidth,
+								img.naturalHeight,
+								canvas,
+								{ primaryColor, accentColor },
+							);
+							capturedViaImageCapture = true;
+						}
+					} catch (imageCaptureErr) {
+						console.warn(
+							"ImageCapture.takePhoto nie powiodło się, przełączam na zrzut z video:",
+							imageCaptureErr,
+						);
+					}
+				}
+			}
+
+			// Niezawodny fallback: zrzut z wysokorozdzielczego elementu <video> (Full HD)
+			if (!capturedViaImageCapture) {
+				captureFrameToCanvas(video, canvas, {
+					primaryColor,
+					accentColor,
+				});
+			}
+
 			const file = await canvasToJpegFile(
 				canvas,
 				`photobooth_${Date.now()}.jpg`,
+				0.95,
 			);
 			onCapture(file);
 		} catch (err) {
