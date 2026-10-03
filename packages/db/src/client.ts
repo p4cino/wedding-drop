@@ -65,41 +65,46 @@ export async function initDatabase() {
 				INSERT INTO admins (username, password_hash)
 				VALUES ('admin', ${passwordHash})
 			`;
-			console.log(
-				`[DB] Utworzono domyślnego administratora: login='admin', hasło='${defaultAdminPass}'`,
-			);
+			console.log("[DB] Utworzono domyślnego administratora: login='admin'");
 		}
 
-		// Utworzenie domyślnej galerii, jeśli tabela jest pusta
-		const existingGalleries = await client`SELECT count(*) FROM galleries`;
-		if (
-			existingGalleries?.[0] &&
-			parseInt(existingGalleries[0].count, 10) === 0
-		) {
-			const ownerPassHash = await hash("sekret123", 10);
-			const defaultGalId = "a0000000-0000-0000-0000-000000000001";
-			await client`
-				INSERT INTO galleries (
-					id, slug, couple_names, wedding_date, owner_email, owner_password_hash,
-					is_active, allow_guest_downloads, allow_videos
-				)
-				VALUES (
-					${defaultGalId}, 'kasia-i-tomek', 'Kasia & Tomek', '2026-09-12', 'kontakt@kasiaitomek.pl', ${ownerPassHash},
-					true, true, true
-				)
-			`;
-			await client`
-				INSERT INTO card_settings (
-					gallery_id, headline, subheadline, primary_color, accent_color, paper_size, custom_instructions
-				)
-				VALUES (
-					${defaultGalId}, 'Podziel się wspomnieniami!', 'Zeskanuj kod QR aparatem w telefonie i dodaj swoje zdjęcia z naszego wesela',
-					'#1E293B', '#D4AF37', 'A6', '1. Otwórz aparat w telefonie\n2. Skieruj obiektyw na kod QR\n3. Wrzucaj zdjęcia bez rejestracji i aplikacji!'
-				)
-			`;
-			console.log(
-				`[DB] Utworzono domyślną galerię: slug='kasia-i-tomek', hasło='sekret123'`,
-			);
+		// Utworzenie domyślnej galerii tylko w środowisku deweloperskim / testowym lub przy jawnym SEED_DEMO=true
+		const shouldSeedDemo =
+			process.env.SEED_DEMO === "true" ||
+			(process.env.NODE_ENV !== "production" &&
+				process.env.SEED_DEMO !== "false");
+
+		if (shouldSeedDemo) {
+			const existingGalleries = await client`SELECT count(*) FROM galleries`;
+			if (
+				existingGalleries?.[0] &&
+				parseInt(existingGalleries[0].count, 10) === 0
+			) {
+				const ownerPassHash = await hash("sekret123", 10);
+				const defaultGalId = "a0000000-0000-0000-0000-000000000001";
+				await client`
+					INSERT INTO galleries (
+						id, slug, couple_names, wedding_date, owner_email, owner_password_hash,
+						is_active, allow_guest_downloads, allow_videos
+					)
+					VALUES (
+						${defaultGalId}, 'kasia-i-tomek', 'Kasia & Tomek', '2026-09-12', 'kontakt@kasiaitomek.pl', ${ownerPassHash},
+						true, true, true
+					)
+				`;
+				await client`
+					INSERT INTO card_settings (
+						gallery_id, headline, subheadline, primary_color, accent_color, paper_size, custom_instructions
+					)
+					VALUES (
+						${defaultGalId}, 'Podziel się wspomnieniami!', 'Zeskanuj kod QR aparatem w telefonie i dodaj swoje zdjęcia z naszego wesela',
+						'#1E293B', '#D4AF37', 'A6', '1. Otwórz aparat w telefonie\n2. Skieruj obiektyw na kod QR\n3. Wrzucaj zdjęcia bez rejestracji i aplikacji!'
+					)
+				`;
+				console.log(
+					"[DB] Utworzono domyślną galerię demo: slug='kasia-i-tomek'",
+				);
+			}
 		}
 
 		console.log("[DB] Baza danych PostgreSQL zainicjalizowana pomyślnie.");

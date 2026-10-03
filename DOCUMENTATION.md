@@ -51,9 +51,9 @@ graph TD
     Couple -->|"Zarządzanie / Pobieranie ZIP"| Caddy
     Admin -->|"Tworzenie wesel / Statystyki"| Caddy
 
-    Caddy -->|"Proxy do web:3000"| NextCore
-    Caddy -->|"/api/upload/tus/*"| TusServer
-    Caddy -->|"/media-file/* (Bezpośrednie serwowanie, Byte-Range)"| Filesystem
+    Caddy -->|"Proxy do web:3000 (NextCore, TUS, MediaFileStream)"| NextCore
+    NextCore -->|"/api/upload/tus/*"| TusServer
+    NextCore -->|"/media-file/* (Bezpieczne serwowanie, Auth, Byte-Range)"| Filesystem
 
     TusServer -->|"Zapis chunków"| Filesystem
     TusServer -->|"POST_FINISH hook"| MediaQueue
@@ -216,7 +216,7 @@ Indeks `idx_wishes_gallery_status_created` na `(gallery_id, status, created_at)`
   - Dla właściciela (autoryzacja ciasteczkiem sesji `wd_owner_{slug}`, nagłówkiem `x-owner-token` lub nagłówkiem `x-owner-password`): do archiwum dołączane są również zdjęcia ukryte (`status: "hidden"`), a pobieranie działa niezależnie od blokady pobierania gości. Poświadczenia w query stringu (`?password=`, `?token=`) są ignorowane ze względów bezpieczeństwa.
   - Oparte o nowoczesny strumień `ZipArchive` z pakietu `archiver` (brak buforowania gigabajtów w RAM).
   - Jeśli galeria zawiera widoczne życzenia (zgodnie z tymi samymi zasadami widoczności `hidden` co przy przeglądaniu przez właściciela), do archiwum dogrywany jest dodatkowy plik tekstowy `zyczenia.txt` z treścią i autorem każdego wpisu.
-- `GET /media-file/*` – Bezpośrednie serwowanie statycznych plików przez zoptymalizowane proxy Caddy (bez udziału Node.js), z pełną obsługą cache i nagłówków Byte-Range.
+- `GET /media-file/*` – Bezpieczne serwowanie plików multimedialnych przez dedykowany handler Node.js (`apps/web/src/lib/media-file-handler.ts`) z ochroną przed Path Traversal (`path.resolve` w sandboxie `/data`), weryfikacją statusu pliku w bazie danych (blokada dostępu do mediów ukrytych/usuniętych dla nieautoryzowanych gości) oraz pełną obsługą strumieniowania i nagłówków Byte-Range (`206 Partial Content`).
 - `POST /api/gallery/:slug/wishes` – Dodanie tekstowego życzenia do księgi gości (publiczne, bez logowania, bez pliku):
   - Waliduje `addWishDto` (treść wymagana, max 500 znaków; opcjonalne imię/nazwisko, max 60 znaków).
   - Odrzuca żądanie kodem `404`, gdy galeria nie istnieje, lub `400`, gdy jest nieaktywna albo treść jest pusta/nieprawidłowa.
@@ -324,27 +324,31 @@ docker run --rm -v wedding-drop_app_data:/data -v $(pwd):/backup alpine tar -xzf
 
 ## 8. Bezpieczeństwo i Ochrona Prywatności
 
-1. **Kryptograficzna Autoryzacja Administratora**:
-   - Zamiast statycznych prefixów stosowany jest podpisany token HMAC-SHA256 (`admin_<timestamp>_<base64User>_<hmac>`).
-   - Weryfikacja podpisu realizowana jest za pomocą `crypto.timingSafeEqual` w celu zapobieżenia atakom czasowym (Timing Attacks).
-   - Token posiada 7-dniowy okres ważności.
-2. **Ochrona przed Atakami Path Traversal (Directory Traversal)**:
-   - Tworzenie sluga galerii (`customSlug`) jest ściśle sanityzowane wyrażeniem `replace(/[^a-z0-9_-]/g, "")`. Wszelkie znaki specjalne (`!@#`), spacje, kropki oraz ukośniki (`/`, `..`) są natychmiast usuwane, uniemożliwiając manipulację strukturą katalogów dyskowych.
-   - Serwowanie plików multimedialnych dla endpointu `/media-file/*` zostało oddelegowane do webserwera Caddy, co niweluje ryzyko ataków typu directory traversal na poziomie Node.js, oferując przy okazji bardzo wysoką wydajność, w tym natywną obsługę zapytań `Byte-Range`.
-3. **Prywatność Zdjęć Ukrytych**:
-   - Zdjęcia o statusie `hidden` oraz `deleted` są niedostępne dla publicznych zapytań gości.
-   - Próba odczytu zdjęć ukrytych parametrem `includeHidden=true` bez poświadczeń właściciela kończy się błędem HTTP 401.
-4. **Brak Indeksowania przez Wyszukiwarki (SEO / RODO)**:
+1. **Kryptograficzna Autoryzacja i Separacja Domen HMAC**:
+   - Tokeny administratora (`admin_<timestamp>_<base64User>_<hmac>`) oraz właściciela galerii (`owner_<timestamp>_<base64Slug>_<hmac>`) są kryptograficznie odseparowane zarówno w payloadzie podpisu (`admin:` vs `owner:`), jak i w obsłudze kluczy (`ADMIN_SECRET`, `OWNER_SECRET`).
+   - Uniemożliwia to eskalację uprawnień poprzez zamianę prefiksów (Token Prefix Swap).
+   - W przypadku braku konfiguracji sekretów w zmiennych środowiskowych, aplikacja generuje bezpieczny losowy klucz w pamięci RAM (`crypto.randomBytes(32)`), eliminując jakiekolwiek znane hasła domyślne.
+   - Weryfikacja podpisu realizowana jest za pomocą `crypto.timingSafeEqual` w celu zapobieżenia atakom czasowym (Timing Attacks). Ważność tokenów wynosi 7 dni.
+2. **Bezpieczne Serwowanie Mediów i Ochrona przed Path Traversal**:
+   - Endpoint `/media-file/*` jest obsługiwany przez dedykowany handler Node.js z rygorystycznym sprawdzaniem granic katalogu `/data` (`path.resolve`), blokadą sekwencji `..` oraz bajtów zerowych (`\0`).
+   - Każde żądanie weryfikuje status materiału w bazie danych PostgreSQL: pliki `hidden` są blokowane kodem `403 Forbidden` dla nieautoryzowanych gości (dostęp wymaga tokenu właściciela lub administratora), a pliki `deleted` zwracają `404 Not Found`.
+   - Zachowano pełną obsługę streamingu oraz nagłówków Byte-Range (`206 Partial Content`), kluczowych dla płynnego odtwarzania wideo na urządzeniach mobilnych (iOS/Android).
+3. **Ochrona przed Stored XSS i Weryfikacja Magic Bytes**:
+   - W potoku przetwarzania mediów (`packages/media`) wprowadzono inspekcję sygnatury binarnej (Magic Bytes) dla plików JPEG, PNG, WebP, GIF, MP4, MOV, WebM i HEIC.
+   - Wszelkie próby przesłania plików tekstowych, skryptów HTML/SVG/PHP czy zmanipulowanych rozszerzeń są natychmiast odrzucane i usuwane z dysku przed zapisaniem w bazie danych lub zaserwowaniem w galerii.
+4. **Bezpieczeństwo PWA i Wykluczenie Cache API**:
+   - Konfiguracja Service Worker (`sw.ts`) wymusza strategię `NetworkOnly` dla wszystkich zapytań `/api/*`, uniemożliwiając cachowanie danych wrażliwych, tokenów sesyjnych oraz odpowiedzi API w `CacheStorage` przeglądarki.
+5. **Brak Indeksowania przez Wyszukiwarki (SEO / RODO)**:
    - Caddy wysyła nagłówek brzegowy: `X-Robots-Tag: noindex, nofollow, noarchive, nosnippet`.
    - Każda strona HTML posiada meta tag `<meta name="robots" content="noindex, nofollow, noarchive" />`.
-5. **Ochrona Zasobów Maszyny (Intel N100 Anti-DoS)**:
+6. **Ochrona Zasobów Maszyny (Intel N100 Anti-DoS)**:
    - Pobieranie ZIP realizowane jest wyłącznie strumieniowo (`chunked transfer`) – serwer nie ładuje całego archiwum do pamięci RAM.
    - Kolejka obróbki `p-queue` jest ograniczona do `concurrency: 2`.
    - Watchdog `ffmpeg` (25s timeout) chroni przed zawieszeniem wątków procesora na uszkodzonych plikach wideo.
-6. **Fizyczna Izolacja Danych**:
+7. **Fizyczna Izolacja Danych**:
    - Każde wesele posiada unikalny slug oraz odizolowany folder dyskowy.
    - Skasowanie wesela z poziomu panelu administratora fizycznie usuwa pliki z dysku za pomocą `fs.rm`.
-7. **Bezpieczeństwo CORS i Zgodność z HTTPS**:
+8. **Bezpieczeństwo CORS i Zgodność z HTTPS**:
    - Serwer TUS zwraca relatywne adresy zasobów (`relativeLocation: true`), co uniemożliwia niezgodność protokołów za reverse proxy Caddy (brak blokad CORS preflight).
 
 ---

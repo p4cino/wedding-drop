@@ -94,7 +94,45 @@ export function initTusServer(dataDir: string, options: TusServerOptions = {}) {
 				};
 			}
 
-			const { gallerySlug, source, ownerToken } = parseResult.data;
+			const {
+				gallerySlug,
+				source,
+				ownerToken,
+				fileType: mimeType,
+				originalName,
+			} = parseResult.data;
+
+			// Weryfikacja istnienia i aktywności galerii dla wszystkich uploadów (gości i fotografów)
+			const galleryResult = await db
+				.select()
+				.from(galleries)
+				.where(eq(galleries.slug, gallerySlug))
+				.limit(1);
+
+			if (!galleryResult.length) {
+				throw {
+					status_code: 404,
+					body: "Błąd: Galeria nie istnieje.",
+				};
+			}
+
+			const gallery = galleryResult[0];
+			if (gallery.isActive === false) {
+				throw {
+					status_code: 403,
+					body: "Błąd: Galeria jest obecnie wyłączona i nie przyjmuje nowych materiałów.",
+				};
+			}
+
+			const isVideo =
+				mimeType?.startsWith("video") ||
+				/\.(mp4|mov|avi|webm)$/i.test(originalName || "");
+			if (isVideo && gallery.allowVideos === false) {
+				throw {
+					status_code: 403,
+					body: "Błąd: Wgrywanie filmów jest wyłączone w tej galerii.",
+				};
+			}
 
 			if (source === "photographer") {
 				// Import fotografa wymaga zawsze poprawnej autoryzacji właściciela.

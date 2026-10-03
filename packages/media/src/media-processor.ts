@@ -5,6 +5,7 @@ import path from "node:path";
 import { db, galleries, mediaItems } from "@wedding-drop/db";
 import { eq } from "drizzle-orm";
 import PQueue from "p-queue";
+import { validateMediaFile } from "./file-validator";
 import { sseBus } from "./sse-bus";
 
 // Ograniczenie współbieżności do 2 procesów naraz - krytyczne dla 4-rdzeniowego Intel N100!
@@ -42,6 +43,20 @@ async function processMediaTask(task: ProcessTask) {
 	} = task;
 
 	try {
+		// Weryfikacja sygnatury pliku i magic bytes przed przeniesieniem do galerii (ochrona przed Stored XSS)
+		const validation = await validateMediaFile(
+			tempFilePath,
+			originalName,
+			fileType,
+		);
+		if (!validation.valid) {
+			console.warn(
+				`[Processor] Odrzucono niebezpieczny plik ${originalName}: ${validation.error}`,
+			);
+			await fs.unlink(tempFilePath).catch(() => {});
+			return;
+		}
+
 		const galleryResult = await db
 			.select()
 			.from(galleries)
@@ -59,8 +74,7 @@ async function processMediaTask(task: ProcessTask) {
 		await fs.mkdir(rawDir, { recursive: true });
 		await fs.mkdir(thumbsDir, { recursive: true });
 
-		const safeExt =
-			path.extname(originalName) || (fileType === "video" ? ".mp4" : ".jpg");
+		const safeExt = validation.safeExt;
 		const rawFileName = `${uploadId}${safeExt}`;
 		const targetRawPath = path.join(rawDir, rawFileName);
 		const thumbFileName = `${uploadId}_thumb.webp`;

@@ -96,6 +96,68 @@ describe("tus-server configuration", () => {
 		}
 	});
 
+	it("onUploadCreate powinien odrzucić upload (404), gdy galeria nie istnieje", async () => {
+		mockGalleryResult = [];
+		const server = initTusServer(tempDir);
+		const onUploadCreate = server.options.onUploadCreate;
+
+		if (onUploadCreate) {
+			await expect(
+				onUploadCreate(
+					{} as never,
+					{ metadata: { gallerySlug: "nieistniejaca" } } as never,
+				),
+			).rejects.toMatchObject({
+				status_code: 404,
+				body: "Błąd: Galeria nie istnieje.",
+			});
+		}
+	});
+
+	it("onUploadCreate powinien odrzucić upload (403), gdy galeria jest wyłączona (isActive: false)", async () => {
+		mockGalleryResult = [{ id: "gal-1", maxStorageBytes: 0, isActive: false }];
+		const server = initTusServer(tempDir);
+		const onUploadCreate = server.options.onUploadCreate;
+
+		if (onUploadCreate) {
+			await expect(
+				onUploadCreate(
+					{} as never,
+					{ metadata: { gallerySlug: "kasia-i-tomek" } } as never,
+				),
+			).rejects.toMatchObject({
+				status_code: 403,
+				body: expect.stringContaining("wyłączona"),
+			});
+		}
+	});
+
+	it("onUploadCreate powinien odrzucić upload wideo (403), gdy galeria nie zezwala na filmy (allowVideos: false)", async () => {
+		mockGalleryResult = [
+			{ id: "gal-1", maxStorageBytes: 0, isActive: true, allowVideos: false },
+		];
+		const server = initTusServer(tempDir);
+		const onUploadCreate = server.options.onUploadCreate;
+
+		if (onUploadCreate) {
+			await expect(
+				onUploadCreate(
+					{} as never,
+					{
+						metadata: {
+							gallerySlug: "kasia-i-tomek",
+							fileType: "video/mp4",
+							originalName: "film.mp4",
+						},
+					} as never,
+				),
+			).rejects.toMatchObject({
+				status_code: 403,
+				body: expect.stringContaining("Wgrywanie filmów jest wyłączone"),
+			});
+		}
+	});
+
 	describe("onUploadCreate - import fotografa (source: photographer)", () => {
 		it("powinien odrzucić upload fotografa (401), gdy nie wstrzyknięto funkcji weryfikującej", async () => {
 			const server = initTusServer(tempDir);

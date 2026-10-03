@@ -7,12 +7,6 @@
         Referrer-Policy "strict-origin-when-cross-origin"
     }
 
-    # Obsługa plików multimedialnych bezpośrednio przez Caddy (z obsługą Byte-Range i cache)
-    handle_path /media-file/* {
-        root * /app/data
-        file_server
-        header Cache-Control "public, max-age=31536000, immutable"
-    }
 
     # Domyślny fallback do aplikacji Next.js
     handle {
