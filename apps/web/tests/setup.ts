@@ -15,6 +15,20 @@ if (typeof window !== "undefined") {
 	// Polyfill dla URL.createObjectURL i revokeObjectURL
 	window.URL.createObjectURL = vi.fn(() => "blob:mock-url");
 	window.URL.revokeObjectURL = vi.fn();
+
+	// jsdom nie implementuje EventSource (SSE)
+	if (typeof window.EventSource === "undefined") {
+		class DefaultFakeEventSource {
+			onopen: (() => void) | null = null;
+			onmessage: ((e: { data: string }) => void) | null = null;
+			onerror: (() => void) | null = null;
+			close() {}
+		}
+		// @ts-expect-error stub EventSource w jsdom
+		window.EventSource = DefaultFakeEventSource;
+		// @ts-expect-error stub EventSource w jsdom
+		global.EventSource = DefaultFakeEventSource;
+	}
 }
 
 vi.mock("next-intl", () => ({

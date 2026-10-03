@@ -4,11 +4,13 @@ import { describe, expect, it, vi } from "vitest";
 import {
 	canvasToJpegFile,
 	captureFrameToCanvas,
+	captureSourceToCanvas,
 	computeCaptureDimensions,
 	DEFAULT_ACCENT_COLOR,
 	DEFAULT_PRIMARY_COLOR,
 	drawPhotoboothFrame,
 	isCameraSupported,
+	MAX_CAPTURE_DIMENSION,
 } from "@/lib/photobooth";
 import {
 	removeMediaDevices,
@@ -17,16 +19,17 @@ import {
 
 describe("computeCaptureDimensions", () => {
 	it("zachowuje faktyczne wymiary strumienia wideo, gdy dłuższy bok mieści się w limicie", () => {
-		expect(computeCaptureDimensions(1280, 720)).toEqual({
-			width: 1280,
-			height: 720,
+		expect(computeCaptureDimensions(1920, 1080)).toEqual({
+			width: 1920,
+			height: 1080,
 		});
 	});
 
-	it("skaluje proporcjonalnie w dół, gdy dłuższy bok przekracza maksymalny rozmiar", () => {
-		const result = computeCaptureDimensions(3840, 2160, 1920);
-		expect(result.width).toBe(1920);
-		expect(result.height).toBe(1080);
+	it("skaluje proporcjonalnie w dół, gdy dłuższy bok przekracza domyślny maksymalny rozmiar (2560px)", () => {
+		expect(MAX_CAPTURE_DIMENSION).toBe(2560);
+		const result = computeCaptureDimensions(3840, 2160);
+		expect(result.width).toBe(2560);
+		expect(result.height).toBe(1440);
 	});
 
 	it("skaluje w dół również dla orientacji pionowej (portrait)", () => {
@@ -129,6 +132,41 @@ describe("captureFrameToCanvas", () => {
 	});
 });
 
+describe("captureSourceToCanvas", () => {
+	it("obsługuje dowolne źródło CanvasImageSource (np. ImageBitmap/HTMLImageElement) i skaluje do maxDimension", () => {
+		const fakeImageSource = {
+			width: 3840,
+			height: 2160,
+		} as unknown as CanvasImageSource;
+		const canvas = document.createElement("canvas");
+		const ctx = createMockCtx();
+		vi.spyOn(canvas, "getContext").mockReturnValue(
+			ctx as unknown as RenderingContext,
+		);
+
+		const size = captureSourceToCanvas(
+			fakeImageSource,
+			3840,
+			2160,
+			canvas,
+			{ primaryColor: "#123456" },
+			2560,
+		);
+
+		expect(size).toEqual({ width: 2560, height: 1440 });
+		expect(canvas.width).toBe(2560);
+		expect(canvas.height).toBe(1440);
+		expect(ctx.drawImage).toHaveBeenCalledWith(
+			fakeImageSource,
+			0,
+			0,
+			2560,
+			1440,
+		);
+		expect(ctx.fillRect).toHaveBeenCalled();
+	});
+});
+
 describe("canvasToJpegFile", () => {
 	it("eksportuje canvas jako File typu image/jpeg z podaną nazwą", async () => {
 		const canvas = document.createElement("canvas");
@@ -143,7 +181,7 @@ describe("canvasToJpegFile", () => {
 		expect(file.size).toBe(fakeBlob.size);
 	});
 
-	it("wywołuje toBlob z jakością 0.92 domyślnie", async () => {
+	it("wywołuje toBlob z jakością 0.95 domyślnie", async () => {
 		const canvas = document.createElement("canvas");
 		const toBlobSpy = vi.fn((callback: BlobCallback) =>
 			callback(new Blob(["x"], { type: "image/jpeg" })),
@@ -155,7 +193,7 @@ describe("canvasToJpegFile", () => {
 		expect(toBlobSpy).toHaveBeenCalledWith(
 			expect.any(Function),
 			"image/jpeg",
-			0.92,
+			0.95,
 		);
 	});
 
