@@ -32,20 +32,21 @@ export default function OwnerDashboardPage() {
 	const t = useTranslations("OwnerPanel");
 	const tWishes = useTranslations("Wishes");
 	const params = useParams();
-	const slug = params?.slug as string;
+	const slug = Array.isArray(params?.slug)
+		? params.slug[0]
+		: (params?.slug as string);
 
 	const [password, setPassword] = useState("");
 	const [ownerToken, setOwnerToken] = useState("");
 	const [isAuthenticated, setIsAuthenticated] = useState(false);
-	const [error, setError] = useState("");
-	const [loading, setLoading] = useState(false);
-
 	const [galleryInfo, setGalleryInfo] = useState<OwnerPanelGallery | null>(
 		null,
 	);
 	const [stats, setStats] = useState({ totalFiles: 0, totalBytes: 0 });
 	const [mediaList, setMediaList] = useState<OwnerMediaItem[]>([]);
 	const [wishesList, setWishesList] = useState<OwnerWishItem[]>([]);
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState("");
 	const [showExportModal, setShowExportModal] = useState(false);
 	const [toast, setToast] = useState<ToastMessage | null>(null);
 
@@ -122,7 +123,7 @@ export default function OwnerDashboardPage() {
 				}
 
 				setOwnerToken(data.ownerToken);
-				sessionStorage.setItem(`owner_token_${slug}`, data.ownerToken);
+				setPassword("");
 				applyPanelData(data, data.ownerToken);
 			} catch (_err) {
 				setError(t("connError"));
@@ -133,31 +134,29 @@ export default function OwnerDashboardPage() {
 		[slug, applyPanelData, t],
 	);
 
-	// Odtworzenie sesji z zapisanego tokenu (bez hasła); 401 => powrót do logowania
-	const restoreSession = useCallback(
-		async (token: string) => {
-			setLoading(true);
-			try {
-				const res = await ownerRequest<OwnerPanelData>(
-					token,
-					"GET",
-					`/api/owner/${slug}/session`,
-				);
-				if (!res.ok || !res.data) {
-					sessionStorage.removeItem(`owner_token_${slug}`);
-					if (res.status === 0) setError(t("connError"));
-					return;
-				}
-				setOwnerToken(token);
-				applyPanelData(res.data, token);
-			} finally {
-				setLoading(false);
+	// Odtworzenie sesji z ciasteczka HttpOnly (bez konieczności posiadania tokenu w storage)
+	const restoreSession = useCallback(async () => {
+		setLoading(true);
+		try {
+			const res = await fetch(`/api/owner/${slug}/session`, {
+				method: "GET",
+			});
+			if (!res.ok) {
+				return;
 			}
-		},
-		[slug, applyPanelData, t],
-	);
+			const data = (await res.json()) as OwnerPanelData;
+			if (data?.ownerToken) {
+				setOwnerToken(data.ownerToken);
+				applyPanelData(data, data.ownerToken);
+			}
+		} catch (_err) {
+			// Błąd sieciowy przy odtwarzaniu sesji
+		} finally {
+			setLoading(false);
+		}
+	}, [slug, applyPanelData]);
 
-	// Jednorazowa inicjalizacja per slug: powrót z Google OAuth i odtworzenie sesji tokenem
+	// Jednorazowa inicjalizacja per slug: powrót z Google OAuth, odtworzenie sesji z ciasteczka i sprzątanie storage
 	const initializedSlug = useRef<string | null>(null);
 	useEffect(() => {
 		if (initializedSlug.current === slug) return;
@@ -176,11 +175,11 @@ export default function OwnerDashboardPage() {
 			window.history.replaceState({}, document.title, window.location.pathname);
 		}
 
-		// Sprzątanie po poprzedniej wersji, która zapisywała hasło w sessionStorage
+		// Jednorazowe czyszczenie pozostałości po starej wersji w sessionStorage (migracja bezpieczeństwa)
 		sessionStorage.removeItem(`owner_pwd_${slug}`);
+		sessionStorage.removeItem(`owner_token_${slug}`);
 
-		const savedToken = sessionStorage.getItem(`owner_token_${slug}`);
-		if (savedToken) restoreSession(savedToken);
+		restoreSession();
 	}, [slug, restoreSession, t]);
 
 	// Zdarzenia na żywo: nowe pliki/życzenia oraz postęp Google Drive
@@ -250,11 +249,53 @@ export default function OwnerDashboardPage() {
 		setWishesList((prev) => prev.filter((w) => w.id !== wishId));
 	};
 
-	const handleConnectGDrive = () => {
-		const tokenParam = ownerToken
-			? `&token=${encodeURIComponent(ownerToken)}`
-			: "";
-		window.location.href = `/api/auth/google?slug=${slug}${tokenParam}`;
+	const handleLogout = async () => {
+		try {
+			await fetch(`/api/owner/${slug}/session`, {
+				method: "DELETE",
+			});
+		} catch (_err) {
+			// Błąd sieciowy przy wylogowywaniu
+		} finally {
+			setIsAuthenticated(false);
+			setOwnerToken("");
+			setPassword("");
+			setGalleryInfo(null);
+			setStats({ totalFiles: 0, totalBytes: 0 });
+			setMediaList([]);
+			setWishesList([]);
+		}
+	};
+
+	const handleConnectGDrive = async () => {
+		try {
+			const headers: Record<string, string> = {
+				"Content-Type": "application/json",
+			};
+			if (ownerToken) headers["x-owner-token"] = ownerToken;
+
+			const res = await fetch("/api/auth/google", {
+				method: "POST",
+				headers,
+				body: JSON.stringify({ slug }),
+			});
+
+			const data = await res.json().catch(() => null);
+			if (!res.ok || !data?.authUrl) {
+				setToast({
+					type: "error",
+					text: data?.error || t("gdriveConnectError"),
+				});
+				return;
+			}
+
+			window.location.assign(data.authUrl);
+		} catch (_err) {
+			setToast({
+				type: "error",
+				text: t("connError"),
+			});
+		}
 	};
 
 	const handleDisconnectGDrive = async () => {
@@ -312,6 +353,7 @@ export default function OwnerDashboardPage() {
 				slug={slug}
 				ownerToken={ownerToken}
 				coupleNames={galleryInfo?.coupleNames}
+				onLogout={handleLogout}
 			/>
 
 			<main className="max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-8">

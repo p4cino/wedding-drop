@@ -32,6 +32,7 @@ const panel = {
 	},
 	stats: { totalFiles: 0, totalBytes: 0 },
 	isGDriveConfigured: true,
+	ownerToken: "owner_tok",
 };
 
 const media = {
@@ -83,44 +84,38 @@ describe("OwnerDashboardPage — sesja i błędy", () => {
 	});
 	afterEach(() => vi.unstubAllGlobals());
 
-	it("po zalogowaniu w sessionStorage jest token, ale nigdy hasło", async () => {
-		installFetch();
+	it("po zalogowaniu w sessionStorage nie ma tokenu ani hasła", async () => {
+		installFetch({ sessionStatus: 401 });
 		render(<OwnerDashboardPage />);
+		const loginBtn = await screen.findByRole("button", { name: "loginBtn" });
 		fireEvent.change(screen.getByLabelText("pwdLabel"), {
 			target: { value: "supersecret" },
 		});
-		fireEvent.click(screen.getByRole("button", { name: "loginBtn" }));
+		fireEvent.click(loginBtn);
 
 		await screen.findByText("Kasia i Tomek");
-		expect(sessionStorage.getItem("owner_token_kasia")).toBe("owner_tok");
-		const stored = Object.keys(sessionStorage).flatMap((k) => [
-			k,
-			sessionStorage.getItem(k) ?? "",
-		]);
-		expect(stored.join("|")).not.toContain("supersecret");
+		expect(sessionStorage.getItem("owner_token_kasia")).toBeNull();
 		expect(sessionStorage.getItem("owner_pwd_kasia")).toBeNull();
 	});
 
-	it("odtwarza sesję z zapisanego tokenu bez pytania o hasło i sprząta stary klucz z hasłem", async () => {
+	it("odtwarza sesję z ciasteczka bez pytania o hasło i sprząta stary klucz z hasłem", async () => {
 		sessionStorage.setItem("owner_token_kasia", "owner_saved");
 		sessionStorage.setItem("owner_pwd_kasia", "stare-haslo");
 		const fetchMock = installFetch();
 		render(<OwnerDashboardPage />);
 
 		await screen.findByText("Kasia i Tomek");
-		const sessionCall = fetchMock.mock.calls.find(
-			(c) => c[0] === "/api/owner/kasia/session",
-		);
-		expect(sessionCall?.[1]?.headers).toMatchObject({
-			"x-owner-token": "owner_saved",
-		});
+		expect(
+			fetchMock.mock.calls.some((c) => c[0] === "/api/owner/kasia/session"),
+		).toBe(true);
 		expect(
 			fetchMock.mock.calls.some((c) => c[0] === "/api/owner/kasia/auth"),
 		).toBe(false);
 		expect(sessionStorage.getItem("owner_pwd_kasia")).toBeNull();
+		expect(sessionStorage.getItem("owner_token_kasia")).toBeNull();
 	});
 
-	it("gdy token jest nieważny (401), czyści go i pokazuje formularz logowania", async () => {
+	it("gdy sesja jest nieważna (401), pokazuje formularz logowania", async () => {
 		sessionStorage.setItem("owner_token_kasia", "owner_expired");
 		installFetch({ sessionStatus: 401 });
 		render(<OwnerDashboardPage />);
@@ -132,7 +127,6 @@ describe("OwnerDashboardPage — sesja i błędy", () => {
 	});
 
 	it("nieudana zmiana statusu zdjęcia pokazuje komunikat błędu i nie zmienia listy", async () => {
-		sessionStorage.setItem("owner_token_kasia", "owner_saved");
 		installFetch();
 		statusPatchOk = false;
 		render(<OwnerDashboardPage />);

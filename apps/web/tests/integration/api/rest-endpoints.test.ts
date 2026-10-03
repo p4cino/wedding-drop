@@ -15,7 +15,10 @@ import {
 } from "@/app/api/owner/[slug]/gdrive/route";
 import { DELETE as ownerMediaDelete } from "@/app/api/owner/[slug]/media/[id]/route";
 import { PATCH as ownerMediaStatusPatch } from "@/app/api/owner/[slug]/media/[id]/status/route";
-import { GET as ownerSessionGet } from "@/app/api/owner/[slug]/session/route";
+import {
+	DELETE as ownerSessionDelete,
+	GET as ownerSessionGet,
+} from "@/app/api/owner/[slug]/session/route";
 import { generateAdminToken, generateOwnerToken } from "@/lib/auth";
 
 vi.mock("@node-rs/bcrypt", () => ({
@@ -264,6 +267,17 @@ describe("REST API Endpoints", () => {
 			expect(data.galleries).toBeDefined();
 		});
 
+		it("GET /api/admin/galleries - token w query stringu (?token=) zwraca 401", async () => {
+			const req = new NextRequest(
+				`http://localhost/api/admin/galleries?token=${adminToken}`,
+				{
+					method: "GET",
+				},
+			);
+			const res = await adminGalleriesGet(req);
+			expect(res.status).toBe(401);
+		});
+
 		it("POST /api/admin/galleries - brak wymaganych pól zwraca 400", async () => {
 			const req = new NextRequest("http://localhost/api/admin/galleries", {
 				method: "POST",
@@ -332,6 +346,17 @@ describe("REST API Endpoints", () => {
 		it("DELETE /api/admin/galleries/[id] - bez uprawnień administratora zwraca 401", async () => {
 			const req = new NextRequest(
 				"http://localhost/api/admin/galleries/gal-1",
+				{ method: "DELETE" },
+			);
+			const res = await adminGalleryDelete(req, {
+				params: Promise.resolve({ id: "gal-1" }),
+			});
+			expect(res.status).toBe(401);
+		});
+
+		it("DELETE /api/admin/galleries/[id] - token w query stringu (?token=) zwraca 401", async () => {
+			const req = new NextRequest(
+				`http://localhost/api/admin/galleries/gal-1?token=${adminToken}`,
 				{ method: "DELETE" },
 			);
 			const res = await adminGalleryDelete(req, {
@@ -409,9 +434,10 @@ describe("REST API Endpoints", () => {
 				params: Promise.resolve({ slug }),
 			});
 			expect(res.status).toBe(401);
+			expect(res.headers.get("set-cookie")).toBeNull();
 		});
 
-		it("POST /api/owner/[slug]/auth - logowanie pary młodej i wydanie tokenu HMAC", async () => {
+		it("POST /api/owner/[slug]/auth - logowanie pary młodej i wydanie tokenu HMAC oraz ciasteczka sesji", async () => {
 			const req = new NextRequest(`http://localhost/api/owner/${slug}/auth`, {
 				method: "POST",
 				body: JSON.stringify({ password: "owner123" }),
@@ -424,6 +450,79 @@ describe("REST API Endpoints", () => {
 			expect(data.success).toBe(true);
 			expect(data.ownerToken).toBeDefined();
 			expect(data.ownerToken.startsWith("owner_")).toBe(true);
+			const cookieHeader = res.headers.get("set-cookie");
+			expect(cookieHeader).toBeDefined();
+			expect(cookieHeader).toContain(`wd_owner_${slug}`);
+			expect(cookieHeader).toContain("HttpOnly");
+			expect(cookieHeader?.toLowerCase()).toContain("samesite=strict");
+			expect(cookieHeader).toContain("Path=/api");
+		});
+
+		it("GET /api/owner/[slug]/session - przywraca sesję z ciasteczka i odświeża token", async () => {
+			const req = new NextRequest(
+				`http://localhost/api/owner/${slug}/session`,
+				{
+					method: "GET",
+					headers: { cookie: `wd_owner_${slug}=${ownerToken}` },
+				},
+			);
+			const res = await ownerSessionGet(req, {
+				params: Promise.resolve({ slug }),
+			});
+			expect(res.status).toBe(200);
+			const data = await res.json();
+			expect(data.success).toBe(true);
+			expect(data.ownerToken).toBeDefined();
+			expect(data.gallery.slug).toBe(slug);
+			expect(data.stats).toBeDefined();
+			expect(res.headers.get("set-cookie")).toContain(`wd_owner_${slug}`);
+		});
+
+		it("GET /api/owner/[slug]/session - brak ciasteczka zwraca 401", async () => {
+			const req = new NextRequest(
+				`http://localhost/api/owner/${slug}/session`,
+				{
+					method: "GET",
+				},
+			);
+			const res = await ownerSessionGet(req, {
+				params: Promise.resolve({ slug }),
+			});
+			expect(res.status).toBe(401);
+		});
+
+		it("GET /api/owner/[slug]/session - nieprawidłowe ciasteczko innej galerii zwraca 401", async () => {
+			const req = new NextRequest(
+				`http://localhost/api/owner/${slug}/session`,
+				{
+					method: "GET",
+					headers: {
+						cookie: `wd_owner_${slug}=${generateOwnerToken("inna-galeria")}`,
+					},
+				},
+			);
+			const res = await ownerSessionGet(req, {
+				params: Promise.resolve({ slug }),
+			});
+			expect(res.status).toBe(401);
+		});
+
+		it("DELETE /api/owner/[slug]/session - czyści ciasteczko sesji", async () => {
+			const req = new NextRequest(
+				`http://localhost/api/owner/${slug}/session`,
+				{
+					method: "DELETE",
+				},
+			);
+			const res = await ownerSessionDelete(req, {
+				params: Promise.resolve({ slug }),
+			});
+			expect(res.status).toBe(200);
+			const data = await res.json();
+			expect(data.success).toBe(true);
+			const cookieHeader = res.headers.get("set-cookie");
+			expect(cookieHeader).toContain(`wd_owner_${slug}`);
+			expect(cookieHeader).toContain("Max-Age=0");
 		});
 
 		it("POST /api/owner/[slug]/auth - błąd serwera zwraca 500", async () => {
@@ -438,7 +537,7 @@ describe("REST API Endpoints", () => {
 			expect(res.status).toBe(500);
 		});
 
-		it("GET /api/owner/[slug]/session - ważny token odtwarza dane panelu bez nowego tokenu", async () => {
+		it("GET /api/owner/[slug]/session - ważny token odtwarza dane panelu i zwraca świeży token", async () => {
 			const req = new NextRequest(
 				`http://localhost/api/owner/${slug}/session`,
 				{
@@ -451,13 +550,13 @@ describe("REST API Endpoints", () => {
 			expect(res.status).toBe(200);
 			const data = await res.json();
 			expect(data.success).toBe(true);
-			expect(data.ownerToken).toBeUndefined();
+			expect(data.ownerToken).toBeDefined();
 			expect(data.gallery.slug).toBe(slug);
 			expect(data.gallery.hasGDrive).toBe(true);
 			expect(data.stats).toBeDefined();
 		});
 
-		it("GET /api/owner/[slug]/session - zwraca te same klucze co logowanie (poza tokenem)", async () => {
+		it("GET /api/owner/[slug]/session - zwraca te same klucze co logowanie", async () => {
 			const loginRes = await ownerAuthPost(
 				new NextRequest(`http://localhost/api/owner/${slug}/auth`, {
 					method: "POST",
@@ -473,10 +572,7 @@ describe("REST API Endpoints", () => {
 				{ params: Promise.resolve({ slug }) },
 			);
 			const session = await sessionRes.json();
-			const { ownerToken: _omitted, ...loginWithoutToken } = login;
-			expect(Object.keys(session).sort()).toEqual(
-				Object.keys(loginWithoutToken).sort(),
-			);
+			expect(Object.keys(session).sort()).toEqual(Object.keys(login).sort());
 			expect(Object.keys(session.gallery).sort()).toEqual(
 				Object.keys(login.gallery).sort(),
 			);
@@ -540,6 +636,34 @@ describe("REST API Endpoints", () => {
 				},
 			);
 			const res = await ownerMediaStatusPatch(req, {
+				params: Promise.resolve({ slug, id: "m-1" }),
+			});
+			expect(res.status).toBe(401);
+		});
+
+		it("PATCH /api/owner/[slug]/media/[id]/status - token w query stringu (?token=) zwraca 401", async () => {
+			const req = new NextRequest(
+				`http://localhost/api/owner/${slug}/media/m-1/status?token=${ownerToken}`,
+				{
+					method: "PATCH",
+					body: JSON.stringify({ newStatus: "hidden" }),
+				},
+			);
+			const res = await ownerMediaStatusPatch(req, {
+				params: Promise.resolve({ slug, id: "m-1" }),
+			});
+			expect(res.status).toBe(401);
+		});
+
+		it("DELETE /api/owner/[slug]/media/[id] - z samym ciasteczkiem sesji zwraca 401 (wymaga nagłówka)", async () => {
+			const req = new NextRequest(
+				`http://localhost/api/owner/${slug}/media/m-1`,
+				{
+					method: "DELETE",
+					headers: { cookie: `wd_owner_${slug}=${ownerToken}` },
+				},
+			);
+			const res = await ownerMediaDelete(req, {
 				params: Promise.resolve({ slug, id: "m-1" }),
 			});
 			expect(res.status).toBe(401);

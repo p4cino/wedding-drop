@@ -9,6 +9,9 @@ export default defineConfig({
 	reporter: "html",
 	use: {
 		baseURL: process.env.BASE_URL || "https://localhost",
+		extraHTTPHeaders: {
+			"accept-language": "pl-PL,pl;q=0.9",
+		},
 		ignoreHTTPSErrors: true, // Dla lokalnego certyfikatu Caddy
 		trace: "on-first-retry",
 		screenshot: "only-on-failure",

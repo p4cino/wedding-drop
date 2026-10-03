@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, ExternalLink, QrCode, Tv } from "lucide-react";
+import { Download, ExternalLink, LogOut, QrCode, Tv } from "lucide-react";
 import { useTranslations } from "next-intl";
 import NewTabLabel from "@/components/NewTabLabel";
 import { Link } from "@/i18n/routing";
@@ -9,6 +9,7 @@ interface OwnerHeaderProps {
 	slug: string;
 	ownerToken: string;
 	coupleNames?: string;
+	onLogout?: () => void;
 }
 
 const SOFT_LINK =
@@ -16,8 +17,9 @@ const SOFT_LINK =
 
 export function OwnerHeader({
 	slug,
-	ownerToken,
+	ownerToken: _ownerToken,
 	coupleNames,
+	onLogout,
 }: OwnerHeaderProps) {
 	const t = useTranslations("OwnerPanel");
 	const newTab = <NewTabLabel />;
@@ -53,12 +55,23 @@ export function OwnerHeader({
 				</Link>
 
 				<a
-					href={`/api/gallery/${slug}/zip?token=${encodeURIComponent(ownerToken)}`}
+					href={`/api/gallery/${slug}/zip`}
 					className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-900 text-white shadow-sm transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
 				>
 					<Download className="w-4 h-4" aria-hidden="true" />
 					<span>{t("downloadZip")}</span>
 				</a>
+
+				{onLogout && (
+					<button
+						type="button"
+						onClick={onLogout}
+						className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-red-50 hover:text-red-700 text-slate-700 transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
+					>
+						<LogOut className="w-3.5 h-3.5" aria-hidden="true" />
+						<span>{t("logoutBtn")}</span>
+					</button>
+				)}
 			</div>
 		</header>
 	);

@@ -2,7 +2,7 @@ import { compare } from "@node-rs/bcrypt";
 import { db, galleries, mediaItems } from "@wedding-drop/db";
 import { and, desc, eq, ne } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
-import { verifyAdminToken, verifyOwnerToken } from "@/lib/auth";
+import { readOwnerToken, verifyAdminToken, verifyOwnerToken } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -31,13 +31,11 @@ export async function GET(
 
 		let canViewHidden = false;
 		if (includeHidden) {
-			const ownerToken =
-				req.headers.get("x-owner-token") || searchParams.get("ownerToken");
+			const ownerToken = readOwnerToken(req, slug);
 			if (ownerToken && verifyOwnerToken(ownerToken, slug)) {
 				canViewHidden = true;
 			}
-			const ownerPassword =
-				req.headers.get("x-owner-password") || searchParams.get("password");
+			const ownerPassword = req.headers.get("x-owner-password");
 			if (
 				!canViewHidden &&
 				ownerPassword &&
@@ -45,8 +43,12 @@ export async function GET(
 			) {
 				canViewHidden = true;
 			}
-			const adminToken =
-				req.headers.get("x-admin-token") || searchParams.get("adminToken");
+			const authHeader = req.headers.get("authorization");
+			const bearerToken =
+				authHeader && /^Bearer\s+/i.test(authHeader)
+					? authHeader.replace(/^Bearer\s+/i, "")
+					: null;
+			const adminToken = req.headers.get("x-admin-token") || bearerToken;
 			if (!canViewHidden && adminToken && verifyAdminToken(adminToken)) {
 				canViewHidden = true;
 			}

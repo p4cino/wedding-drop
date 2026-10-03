@@ -6,6 +6,8 @@ import { createGalleryZipStream } from "@wedding-drop/media";
 import { and, desc, eq, ne } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 
+import { readOwnerToken, verifyOwnerToken } from "@/lib/auth";
+
 export const dynamic = "force-dynamic";
 
 export async function GET(
@@ -29,12 +31,16 @@ export async function GET(
 
 		const gallery = galleryResult[0];
 		const { searchParams } = new URL(req.url);
-		const providedPassword =
-			req.headers.get("x-owner-password") || searchParams.get("password");
 		let isOwner = false;
 
-		if (providedPassword) {
-			isOwner = await compare(providedPassword, gallery.ownerPasswordHash);
+		const ownerToken = readOwnerToken(req, slug);
+		if (ownerToken && verifyOwnerToken(ownerToken, slug)) {
+			isOwner = true;
+		} else {
+			const providedPassword = req.headers.get("x-owner-password");
+			if (providedPassword) {
+				isOwner = await compare(providedPassword, gallery.ownerPasswordHash);
+			}
 		}
 
 		// Jeśli to nie jest właściciel, sprawdzamy uprawnienia gościa

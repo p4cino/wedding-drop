@@ -39,7 +39,7 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 		).not.toBeVisible();
 	});
 
-	test("UC3: powinien wygenerować link do pobrania ZIP zawierający bezpieczny token właściciela", async ({
+	test("UC3: powinien wygenerować bezpieczny link do pobrania ZIP bez poświadczeń w URL", async ({
 		page,
 	}) => {
 		await page.goto("/owner/kasia-i-tomek");
@@ -50,16 +50,14 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 			page.getByText("Zarządzanie galerią, eksport i moderacja treści"),
 		).toBeVisible();
 
-		// Przycisk pobierania ZIP — link zawiera podpisany token HMAC (nie hasło w URL,
-		// zgodnie z regułą bezpieczeństwa z AGENTS.md), więc dopasowujemy wzorzec zamiast
-		// stałego ciągu (token zawiera znacznik czasu i jest inny przy każdym logowaniu)
+		// Przycisk pobierania ZIP nie powinien zawierać tokenu ani hasła w URL
 		const zipBtn = page.getByRole("link", {
 			name: /Pobierz ZIP/i,
 		});
 		await expect(zipBtn).toBeVisible();
 		await expect(zipBtn).toHaveAttribute(
 			"href",
-			/^\/api\/gallery\/kasia-i-tomek\/zip\?token=owner_\d+_[A-Za-z0-9%]+_[a-f0-9]+$/,
+			"/api/gallery/kasia-i-tomek/zip",
 		);
 	});
 
@@ -581,5 +579,153 @@ test.describe("Panel Pary Młodej (Właściciela)", () => {
 		// Materiał fotografa w siatce moderacji ma odróżniającą odznakę
 		await expect(page.getByText("Fotograf Jan Kowalski")).toBeVisible();
 		await expect(page.getByText("Fotograf", { exact: true })).toBeVisible();
+	});
+
+	test("UC11: powinien odtworzyć sesję po przeładowaniu strony i nie zapisywać poświadczeń w sessionStorage", async ({
+		page,
+	}) => {
+		await page.goto("/owner/kasia-i-tomek");
+		await page.getByPlaceholder("Wpisz hasło dostępu").fill("sekret123");
+		await page.getByRole("button", { name: "Zaloguj się" }).click();
+
+		await expect(
+			page.getByText("Zarządzanie galerią, eksport i moderacja treści"),
+		).toBeVisible();
+
+		// Sprawdzenie, że ani hasło ani token nie są zapisane w sessionStorage ani localStorage
+		const storageData = await page.evaluate(() => {
+			return {
+				pwd: sessionStorage.getItem("owner_pwd_kasia-i-tomek"),
+				token: sessionStorage.getItem("owner_token_kasia-i-tomek"),
+				localPwd: localStorage.getItem("owner_pwd_kasia-i-tomek"),
+				localToken: localStorage.getItem("owner_token_kasia-i-tomek"),
+			};
+		});
+		expect(storageData.pwd).toBeNull();
+		expect(storageData.token).toBeNull();
+		expect(storageData.localPwd).toBeNull();
+		expect(storageData.localToken).toBeNull();
+
+		// Przeładowanie strony - sesja powinna zostać odtworzona z ciasteczka HttpOnly
+		await page.reload();
+		await expect(
+			page.getByText("Zarządzanie galerią, eksport i moderacja treści"),
+		).toBeVisible();
+		await expect(
+			page.getByPlaceholder("Wpisz hasło dostępu"),
+		).not.toBeVisible();
+	});
+
+	test("UC12: powinien wysłać POST do /api/auth/google i przekierować na zwrócony authUrl", async ({
+		page,
+	}) => {
+		let postCalled = false;
+		let requestMethod = "";
+		let requestUrl = "";
+		let requestBody: Record<string, unknown> | null = null;
+		let tokenHeader: string | null = null;
+
+		await page.route("**/api/owner/kasia-i-tomek/auth", async (route) => {
+			const res = await route.fetch();
+			const data = await res.json();
+			await route.fulfill({
+				status: res.status(),
+				headers: res.headers(),
+				body: JSON.stringify({ ...data, isGDriveConfigured: true }),
+			});
+		});
+
+		await page.route("**/api/auth/google", async (route) => {
+			postCalled = true;
+			requestMethod = route.request().method();
+			requestUrl = route.request().url();
+			requestBody = route.request().postDataJSON();
+			tokenHeader = route.request().headers()["x-owner-token"] || null;
+
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({
+					authUrl:
+						"https://accounts.google.com/o/oauth2/v2/auth?state=mock-state",
+				}),
+			});
+		});
+
+		// Blokujemy przejście na obcą domenę google.com, aby test nie zawisł
+		await page.route("https://accounts.google.com/**", async (route) => {
+			await route.abort();
+		});
+
+		await page.goto("/owner/kasia-i-tomek");
+		await page.getByPlaceholder("Wpisz hasło dostępu").fill("sekret123");
+		await page.getByRole("button", { name: "Zaloguj się" }).click();
+
+		await expect(
+			page.getByText("Zarządzanie galerią, eksport i moderacja treści"),
+		).toBeVisible();
+
+		const connectBtn = page.getByRole("button", {
+			name: /Połącz z Google Drive/i,
+		});
+		await expect(connectBtn).toBeVisible();
+		await connectBtn.click();
+
+		await expect.poll(() => postCalled).toBe(true);
+		expect(requestMethod).toBe("POST");
+		expect(requestUrl).not.toContain("token=");
+		expect(requestUrl).not.toContain("password=");
+		expect(requestBody).toEqual({ slug: "kasia-i-tomek" });
+		expect(tokenHeader).toBeTruthy();
+	});
+
+	test("UC13: powinien umożliwić wylogowanie z panelu i usunąć sesję", async ({
+		page,
+	}) => {
+		await page.goto("/owner/kasia-i-tomek");
+		await page.getByPlaceholder("Wpisz hasło dostępu").fill("sekret123");
+		await page.getByRole("button", { name: "Zaloguj się" }).click();
+
+		await expect(
+			page.getByText("Zarządzanie galerią, eksport i moderacja treści"),
+		).toBeVisible();
+
+		// Kliknięcie przycisku 'Wyloguj'
+		const logoutBtn = page.getByRole("button", { name: /Wyloguj/i });
+		await expect(logoutBtn).toBeVisible();
+		await logoutBtn.click();
+
+		// Powrót do formularza logowania
+		await expect(page.getByPlaceholder("Wpisz hasło dostępu")).toBeVisible();
+		await expect(
+			page.getByText("Zarządzanie galerią, eksport i moderacja treści"),
+		).not.toBeVisible();
+
+		// Po przeładowaniu sesja nie istnieje, formularz hasła nadal widoczny
+		await page.reload();
+		await expect(page.getByPlaceholder("Wpisz hasło dostępu")).toBeVisible();
+	});
+
+	test("UC14: powinien odtworzyć istniejącą sesję przy wejściu z parametrem ?gdrive=connected", async ({
+		page,
+	}) => {
+		await page.goto("/owner/kasia-i-tomek");
+		await page.getByPlaceholder("Wpisz hasło dostępu").fill("sekret123");
+		await page.getByRole("button", { name: "Zaloguj się" }).click();
+
+		await expect(
+			page.getByText("Zarządzanie galerią, eksport i moderacja treści"),
+		).toBeVisible();
+
+		// Symulacja powrotu z Google OAuth do panelu z parametrem ?gdrive=connected
+		await page.goto("/owner/kasia-i-tomek?gdrive=connected");
+
+		// Sesja powinna zostać pomyślnie odtworzona z ciasteczka HttpOnly
+		await expect(
+			page.getByText("Zarządzanie galerią, eksport i moderacja treści"),
+		).toBeVisible();
+		await expect(
+			page.getByText("Dysk Google został pomyślnie podłączony"),
+		).toBeVisible();
 	});
 });

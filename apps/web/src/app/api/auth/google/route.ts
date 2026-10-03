@@ -7,7 +7,7 @@ import { verifyOwnerToken } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
+export async function POST(req: NextRequest) {
 	try {
 		if (!isGoogleDriveConfigured()) {
 			return NextResponse.json(
@@ -19,21 +19,43 @@ export async function GET(req: NextRequest) {
 			);
 		}
 
-		const { searchParams } = new URL(req.url);
-		const slug = searchParams.get("slug");
-		const token = searchParams.get("token");
-		const password = searchParams.get("password");
+		const body = await req.json().catch(() => null);
+		const slug = body?.slug;
 
-		if (!slug || (!token && !password)) {
+		if (!slug || typeof slug !== "string") {
 			return NextResponse.json(
 				{
-					error: "Wymagany jest slug galerii oraz token lub hasło właściciela.",
+					error: "Wymagany jest slug galerii w ciele żądania.",
 				},
 				{ status: 400 },
 			);
 		}
 
-		// Weryfikacja tożsamości właściciela galerii
+		let token = req.headers.get("x-owner-token");
+		if (!token) {
+			const authHeader = req.headers.get("authorization");
+			if (authHeader?.toLowerCase().startsWith("bearer ")) {
+				token = authHeader.slice(7).trim();
+			}
+		}
+		if (!token && body && typeof body.token === "string") {
+			token = body.token;
+		}
+
+		const password =
+			req.headers.get("x-owner-password") ||
+			(body && typeof body.password === "string" ? body.password : null);
+
+		if (!token && !password) {
+			return NextResponse.json(
+				{
+					error:
+						"Wymagana jest autoryzacja właściciela galerii (token lub hasło).",
+				},
+				{ status: 401 },
+			);
+		}
+
 		if (token && !verifyOwnerToken(token, slug)) {
 			return NextResponse.json(
 				{ error: "Nieprawidłowy token właściciela galerii." },
@@ -41,20 +63,20 @@ export async function GET(req: NextRequest) {
 			);
 		}
 
+		const galleryResult = await db
+			.select()
+			.from(galleries)
+			.where(eq(galleries.slug, slug))
+			.limit(1);
+
+		if (!galleryResult.length) {
+			return NextResponse.json(
+				{ error: "Galeria nie istnieje." },
+				{ status: 404 },
+			);
+		}
+
 		if (!token && password) {
-			const galleryResult = await db
-				.select()
-				.from(galleries)
-				.where(eq(galleries.slug, slug))
-				.limit(1);
-
-			if (!galleryResult.length) {
-				return NextResponse.json(
-					{ error: "Galeria nie istnieje." },
-					{ status: 404 },
-				);
-			}
-
 			const gallery = galleryResult[0];
 			const isValid = await compare(password, gallery.ownerPasswordHash);
 			if (!isValid) {
@@ -65,10 +87,8 @@ export async function GET(req: NextRequest) {
 			}
 		}
 
-		// Generujemy bezpieczny URL Google OAuth ze stanem HMAC
 		const authUrl = getGoogleAuthUrl(slug);
-
-		return NextResponse.redirect(authUrl);
+		return NextResponse.json({ authUrl }, { status: 200 });
 	} catch (err: unknown) {
 		console.error("Błąd inicjalizacji Google OAuth:", err);
 		const errorMsg =
