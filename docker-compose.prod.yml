@@ -82,7 +82,7 @@ services:
       [
         "sh",
         "-c",
-        "wget -qO /etc/caddy/Caddyfile https://raw.githubusercontent.com/p4cino/wedding-drop/v1.0.0/Caddyfile && caddy run --config /etc/caddy/Caddyfile --adapter caddyfile",
+        "wget -qO /etc/caddy/Caddyfile https://raw.githubusercontent.com/p4cino/wedding-drop/v1.1.0/Caddyfile && caddy run --config /etc/caddy/Caddyfile --adapter caddyfile",
       ]
     ports:
       - "8080:80"
