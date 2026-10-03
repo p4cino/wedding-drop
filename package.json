@@ -15,10 +15,12 @@
 		"screenshots": "pnpm --filter @wedding-drop/web exec tsx ../../scripts/capture-screenshots.ts",
 		"db:push": "turbo run db:push",
 		"db:generate": "turbo run db:generate",
+		"openspec": "openspec",
 		"prepare": "husky"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.14",
+		"@fission-ai/openspec": "^1.14.0",
 		"husky": "^9.1.7",
 		"lint-staged": "^17.5.1",
 		"turbo": "^2.11.3",

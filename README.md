@@ -237,12 +237,12 @@ Pokrywa:
 
 Repozytorium używa [OpenSpec](https://github.com/Fission-AI/OpenSpec) do propozycji zmian i specyfikacji (`openspec/`). Artefakty piszemy po polsku; kontekst projektu jest w `openspec/config.yaml`.
 
-Komendy w Cursorze: `/opsx-explore`, `/opsx-propose`, `/opsx-apply`, `/opsx-update`, `/opsx-sync`, `/opsx-archive`  
-(Claude Code: `/opsx:explore`, `/opsx:propose`, …).
+Komendy w Antigravity i Cursorze: `/opsx-explore`, `/opsx-propose`, `/opsx-apply`, `/opsx-update`, `/opsx-sync`, `/opsx-archive`  
+(Claude Code i Gemini CLI: `/opsx:explore`, `/opsx:propose`, …).
 
 ```bash
-npx @fission-ai/openspec list          # aktywne change'e
-npx @fission-ai/openspec list --specs  # główne specyfikacje
+pnpm openspec list          # aktywne change'e
+pnpm openspec list --specs  # główne specyfikacje
 ```
 
 ---
