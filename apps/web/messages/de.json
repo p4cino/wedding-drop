@@ -222,6 +222,8 @@
 		"viewGallery": "Gästegalerie ansehen",
 		"cardBtn": "Tischkarte A6",
 		"downloadZip": "ZIP herunterladen",
+		"logoutBtn": "Abmelden",
+		"gdriveConnectError": "Google Drive-Verbindung konnte nicht initialisiert werden.",
 		"gdriveCardTitle": "Google Drive Cloud-Backup",
 		"connected": "Verbunden ({email})",
 		"defaultAccount": "Google-Konto",

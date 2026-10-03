@@ -200,7 +200,7 @@ Indeks `idx_wishes_gallery_status_created` na `(gallery_id, status, created_at)`
 ### Publiczne (Gość)
 - `GET /api/gallery/:slug` – Metadane galerii, status aktywności i ustawienia winietki, w tym `primaryColor`/`accentColor` motywu wesela (zawsze zwracane, z domyślnymi wartościami generatora winietek, gdy galeria nie ma zapisanych ustawień) — wykorzystywane m.in. przez ramkę photobooth w przeglądarce gościa (`CameraCapture.tsx`).
 - `GET /api/gallery/:slug/media` – Lista aktywnych multimediów (`status: "ready"`):
-  - Parametr `?includeHidden=true` wymaga autoryzacji nagłówkiem `Authorization: Bearer <adminToken>` lub nagłówkiem `x-owner-password: <password>` (ewentualnie `?password=`). Próba nieautoryzowanego odczytu zwraca `401 Unauthorized`.
+  - Parametr `?includeHidden=true` wymaga autoryzacji nagłówkiem `Authorization: Bearer <adminToken>` / `x-admin-token`, nagłówkiem `x-owner-token`, ciasteczkiem sesji `wd_owner_{slug}` lub nagłówkiem `x-owner-password: <password>`. Poświadczenia w query stringu są ignorowane, a próba nieautoryzowanego odczytu zwraca `401 Unauthorized`.
   - Pozycje o statusie `status: "deleted"` są bezwzględnie odfiltrowywane.
 - `GET /api/gallery/:slug/live` – Strumień Server-Sent Events (SSE):
   - Emisja `new-media`: powiadomienie o nowym przetworzonym zdjęciu.
@@ -212,8 +212,8 @@ Indeks `idx_wishes_gallery_status_created` na `(gallery_id, status, created_at)`
   - Obsługuje zapytanie z parametrami URL (`headline`, `primaryColor`, `accentColor`, `instructions`), dzięki czemu pobierany plik od razu odzwierciedla stan edytora wizualnego bez wymogu uprzedniego zapisu w bazie.
   - Generuje prawidłowy kod QR z dynamicznym wykrywaniem hosta (brak sztywnego kodowania domen lokalnych).
 - `GET /api/gallery/:slug/zip` – Strumieniowane archiwum ZIP ze wszystkimi zdjęciami:
-  - Weryfikuje uprawnienie `allowGuestDownloads` oraz PIN galerii.
-  - Przy podaniu hasła właściciela (`?password=`) do archiwum dołączane są również zdjęcia ukryte (`status: "hidden"`).
+  - Dla gości: weryfikuje uprawnienie `allowGuestDownloads` oraz PIN galerii (`x-access-pin` lub `?pin=`).
+  - Dla właściciela (autoryzacja ciasteczkiem sesji `wd_owner_{slug}`, nagłówkiem `x-owner-token` lub nagłówkiem `x-owner-password`): do archiwum dołączane są również zdjęcia ukryte (`status: "hidden"`), a pobieranie działa niezależnie od blokady pobierania gości. Poświadczenia w query stringu (`?password=`, `?token=`) są ignorowane ze względów bezpieczeństwa.
   - Oparte o nowoczesny strumień `ZipArchive` z pakietu `archiver` (brak buforowania gigabajtów w RAM).
   - Jeśli galeria zawiera widoczne życzenia (zgodnie z tymi samymi zasadami widoczności `hidden` co przy przeglądaniu przez właściciela), do archiwum dogrywany jest dodatkowy plik tekstowy `zyczenia.txt` z treścią i autorem każdego wpisu.
 - `GET /media-file/*` – Bezpośrednie serwowanie statycznych plików przez zoptymalizowane proxy Caddy (bez udziału Node.js), z pełną obsługą cache i nagłówków Byte-Range.
@@ -226,12 +226,12 @@ Indeks `idx_wishes_gallery_status_created` na `(gallery_id, status, created_at)`
   - Z poświadczeniami właściciela/administratora zwraca wszystkie poza `deleted`.
 - `GET /g/:slug/tv` – **Nie jest to nowy endpoint API**, lecz publiczna trasa strony (komponent kliencki `apps/web/src/app/[locale]/g/[slug]/tv/page.tsx`) — tryb TV/pokaz slajdów na telewizor lub rzutnik. Pobiera dane wyłącznie z `GET /api/gallery/:slug/media` i `GET /api/gallery/:slug/live` powyżej, bez żadnych własnych zapytań do bazy i bez wysyłania nagłówków/parametrów właściciela — dziedziczy filtrowanie `status: "ready"` 1:1 z istniejących endpointów.
 
-### Panel Pary Młodej (RESTful API)
-- `POST /api/owner/:slug/auth` – Logowanie hasłem właściciela, wydanie podpisanego tokenu HMAC-SHA256, zwrócenie statystyk galerii, stanu Google Drive i konfiguracji winietki.
-- `GET /api/owner/:slug/session` – Odtworzenie sesji panelu tokenem właściciela (nagłówek `x-owner-token`) bez ponownego podawania hasła; zwraca ten sam ładunek co logowanie, ale bez nowego tokenu. Przeglądarka przechowuje w `sessionStorage` wyłącznie token — hasło nigdy nie jest zapisywane.
+- `POST /api/owner/:slug/auth` – Logowanie hasłem właściciela, wydanie podpisanego tokenu HMAC-SHA256 w JSON oraz ciasteczka sesji `wd_owner_{slug}` (`HttpOnly; SameSite=Strict; Path=/api; Max-Age=7 dni; Secure` w produkcji). Zwraca statystyki galerii, stan Google Drive i konfigurację winietki.
+- `GET /api/owner/:slug/session` – Przywrócenie aktywnej sesji właściciela na podstawie ciasteczka `wd_owner_{slug}` (wymaga metody GET). Odświeża ciasteczko sesji i zwraca świeży `ownerToken` oraz pełne dane panelu bez ponownego podawania hasła.
+- `DELETE /api/owner/:slug/session` – Wylogowanie właściciela i wyczyszczenie ciasteczka sesji (`Max-Age=0`).
 - Import materiałów fotografa/kamerzysty (`PhotographerImportPanel.tsx`) nie ma osobnego endpointu REST — korzysta z tego samego `ANY /api/upload/tus/*` co upload gościa, przekazując dodatkowo `ownerToken` z logowania właściciela oraz `source: "photographer"` w metadanych TUS (patrz sekcja 3.1 i 5 wyżej).
-- `PATCH /api/owner/:slug/media/:id/status` – Zmiana widoczności zdjęcia (`ready` <-> `hidden`) autoryzowana tokenem HMAC, wraz z natychmiastową emisją SSE `media-updated`.
-- `DELETE /api/owner/:slug/media/:id` – Fizyczne usunięcie pliku źródłowego i miniatury z dysku oraz bazy danych z powiadomieniem SSE.
+- `PATCH /api/owner/:slug/media/:id/status` – Zmiana widoczności zdjęcia (`ready` <-> `hidden`) autoryzowana tokenem HMAC (nagłówek `x-owner-token` lub `body.token`), wraz z natychmiastową emisją SSE `media-updated`.
+- `DELETE /api/owner/:slug/media/:id` – Fizyczne usunięcie pliku źródłowego i miniatury z dysku oraz bazy danych autoryzowane nagłówkiem `x-owner-token` lub `body.token` (ciasteczko nie wystarcza dla operacji mutujących).
 - `PATCH /api/owner/:slug/wishes/:id/status` – Moderacja życzenia autoryzowana tokenem HMAC (`authenticateOwner`), analogicznie do moderacji zdjęć:
   - `newStatus: "hidden"` ukrywa życzenie przed gośćmi, `"ready"` przywraca widoczność, `"deleted"` trwale je usuwa (soft-delete — brak plików do fizycznego skasowania, więc wystarczy zmiana statusu).
   - Emisja SSE `wish-updated` synchronizuje zmianę na żywo ze wszystkimi otwartymi widokami galerii.
@@ -239,7 +239,7 @@ Indeks `idx_wishes_gallery_status_created` na `(gallery_id, status, created_at)`
 - `GET /api/owner/:slug/gdrive` – Pobranie aktualnego stanu transferu, liczby przetworzonych bajtów i linku do folderu Google Drive.
 - `POST /api/owner/:slug/gdrive/export` – Uruchomienie asynchronicznego eksportu multimediów na Dysk Google w tle z opcją dołączenia ukrytych zdjęć.
 - `DELETE /api/owner/:slug/gdrive` – Bezpieczne odłączenie konta Google Drive i usunięcie tokenów z bazy.
-- `GET /api/auth/google` – Inicjalizacja autoryzacji Google OAuth 2.0 (weryfikacja tokenu HMAC, podpis stanu, wymuszenie offline refresh_token).
+- `POST /api/auth/google` – Inicjalizacja autoryzacji Google OAuth 2.0 (body `{ slug }`, autoryzacja nagłówkiem `x-owner-token` / `Authorization: Bearer` lub `x-owner-password`). Zwraca `200 { authUrl }` z podpisanym stanem HMAC do nawigacji po stronie klienta (eliminacja poświadczeń z adresów URL).
 - `GET /api/auth/google/callback` – Obsługa zwrotna OAuth 2.0, weryfikacja integralności tokena stanu, wymiana kodu na refresh token i przekierowanie z powrotem do panelu.
 
 ### Panel Administratora (RESTful API)
@@ -465,3 +465,36 @@ curl -sv http://<ip-nas>:<port>/ 2>&1 | head -40
 # 4. Lista zajetych portow na calym NAS-ie, przy konflikcie
 sudo ss -tlnp
 ```
+
+---
+
+## 12. Spec-Driven Development (OpenSpec)
+
+Projekt wdraża metodologię **Spec-Driven Development (SDD)** z użyciem narzędzia [OpenSpec](https://github.com/Fission-AI/openspec). Pozwala ona na iteracyjne planowanie architektoniczne, specyfikowanie wymagań, zarządzanie zmianami oraz zachowanie spójności kodu z intencją projektową przed przystąpieniem do implementacji z asystentami AI (Antigravity, Cursor, Claude Code).
+
+### Struktura OpenSpec:
+- `openspec/config.yaml`: Konfiguracja projektu zawierająca reguły architektoniczne (wariant sprzętowy Intel N100, zasady przetwarzania mediów, p-queue, limity watchdog, streaming ZIP, normalizacja ścieżek POSIX).
+- `openspec/specs/`: Formalne specyfikacje modułów i domen systemu jako źródło prawdy.
+- `openspec/changes/`: Propozycje zmian (`proposal`, `spec`, `design`, `tasks`).
+
+### Polecenia CLI:
+```bash
+# Diagnostyka konfiguracji i ścieżek
+pnpm openspec doctor
+
+# Walidacja poprawności specyfikacji i propozycji zmian
+pnpm openspec validate --all
+
+# Uruchomienie lokalnego dashboardu podglądu specyfikacji
+pnpm openspec view
+```
+
+### Integracja z Asystentami AI:
+- Asystenci korzystają ze zintegrowanych umiejętności (skills) w `.agents/skills/openspec-*`, `.cursor/skills/` oraz `.claude/`.
+- Dostępne komendy przepływu pracy:
+  - `/opsx-propose`: Inicjalizacja nowej propozycji funkcjonalności lub zmiany architektonicznej.
+  - `/opsx-explore`: Tryb analizy i burzy mózgów nad istniejącą bazą kodu przed przygotowaniem specyfikacji.
+  - `/opsx-apply`: Implementacja zadań zdefiniowanych w zatwierdzonej propozycji OpenSpec.
+  - `/opsx-sync`: Synchronizacja zmian i specyfikacji.
+  - `/opsx-archive`: Archiwizacja wdrożonej zmiany i aktualizacja głównego drzewa specyfikacji.
+

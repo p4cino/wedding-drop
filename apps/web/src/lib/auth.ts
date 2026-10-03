@@ -1,7 +1,80 @@
 import crypto from "node:crypto";
 import { db, galleries } from "@wedding-drop/db";
 import { eq } from "drizzle-orm";
-import type { NextRequest } from "next/server";
+import type { NextRequest, NextResponse } from "next/server";
+
+export const OWNER_SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 604800s (7 dni)
+
+export function ownerSessionCookieName(slug: string): string {
+	return `wd_owner_${slug}`;
+}
+
+export function setOwnerSessionCookie(
+	res: NextResponse,
+	slug: string,
+	token: string,
+): void {
+	res.cookies.set({
+		name: ownerSessionCookieName(slug),
+		value: token,
+		httpOnly: true,
+		sameSite: "strict",
+		path: "/api",
+		maxAge: OWNER_SESSION_MAX_AGE,
+		secure: process.env.NODE_ENV === "production",
+	});
+}
+
+export function clearOwnerSessionCookie(res: NextResponse, slug: string): void {
+	res.cookies.set({
+		name: ownerSessionCookieName(slug),
+		value: "",
+		httpOnly: true,
+		sameSite: "strict",
+		path: "/api",
+		maxAge: 0,
+		secure: process.env.NODE_ENV === "production",
+	});
+}
+
+function getCookieValue(
+	req: NextRequest | Request,
+	name: string,
+): string | undefined {
+	if ("cookies" in req && typeof req.cookies?.get === "function") {
+		return req.cookies.get(name)?.value;
+	}
+	const cookieHeader = req.headers.get("cookie");
+	if (!cookieHeader) return undefined;
+	const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+	return match ? decodeURIComponent(match[1]) : undefined;
+}
+
+export function readOwnerToken(
+	req: NextRequest | Request,
+	slug: string,
+	body?: { token?: string } | null,
+): string | null {
+	const headerToken = req.headers.get("x-owner-token");
+	if (headerToken) return headerToken;
+
+	const authHeader = req.headers.get("authorization");
+	if (authHeader && /^Bearer\s+/i.test(authHeader)) {
+		return authHeader.replace(/^Bearer\s+/i, "");
+	}
+
+	if (body?.token) {
+		return body.token;
+	}
+
+	const method = req.method?.toUpperCase();
+	if (method === "GET" || method === "HEAD") {
+		const cookieToken = getCookieValue(req, ownerSessionCookieName(slug));
+		if (cookieToken) return cookieToken;
+	}
+
+	return null;
+}
 
 export function getAdminSecret(): string {
 	return (
@@ -143,11 +216,7 @@ export async function authenticateOwner(
 	const gallery = galleryResult[0];
 
 	// Szybka weryfikacja tokenu HMAC (optymalizacja dla Intel N100)
-	const token =
-		req.headers.get("x-owner-token") ||
-		req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ||
-		new URL(req.url).searchParams.get("token") ||
-		body?.token;
+	const token = readOwnerToken(req, slug, body);
 
 	if (token && verifyOwnerToken(token, slug)) {
 		return { authorized: true, gallery };

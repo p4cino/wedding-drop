@@ -222,6 +222,8 @@
 		"viewGallery": "View guest gallery",
 		"cardBtn": "Table Card A6",
 		"downloadZip": "Download ZIP",
+		"logoutBtn": "Log out",
+		"gdriveConnectError": "Failed to initialize Google Drive connection.",
 		"gdriveCardTitle": "Google Drive Cloud Backup",
 		"connected": "Connected ({email})",
 		"defaultAccount": "Google Account",

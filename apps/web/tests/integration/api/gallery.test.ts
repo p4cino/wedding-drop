@@ -6,7 +6,7 @@ import { GET as getLive } from "@/app/api/gallery/[slug]/live/route";
 import { GET as getMedia } from "@/app/api/gallery/[slug]/media/route";
 import { GET as getGallery } from "@/app/api/gallery/[slug]/route";
 import { GET as getZip } from "@/app/api/gallery/[slug]/zip/route";
-import { generateAdminToken } from "@/lib/auth";
+import { generateAdminToken, generateOwnerToken } from "@/lib/auth";
 
 let mockExists = true;
 vi.mock("node:fs", () => ({
@@ -248,9 +248,12 @@ describe("Gallery API Routes", () => {
 			);
 		});
 
-		it("powinien obsłużyć parametr includeHidden=true z poprawnym hasłem", async () => {
+		it("powinien obsłużyć parametr includeHidden=true z poprawnym nagłówkiem x-owner-password", async () => {
 			const req = new NextRequest(
-				"http://localhost/api/gallery/kasia-i-tomek/media?includeHidden=true&password=sekret123",
+				"http://localhost/api/gallery/kasia-i-tomek/media?includeHidden=true",
+				{
+					headers: { "x-owner-password": "sekret123" },
+				},
 			);
 			const res = await getMedia(req, {
 				params: Promise.resolve({ slug: "kasia-i-tomek" }),
@@ -261,10 +264,38 @@ describe("Gallery API Routes", () => {
 			expect(data.media).toBeDefined();
 		});
 
-		it("powinien obsłużyć parametr includeHidden=true z poprawnym adminToken", async () => {
+		it("powinien obsłużyć parametr includeHidden=true z poprawnym tokenem właściciela (nagłówek i ciasteczko)", async () => {
+			const token = generateOwnerToken("kasia-i-tomek");
+			const reqHeader = new NextRequest(
+				"http://localhost/api/gallery/kasia-i-tomek/media?includeHidden=true",
+				{
+					headers: { "x-owner-token": token },
+				},
+			);
+			const resHeader = await getMedia(reqHeader, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+			expect(resHeader.status).toBe(200);
+
+			const reqCookie = new NextRequest(
+				"http://localhost/api/gallery/kasia-i-tomek/media?includeHidden=true",
+				{
+					headers: { cookie: `wd_owner_kasia-i-tomek=${token}` },
+				},
+			);
+			const resCookie = await getMedia(reqCookie, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+			expect(resCookie.status).toBe(200);
+		});
+
+		it("powinien obsłużyć parametr includeHidden=true z poprawnym adminToken przez Authorization: Bearer", async () => {
 			const token = generateAdminToken("admin");
 			const req = new NextRequest(
-				`http://localhost/api/gallery/kasia-i-tomek/media?includeHidden=true&adminToken=${token}`,
+				"http://localhost/api/gallery/kasia-i-tomek/media?includeHidden=true",
+				{
+					headers: { authorization: `Bearer ${token}` },
+				},
 			);
 			const res = await getMedia(req, {
 				params: Promise.resolve({ slug: "kasia-i-tomek" }),
@@ -273,6 +304,23 @@ describe("Gallery API Routes", () => {
 			expect(res.status).toBe(200);
 			const data = await res.json();
 			expect(data.media).toBeDefined();
+		});
+
+		it("powinien odrzucić poświadczenia przekazane w query stringu dla includeHidden=true (401)", async () => {
+			const adminToken = generateAdminToken("admin");
+			const ownerToken = generateOwnerToken("kasia-i-tomek");
+
+			for (const url of [
+				"http://localhost/api/gallery/kasia-i-tomek/media?includeHidden=true&password=sekret123",
+				`http://localhost/api/gallery/kasia-i-tomek/media?includeHidden=true&adminToken=${adminToken}`,
+				`http://localhost/api/gallery/kasia-i-tomek/media?includeHidden=true&ownerToken=${ownerToken}`,
+			]) {
+				const req = new NextRequest(url);
+				const res = await getMedia(req, {
+					params: Promise.resolve({ slug: "kasia-i-tomek" }),
+				});
+				expect(res.status).toBe(401);
+			}
 		});
 
 		it("powinien zwrócić 404, gdy galeria nie istnieje", async () => {
@@ -353,10 +401,42 @@ describe("Gallery API Routes", () => {
 			expect(res.status).toBe(403);
 		});
 
-		it("powinien zezwolić na pobranie ZIP, gdy allowGuestDownloads=false z poprawnym hasłem właściciela", async () => {
+		it("powinien zezwolić na pobranie ZIP, gdy allowGuestDownloads=false z poprawnym tokenem właściciela (nagłówek i ciasteczko)", async () => {
+			mockGalleries[0].allowGuestDownloads = false;
+			const token = generateOwnerToken("kasia-i-tomek");
+
+			const reqHeader = new NextRequest(
+				"http://localhost/api/gallery/kasia-i-tomek/zip",
+				{
+					headers: { "x-owner-token": token },
+				},
+			);
+			const resHeader = await getZip(reqHeader, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+			expect(resHeader.status).toBe(200);
+			expect(resHeader.headers.get("Content-Type")).toBe("application/zip");
+
+			const reqCookie = new NextRequest(
+				"http://localhost/api/gallery/kasia-i-tomek/zip",
+				{
+					headers: { cookie: `wd_owner_kasia-i-tomek=${token}` },
+				},
+			);
+			const resCookie = await getZip(reqCookie, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+			expect(resCookie.status).toBe(200);
+			expect(resCookie.headers.get("Content-Type")).toBe("application/zip");
+		});
+
+		it("powinien zezwolić na pobranie ZIP, gdy allowGuestDownloads=false z poprawnym nagłówkiem x-owner-password", async () => {
 			mockGalleries[0].allowGuestDownloads = false;
 			const req = new NextRequest(
-				"http://localhost/api/gallery/kasia-i-tomek/zip?password=sekret123",
+				"http://localhost/api/gallery/kasia-i-tomek/zip",
+				{
+					headers: { "x-owner-password": "sekret123" },
+				},
 			);
 			const res = await getZip(req, {
 				params: Promise.resolve({ slug: "kasia-i-tomek" }),
@@ -364,6 +444,27 @@ describe("Gallery API Routes", () => {
 
 			expect(res.status).toBe(200);
 			expect(res.headers.get("Content-Type")).toBe("application/zip");
+		});
+
+		it("powinien zablokować pobranie ZIP (403), gdy allowGuestDownloads=false a poświadczenia podano tylko w query (?password= lub ?token=)", async () => {
+			mockGalleries[0].allowGuestDownloads = false;
+			const token = generateOwnerToken("kasia-i-tomek");
+
+			const reqPwd = new NextRequest(
+				"http://localhost/api/gallery/kasia-i-tomek/zip?password=sekret123",
+			);
+			const resPwd = await getZip(reqPwd, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+			expect(resPwd.status).toBe(403);
+
+			const reqToken = new NextRequest(
+				`http://localhost/api/gallery/kasia-i-tomek/zip?token=${token}`,
+			);
+			const resToken = await getZip(reqToken, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+			expect(resToken.status).toBe(403);
 		});
 
 		it("powinien zablokować pobieranie ZIP gdy galeria ma accessPin i podano błędny lub brak PIN", async () => {

@@ -67,9 +67,10 @@ Szybki podgląd wszystkich ślubów, zarządzanie przestrzenią dyskową oraz b�
 
 2. **Dla Pary Młodej (Właściciela Galerii)**:
    - Panel zarządzania dostępny pod `/owner/[slug]`.
+   - **Utwardzona sesja właściciela**: Bezpieczne ciasteczko sesji `HttpOnly; SameSite=Strict; Path=/api` (brak haseł i tokenów w `sessionStorage` oraz w URL-ach). Automatyczne wznawianie sesji po odświeżeniu i przycisk wylogowania.
    - Podgląd liczby zdjęć, filmów oraz sumarycznego zajętego miejsca na dysku.
    - **Import materiałów fotografa/kamerzysty**: masowy, wznawialny import profesjonalnych zdjęć i filmów (ten sam protokół TUS co upload gości) do tej samej galerii i chronologii — dostępny wyłącznie po zalogowaniu właściciela. Zaimportowane pliki są oznaczone w siatce galerii odróżniającą odznaką "Fotograf" i przechodzą przez dokładnie tę samą, ograniczoną kolejkę przetwarzania (`p-queue` concurrency: 2) co uploady gości — bez priorytetu ani osobnego limitu. Jeśli administrator ustawił limit pojemności galerii (`maxStorageBytes`), import fotografa go respektuje i odrzuci pojedyncze pliki przekraczające limit (nie wpływając na pozostałe pliki tej samej paczki importu).
-   - **Pobieranie całej galerii jako jeden plik ZIP**: Generowanie strumieniowe w locie (`archiver`) bez obciążania pamięci RAM serwera (z uwzględnieniem zdjęć ukrytych po podaniu hasła). Jeśli galeria zawiera życzenia, ZIP zawiera dodatkowo plik tekstowy `zyczenia.txt` z treścią i autorami wszystkich widocznych wpisów.
+   - **Pobieranie całej galerii jako jeden plik ZIP**: Generowanie strumieniowe w locie (`archiver`) bez obciążania pamięci RAM serwera (z uwzględnieniem zdjęć ukrytych dla uwierzytelnionej Pary Młodej). Jeśli galeria zawiera życzenia, ZIP zawiera dodatkowo plik tekstowy `zyczenia.txt` z treścią i autorami wszystkich widocznych wpisów.
    - **Moderacja na żywo**: Szybkie ukrywanie zdjęć niepożądanych jednym kliknięciem oraz usuwanie — zmiana statusu natychmiast synchronizuje się ze wszystkimi telefonami na sali weselnej przez SSE (`media-updated`).
    - **Moderacja Księgi Życzeń**: Ten sam mechanizm ukrywania/trwałego usuwania dostępny również dla wpisów w księdze życzeń (SSE `wish-updated`), z filtrowaniem po statusie (wszystkie/widoczne/ukryte).
    - Bezpośredni dostęp do generatora winietki na stolik oraz do trybu TV.
@@ -234,6 +235,32 @@ Komendy w Cursorze: `/opsx-explore`, `/opsx-propose`, `/opsx-apply`, `/opsx-upda
 npx @fission-ai/openspec list          # aktywne change'e
 npx @fission-ai/openspec list --specs  # główne specyfikacje
 ```
+
+---
+
+## 📐 Spec-Driven Development (OpenSpec)
+
+Projekt wspiera podejście **Spec-Driven Development (SDD)** z wykorzystaniem narzędzia [OpenSpec](https://github.com/Fission-AI/openspec), umożliwiając tworzenie formalnych specyfikacji, propozycji zmian i zadań przed przystąpieniem do kodowania z asystentami AI (Antigravity, Cursor, Claude Code).
+
+```bash
+# Sprawdzenie stanu specyfikacji i propozycji
+pnpm openspec doctor
+pnpm openspec validate --all
+
+# Interaktywny pulpit specyfikacji i zmian
+pnpm openspec view
+```
+
+Wszystkie specyfikacje oraz propozycje zmian znajdują się w katalogu `openspec/`, a dedykowane skille i komendy agentów są dostępne m.in. w `.agents/`, `.cursor/` oraz `.claude/`.
+
+---
+
+## 🔒 Bezpieczeństwo i Zmiany w API (Breaking Changes)
+
+Od wersji z utwardzoną sesją właściciela wprowadzono następujące zasady:
+- **Wycofanie poświadczeń z query stringu**: Parametry `?password=`, `?token=`, `?ownerToken=`, `?adminToken=` nie są już akceptowane przez serwer (`/api/gallery/:slug/media`, `/api/gallery/:slug/zip`, `/api/admin/galleries`, `/api/auth/google`). Wszelkie poświadczenia muszą być przekazywane w nagłówkach HTTP (`x-owner-token`, `x-owner-password`, `Authorization: Bearer <token>`, `x-admin-token`) lub za pośrednictwem ciasteczka sesji `wd_owner_{slug}`.
+- **Inicjalizacja Google OAuth**: Endpoint `/api/auth/google` przyjmuje wyłącznie metodę `POST` z ciałem JSON `{ "slug": "..." }` i nagłówkiem autoryzacyjnym, zwracając adres docelowy `{ "authUrl": "..." }`.
+- **Migracja skryptów i integracji**: Zewnętrzne skrypty korzystające dotąd z parametrów w adresie URL (np. pobieranie ZIP) muszą przekazywać nagłówek HTTP, np. `curl -H "x-owner-token: <token>" https://.../api/gallery/<slug>/zip` lub `curl -H "x-owner-password: <haslo>" ...`.
 
 ---
 

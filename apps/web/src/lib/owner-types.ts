@@ -47,6 +47,7 @@ export interface OwnerPanelData {
 	gallery: OwnerPanelGallery;
 	stats: { totalFiles: number; totalBytes: number };
 	isGDriveConfigured?: boolean;
+	ownerToken?: string;
 }
 
 export interface OwnerAuthResponse extends OwnerPanelData {

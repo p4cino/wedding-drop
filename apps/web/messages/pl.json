@@ -222,6 +222,8 @@
 		"viewGallery": "Zobacz galerię gościa",
 		"cardBtn": "Karteczka A6",
 		"downloadZip": "Pobierz ZIP",
+		"logoutBtn": "Wyloguj",
+		"gdriveConnectError": "Nie udało się zainicjować połączenia z Dyskiem Google.",
 		"gdriveCardTitle": "Kopia w chmurze Google Drive",
 		"connected": "Połączono ({email})",
 		"defaultAccount": "Konto Google",

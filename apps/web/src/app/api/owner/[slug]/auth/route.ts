@@ -7,7 +7,7 @@ import {
 } from "@wedding-drop/db";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
-import { generateOwnerToken } from "@/lib/auth";
+import { generateOwnerToken, setOwnerSessionCookie } from "@/lib/auth";
 import { buildOwnerPanelPayload } from "@/lib/owner-panel-payload";
 
 export const dynamic = "force-dynamic";
@@ -58,11 +58,14 @@ export async function POST(
 			);
 		}
 
+		const ownerToken = generateOwnerToken(slug);
 		const payload = await buildOwnerPanelPayload(gallery, gdrive);
-		return NextResponse.json({
+		const res = NextResponse.json({
 			...payload,
-			ownerToken: generateOwnerToken(slug),
+			ownerToken,
 		});
+		setOwnerSessionCookie(res, slug, ownerToken);
+		return res;
 	} catch (error) {
 		console.error("Błąd w endpoint owner auth:", error);
 		return NextResponse.json({ error: "Błąd serwera" }, { status: 500 });

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Dynamic mock variables
 let mockAdminCount = "0";
+const mockGalleryCount = "1";
 
 // Mock postgres module before importing client
 vi.mock("postgres", () => {
@@ -13,6 +14,9 @@ vi.mock("postgres", () => {
 				const rawQuery = strings[0] || "";
 				if (rawQuery.includes("SELECT count(*) FROM admins")) {
 					return Promise.resolve([{ count: mockAdminCount }]);
+				}
+				if (rawQuery.includes("SELECT count(*) FROM galleries")) {
+					return Promise.resolve([{ count: mockGalleryCount }]);
 				}
 				if (rawQuery.includes("INSERT INTO admins")) {
 					return Promise.resolve([{ id: "admin-uuid" }]);

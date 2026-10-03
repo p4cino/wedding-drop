@@ -22,7 +22,6 @@ function getAdminTokenFromRequest(
 	return (
 		req.headers.get("x-admin-token") ||
 		req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ||
-		new URL(req.url).searchParams.get("token") ||
 		body?.token ||
 		null
 	);

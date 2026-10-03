@@ -27,7 +27,7 @@ Szczegółową instrukcję rejestracji aplikacji w Google Cloud Console znajdzie
 
 - `packages/media/src/google-drive.ts`: Inicjalizacja klienta `google.auth.OAuth2`, generowanie linku autoryzacyjnego ze stanem HMAC oraz odświeżanie tokenów.
 - `packages/media/src/gdrive-exporter.ts`: Moduł asynchronicznego eksportu multimediów w tle z logowaniem statusu transferu.
-- `apps/web/src/app/api/auth/google/route.ts`: Endpoint inicjalizujący przekierowanie do Google OAuth.
+- `apps/web/src/app/api/auth/google/route.ts`: Endpoint `POST` inicjalizujący autoryzację Google OAuth (wymaga body `{ slug }` oraz nagłówka `x-owner-token` lub `x-owner-password`, zwraca `{ authUrl }`).
 - `apps/web/src/app/api/auth/google/callback/route.ts`: Obsługa powrotu z Google, weryfikacja integralności tokena HMAC, wymiana kodu autoryzacji na `refresh_token`.
 - `apps/web/src/app/api/owner/route.ts`: Akcje `start-gdrive-export`, `disconnect-gdrive`, `get-gdrive-status`.
 
