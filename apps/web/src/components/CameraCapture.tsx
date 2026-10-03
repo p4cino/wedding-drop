@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, X } from "lucide-react";
+import { Camera, SwitchCamera, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -8,6 +8,9 @@ import {
 	captureFrameToCanvas,
 	isCameraSupported,
 } from "@/lib/photobooth";
+
+const CAMERA_FACING_STORAGE_KEY = "wedding_drop_camera_facing";
+type FacingMode = "user" | "environment";
 
 interface CameraCaptureProps {
 	// Kolory motywu wesela dla dekoracyjnej ramki — brak wartości oznacza użycie
@@ -23,10 +26,9 @@ type CameraStatus = "starting" | "ready" | "error";
 
 /**
  * Podgląd na żywo z kamery urządzenia gościa (`getUserMedia`) używany wewnątrz
- * `UploaderDrawer` jako alternatywa dla wyboru pliku z dysku. Zrobione zdjęcie
- * jest komponowane na `<canvas>` z opcjonalną ramką motywu wesela i eksportowane
- * jako zwykły `File` (JPEG) — dalej trafia do tego samego `startUpload`, co plik
- * z wyboru z dysku.
+ * `UploaderDrawer` jako alternatywa dla wyboru pliku z dysku. Umożliwia przełączanie
+ * między przednim aparatem (selfie) a aparatem głównym (tylnym), komponuje klatkę
+ * na `<canvas>` z opcjonalną ramką motywu wesela i eksportuje jako zwykły `File` (JPEG).
  */
 export default function CameraCapture({
 	primaryColor,
@@ -40,6 +42,20 @@ export default function CameraCapture({
 	const streamRef = useRef<MediaStream | null>(null);
 	const [status, setStatus] = useState<CameraStatus>("starting");
 	const [isCapturing, setIsCapturing] = useState(false);
+	const [facingMode, setFacingMode] = useState<FacingMode>(() => {
+		if (typeof window !== "undefined") {
+			try {
+				const saved = localStorage.getItem(CAMERA_FACING_STORAGE_KEY);
+				if (saved === "user" || saved === "environment") {
+					return saved;
+				}
+			} catch {
+				// Dostęp do localStorage może być zablokowany w restrykcyjnych politykach
+			}
+		}
+		return "environment";
+	});
+	const [canSwitchCamera, setCanSwitchCamera] = useState(false);
 	const t = useTranslations("GuestGallery");
 
 	const stopStream = useCallback(() => {
@@ -51,6 +67,7 @@ export default function CameraCapture({
 
 	useEffect(() => {
 		let cancelled = false;
+		setStatus("starting");
 
 		async function startCamera() {
 			if (!isCameraSupported()) {
@@ -60,7 +77,7 @@ export default function CameraCapture({
 
 			try {
 				const stream = await navigator.mediaDevices.getUserMedia({
-					video: { facingMode: "user" },
+					video: { facingMode: { ideal: facingMode } },
 					audio: false,
 				});
 
@@ -79,7 +96,21 @@ export default function CameraCapture({
 						// Odrzucone odtwarzanie (np. polityka autoplay) nie blokuje podglądu
 					}
 				}
-				setStatus("ready");
+				if (!cancelled) {
+					setStatus("ready");
+				}
+
+				if (navigator.mediaDevices?.enumerateDevices) {
+					try {
+						const devices = await navigator.mediaDevices.enumerateDevices();
+						const videoInputs = devices.filter((d) => d.kind === "videoinput");
+						if (!cancelled) {
+							setCanSwitchCamera(videoInputs.length > 1);
+						}
+					} catch {
+						// Błąd enumerateDevices nie blokuje działania podglądu
+					}
+				}
 			} catch (err) {
 				// Odmowa dostępu (NotAllowedError) lub brak kamery (NotFoundError) —
 				// pokazujemy czytelny komunikat, reszta drawera zostaje odblokowana.
@@ -94,7 +125,19 @@ export default function CameraCapture({
 			cancelled = true;
 			stopStream();
 		};
-	}, [stopStream]);
+	}, [stopStream, facingMode]);
+
+	const handleToggleCamera = useCallback(() => {
+		if (status !== "ready") return;
+		const nextFacing: FacingMode =
+			facingMode === "user" ? "environment" : "user";
+		setFacingMode(nextFacing);
+		try {
+			localStorage.setItem(CAMERA_FACING_STORAGE_KEY, nextFacing);
+		} catch {
+			// localStorage niedostępne
+		}
+	}, [facingMode, status]);
 
 	const handleShutter = async () => {
 		const video = videoRef.current;
@@ -148,7 +191,7 @@ export default function CameraCapture({
 					autoPlay
 					playsInline
 					muted
-					className="w-full h-full object-cover"
+					className={`w-full h-full object-cover ${facingMode === "user" ? "scale-x-[-1]" : ""}`}
 					data-testid="camera-preview-video"
 				/>
 
@@ -158,15 +201,29 @@ export default function CameraCapture({
 					</div>
 				)}
 
-				<button
-					type="button"
-					onClick={onCancel}
-					aria-label={t("cameraCancel")}
-					title={t("cameraCancel")}
-					className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 text-white hover:bg-black/60 transition focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
-				>
-					<X className="w-4 h-4" aria-hidden="true" />
-				</button>
+				<div className="absolute top-2 right-2 flex items-center gap-1.5">
+					{canSwitchCamera && (
+						<button
+							type="button"
+							onClick={handleToggleCamera}
+							disabled={status !== "ready"}
+							aria-label={t("cameraSwitchCamera")}
+							title={t("cameraSwitchCamera")}
+							className="p-1.5 rounded-full bg-black/40 text-white hover:bg-black/60 transition disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+						>
+							<SwitchCamera className="w-4 h-4" aria-hidden="true" />
+						</button>
+					)}
+					<button
+						type="button"
+						onClick={onCancel}
+						aria-label={t("cameraCancel")}
+						title={t("cameraCancel")}
+						className="p-1.5 rounded-full bg-black/40 text-white hover:bg-black/60 transition focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+					>
+						<X className="w-4 h-4" aria-hidden="true" />
+					</button>
+				</div>
 			</div>
 
 			{/* Ukryty canvas roboczy — kompozycja klatki + ramki motywu przed eksportem do pliku */}

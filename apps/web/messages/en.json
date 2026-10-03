@@ -161,6 +161,7 @@
 		"cameraError": "Couldn't start the camera. Check your browser permissions or use the regular file picker instead.",
 		"cameraBackToFiles": "Back to file picker",
 		"cameraCancel": "Close camera preview",
+		"cameraSwitchCamera": "Switch camera (front/back)",
 		"cameraShutter": "Take photo",
 		"lightboxAria": "Media preview: {name}",
 		"slideAnnouncement": "Item {current} of {total}: {name}",

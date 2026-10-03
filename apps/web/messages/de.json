@@ -161,6 +161,7 @@
 		"cameraError": "Die Kamera konnte nicht gestartet werden. Überprüfen Sie die Browserberechtigungen oder verwenden Sie die normale Dateiauswahl.",
 		"cameraBackToFiles": "Zurück zur Dateiauswahl",
 		"cameraCancel": "Kameravorschau schließen",
+		"cameraSwitchCamera": "Kamera wechseln (vorne/hinten)",
 		"cameraShutter": "Foto aufnehmen",
 		"lightboxAria": "Medienvorschau: {name}",
 		"slideAnnouncement": "Element {current} von {total}: {name}",

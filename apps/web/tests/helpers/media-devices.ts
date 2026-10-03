@@ -8,19 +8,42 @@ export function createFakeStream() {
 }
 
 /**
- * Podstawia `navigator.mediaDevices.getUserMedia` (jsdom go nie ma).
- * Zwraca mock `getUserMedia`, żeby test mógł sprawdzić wywołania.
+ * Podstawia `navigator.mediaDevices.getUserMedia` oraz `enumerateDevices` (jsdom ich nie ma).
+ * Zwraca mock `getUserMedia`, żeby test mógł sprawdzić wywołania, z dołączonym `enumerateDevices`.
  */
 export function stubMediaDevices(
-	getUserMedia: () => Promise<MediaStream> = () =>
-		Promise.resolve(createFakeStream().stream),
+	getUserMedia: (
+		constraints?: MediaStreamConstraints,
+	) => Promise<MediaStream> = () => Promise.resolve(createFakeStream().stream),
+	devices: MediaDeviceInfo[] | (() => Promise<MediaDeviceInfo[]>) = [
+		{
+			deviceId: "cam-environment",
+			kind: "videoinput",
+			label: "Back Camera",
+			groupId: "g1",
+			toJSON: () => ({}),
+		} as MediaDeviceInfo,
+		{
+			deviceId: "cam-user",
+			kind: "videoinput",
+			label: "Front Camera",
+			groupId: "g2",
+			toJSON: () => ({}),
+		} as MediaDeviceInfo,
+	],
 ) {
 	const fn = vi.fn(getUserMedia);
+	const enumFn = vi.fn(
+		typeof devices === "function" ? devices : () => Promise.resolve(devices),
+	);
 	Object.defineProperty(navigator, "mediaDevices", {
 		configurable: true,
-		value: { getUserMedia: fn },
+		value: {
+			getUserMedia: fn,
+			enumerateDevices: enumFn,
+		},
 	});
-	return fn;
+	return Object.assign(fn, { enumerateDevices: enumFn });
 }
 
 /** Symuluje przeglądarkę bez API `mediaDevices` (np. brak bezpiecznego kontekstu). */
