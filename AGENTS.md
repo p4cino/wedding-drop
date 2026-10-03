@@ -19,7 +19,7 @@ WeddingDrop is a self-hosted, multi-tenant web application designed to collect w
 - **Linting & Formatting**: **Biome** (`biome.json`). Prettier and ESLint are decommissioned. Use `pnpm biome check apps/ packages/` with tab indentation and double quotes.
 - **Orchestration**: **Turborepo** (`turbo.json`). Tasks `build`, `test`, `lint`, `check-types`, `dev` are managed through Turbo.
 - **Docker Architecture**: Multi-stage build on `node:24-alpine` utilizing `turbo prune @wedding-drop/web --docker` for minimal production image footprint.
-- **OpenSpec**: Spec-driven change workflow under `openspec/` (see `openspec/config.yaml`). Cursor: `/opsx-*`; Claude Code: `/opsx:*`. Artifacts in Polish; this constitution (`AGENTS.md`) still binds all implementations.
+- **OpenSpec**: Spec-driven change workflow under `openspec/` (see `openspec/config.yaml`). CLI: `pnpm openspec <command>`. Antigravity & Cursor: `/opsx-*`; Claude Code & Gemini CLI: `/opsx:*`. Artifacts in Polish; this constitution (`AGENTS.md`) still binds all implementations.
 
 ---
 
@@ -76,6 +76,7 @@ Any code changes must strictly adhere to the following hardware and architectura
 
 This workspace provides specialized skills and tools in `.agents/`:
 - **Skills**:
+  - `openspec-*`: Spec-Driven Development workflows (`openspec-propose`, `openspec-apply-change`, `openspec-archive-change`, `openspec-explore`, `openspec-sync-specs`, `openspec-update-change`) in `.agents/skills/`.
   - `wedding-qa`: Running Vitest (80 tests across packages) and Playwright E2E test suites (32 scenarios / 96 tests across Desktop and Mobile).
   - `wedding-ops`: Managing Docker Compose, Caddy SSL, Drizzle migrations (`packages/db`), and Backup/Restore.
   - `wedding-media-pipeline`: TUS upload, Sharp/FFmpeg processing, watchdog, SSE event bus (`packages/media`).

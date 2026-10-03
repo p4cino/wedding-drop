@@ -360,8 +360,8 @@ docker run --rm -v wedding-drop_app_data:/data -v $(pwd):/backup alpine tar -xzf
 Zmiany funkcjonalne i architektoniczne mogą być prowadzone przez [OpenSpec](https://github.com/Fission-AI/OpenSpec):
 
 - Katalog `openspec/` — `config.yaml` (kontekst WeddingDrop + reguły artefaktów), `specs/` (specyfikacje główne), `changes/` (aktywne propozycje).
-- Skill/komendy Cursor: `.cursor/skills/openspec-*`, `.cursor/commands/opsx-*.md` (`/opsx-explore`, `/opsx-propose`, `/opsx-apply`, …).
-- Skill/komendy Claude Code: `.claude/skills/openspec-*`, `.claude/commands/opsx/` (`/opsx:explore`, `/opsx:propose`, …).
+- Skill/komendy Antigravity & Cursor: `.agents/skills/openspec-*`, `.agents/workflows/opsx-*.md`, `.cursor/skills/openspec-*`, `.cursor/commands/opsx-*.md` (`/opsx-explore`, `/opsx-propose`, `/opsx-apply`, …).
+- Skill/komendy Claude Code & Gemini CLI: `.claude/skills/openspec-*`, `.claude/commands/opsx/`, `.gemini/commands/opsx/` (`/opsx:explore`, `/opsx:propose`, …).
 - Artefakty (proposal, design, specs, tasks) piszemy po polsku; nagłówki strukturalne OpenSpec oraz słowa SHALL/MUST pozostają po angielsku.
 - Konstytucja techniczna (`AGENTS.md`) ma pierwszeństwo przed propozycjami OpenSpec — change nie może poluzować limitów N100 ani reguł bezpieczeństwa.
 
@@ -494,7 +494,7 @@ pnpm openspec view
 ```
 
 ### Integracja z Asystentami AI:
-- Asystenci korzystają ze zintegrowanych umiejętności (skills) w `.agents/skills/openspec-*`, `.cursor/skills/` oraz `.claude/`.
+- Asystenci korzystają ze zintegrowanych umiejętności (skills) i przepływów pracy w `.agents/skills/openspec-*`, `.agents/workflows/`, `.cursor/`, `.claude/` oraz `.gemini/`.
 - Dostępne komendy przepływu pracy:
   - `/opsx-propose`: Inicjalizacja nowej propozycji funkcjonalności lub zmiany architektonicznej.
   - `/opsx-explore`: Tryb analizy i burzy mózgów nad istniejącą bazą kodu przed przygotowaniem specyfikacji.
