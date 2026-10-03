@@ -1,18 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,700;1,400&display=swap");
 
-@import "tailwindcss";
-
-@theme {
-	--color-wedding-champagne: #f7f4ee;
-	--color-wedding-gold: #d4af37;
-	--color-wedding-goldLight: #f3e5ab;
-	--color-wedding-rose: #e0a899;
-	--color-wedding-slate: #1e293b;
-	--color-wedding-dark: #0f172a;
-	--color-wedding-emerald: #1b4332;
-	--font-serif: "Playfair Display", "Cinzel", Georgia, serif;
-	--font-sans: "Inter", system-ui, -apple-system, sans-serif;
-}
+@layer reset, base, tokens, recipes, utilities;
 
 :root {
 	--background: #faf8f5;
@@ -32,6 +20,19 @@ body {
 
 .font-cinzel {
 	font-family: "Cinzel", serif;
+}
+
+/* Screen reader only utility (WCAG) */
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border-width: 0;
 }
 
 /* Glassmorphism */

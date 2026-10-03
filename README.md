@@ -9,6 +9,7 @@
 [![Biome](https://img.shields.io/badge/Biome-v2.5.13-60A5FA?style=flat-square&logo=biome&logoColor=white)](biome.json)
 [![Vitest](https://img.shields.io/badge/Vitest-464%20passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](package.json)
 [![Playwright](https://img.shields.io/badge/Playwright-114%20E2E%20passing-2EAD33?style=flat-square&logo=playwright&logoColor=white)](package.json)
+[![UI](https://img.shields.io/badge/UI-Park%20UI%20%2B%20Panda%20CSS-F59E0B?style=flat-square&logo=react&logoColor=white)](https://park-ui.com)
 [![Hardware](https://img.shields.io/badge/Hardware-Intel%20N100%20Optimized-0071C5?style=flat-square&logo=intel&logoColor=white)](#-optymalizacje-pod-procesor-intel-n100)
 
 Kompletna, samoobsługowa aplikacja internetowa do zbierania zdjęć i filmów z wesel, zaprojektowana z myślą o serwerach domowych i mini-PC (np. z procesorem **Intel N100**). Działa w 100% w środowisku **Docker**, bez żadnych płatnych planów i bez limitów.
@@ -125,9 +126,15 @@ Docker pobierze obrazy, zbuduje aplikację i uruchomi 3 kontenery:
 - `wedding_caddy` – Reverse proxy z automatycznym HTTPS i blokadą noindex
 
 ### Architektura Monorepo (pnpm + Turborepo + Biome):
-- `apps/web`: Aplikacja Next.js 16, App Router, SSR, serwer HTTP (`server.ts`), komponenty i testy integracyjne.
+- `apps/web`: Aplikacja Next.js 16, App Router, SSR, serwer HTTP (`server.ts`), komponenty Park UI oparte na maszynach stanów Ark UI i kompilowane w czasie budowy przez silnik Panda CSS (zero-runtime CSS-in-JS).
 - `packages/db`: Drizzle ORM, schemat PostgreSQL, migracje i connection pool singleton.
 - `packages/media`: Potok przetwarzania mediów (Sharp, FFmpeg, TUS, SSE, PDF A6, QR, ZIP, Google Drive).
+
+### System Wzornictwa (Park UI & Panda CSS):
+Warstwa wizualna aplikacji opiera się na [Park UI](https://park-ui.com) oraz silniku **Panda CSS**:
+- **Zero-runtime CSS**: Style są w całości ekstrahowane statycznie w trakcie kompilacji (`panda codegen`), co eliminuje narzut obliczeniowy w runtime i chroni procesor Intel N100.
+- **Dostępność WAI-ARIA z pudełka**: Modale, szuflady (drawer), toasty i elementy formularzy oparte są na maszynach stanów Ark UI z wbudowaną obsługą pułapki fokusu (`useFocusTrap`) i zamykania klawiszem Escape.
+- **Spójna paleta ślubna**: Silnie typowane tokeny barw (`wedding.champagne`, `wedding.gold`, `wedding.rose`, `wedding.slate`, `wedding.emerald`) oraz luksusowa typografia serif (*Playfair Display*, *Cinzel*).
 
 ### Adresy URL w przeglądarce:
 - **Strona główna**: [http://localhost](http://localhost)

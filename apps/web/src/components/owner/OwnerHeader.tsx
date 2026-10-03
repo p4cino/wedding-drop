@@ -2,6 +2,7 @@
 
 import { Download, ExternalLink, LogOut, QrCode, Tv } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { css } from "styled-system/css";
 import NewTabLabel from "@/components/NewTabLabel";
 import { Link } from "@/i18n/routing";
 
@@ -12,8 +13,22 @@ interface OwnerHeaderProps {
 	onLogout?: () => void;
 }
 
-const SOFT_LINK =
-	"inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none";
+const softLinkStyle = css({
+	display: "inline-flex",
+	alignItems: "center",
+	gap: "1.5",
+	px: "3",
+	py: "2",
+	fontSize: "xs",
+	fontWeight: "semibold",
+	borderRadius: "xl",
+	backgroundColor: "slate.100",
+	color: "slate.700",
+	textDecoration: "none",
+	transition: "all 0.15s ease",
+	_hover: { backgroundColor: "slate.200" },
+	_focusVisible: { outline: "2px solid", outlineColor: "slate.900" },
+});
 
 export function OwnerHeader({
 	slug,
@@ -25,40 +40,110 @@ export function OwnerHeader({
 	const newTab = <NewTabLabel />;
 
 	return (
-		<header className="bg-white border-b border-slate-200 px-4 sm:px-8 py-4 sticky top-0 z-30 flex flex-wrap items-center justify-between gap-4">
+		<header
+			className={css({
+				backgroundColor: "white",
+				borderBottomWidth: "1px",
+				borderBottomColor: "slate.200",
+				px: { base: "4", sm: "8" },
+				py: "4",
+				position: "sticky",
+				top: "0",
+				zIndex: "30",
+				display: "flex",
+				flexWrap: "wrap",
+				alignItems: "center",
+				justifyContent: "space-between",
+				gap: "4",
+			})}
+		>
 			<div>
-				<h1 className="font-serif-luxury text-xl sm:text-2xl font-bold text-slate-900">
+				<h1
+					className={css({
+						fontFamily: "serif",
+						fontSize: { base: "xl", sm: "2xl" },
+						fontWeight: "bold",
+						color: "wedding.slate",
+					})}
+				>
 					{coupleNames || t("defaultOwnerTitle")}
 				</h1>
-				<p className="text-xs text-slate-500">{t("ownerSubtitle")}</p>
+				<p className={css({ fontSize: "xs", color: "slate.500" })}>
+					{t("ownerSubtitle")}
+				</p>
 			</div>
 
-			<div className="flex items-center gap-2.5">
-				<Link href={`/g/${slug}`} target="_blank" className={SOFT_LINK}>
-					<ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
+			<div
+				className={css({
+					display: "flex",
+					alignItems: "center",
+					gap: "2.5",
+				})}
+			>
+				<Link href={`/g/${slug}`} target="_blank" className={softLinkStyle}>
+					<ExternalLink
+						className={css({ w: "3.5", h: "3.5" })}
+						aria-hidden="true"
+					/>
 					<span>{t("viewGallery")}</span>
 					{newTab}
 				</Link>
 
 				<Link
 					href={`/g/${slug}/card`}
-					className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
+					className={css({
+						display: "inline-flex",
+						alignItems: "center",
+						gap: "1.5",
+						px: "3",
+						py: "2",
+						fontSize: "xs",
+						fontWeight: "semibold",
+						borderRadius: "xl",
+						backgroundColor: "amber.50",
+						color: "amber.800",
+						borderWidth: "1px",
+						borderColor: "amber.200",
+						textDecoration: "none",
+						transition: "all 0.15s ease",
+						_hover: { backgroundColor: "amber.100" },
+						_focusVisible: {
+							outline: "2px solid",
+							outlineColor: "wedding.gold",
+						},
+					})}
 				>
-					<QrCode className="w-3.5 h-3.5" aria-hidden="true" />
+					<QrCode className={css({ w: "3.5", h: "3.5" })} aria-hidden="true" />
 					<span>{t("cardBtn")}</span>
 				</Link>
 
-				<Link href={`/g/${slug}/tv`} target="_blank" className={SOFT_LINK}>
-					<Tv className="w-3.5 h-3.5" aria-hidden="true" />
+				<Link href={`/g/${slug}/tv`} target="_blank" className={softLinkStyle}>
+					<Tv className={css({ w: "3.5", h: "3.5" })} aria-hidden="true" />
 					<span>{t("openTvBtn")}</span>
 					{newTab}
 				</Link>
 
 				<a
 					href={`/api/gallery/${slug}/zip`}
-					className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-900 text-white shadow-sm transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
+					className={css({
+						display: "inline-flex",
+						alignItems: "center",
+						gap: "1.5",
+						px: "4",
+						py: "2",
+						fontSize: "xs",
+						fontWeight: "semibold",
+						borderRadius: "xl",
+						backgroundColor: "slate.800",
+						color: "white",
+						boxShadow: "sm",
+						textDecoration: "none",
+						transition: "all 0.15s ease",
+						_hover: { backgroundColor: "slate.900" },
+						_focusVisible: { outline: "2px solid", outlineColor: "slate.900" },
+					})}
 				>
-					<Download className="w-4 h-4" aria-hidden="true" />
+					<Download className={css({ w: "4", h: "4" })} aria-hidden="true" />
 					<span>{t("downloadZip")}</span>
 				</a>
 
@@ -66,9 +151,34 @@ export function OwnerHeader({
 					<button
 						type="button"
 						onClick={onLogout}
-						className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-red-50 hover:text-red-700 text-slate-700 transition focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none"
+						className={css({
+							display: "inline-flex",
+							alignItems: "center",
+							gap: "1.5",
+							px: "3",
+							py: "2",
+							fontSize: "xs",
+							fontWeight: "semibold",
+							borderRadius: "xl",
+							backgroundColor: "slate.100",
+							color: "slate.700",
+							borderWidth: "0",
+							cursor: "pointer",
+							transition: "all 0.15s ease",
+							_hover: {
+								backgroundColor: "red.50",
+								color: "red.700",
+							},
+							_focusVisible: {
+								outline: "2px solid",
+								outlineColor: "slate.900",
+							},
+						})}
 					>
-						<LogOut className="w-3.5 h-3.5" aria-hidden="true" />
+						<LogOut
+							className={css({ w: "3.5", h: "3.5" })}
+							aria-hidden="true"
+						/>
 						<span>{t("logoutBtn")}</span>
 					</button>
 				)}

@@ -2,6 +2,7 @@
 
 import { Calendar, HardDrive, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { css } from "styled-system/css";
 import type { GalleryRow } from "@/lib/admin-types";
 import { formatMegabytes } from "@/lib/format";
 
@@ -21,17 +22,51 @@ export function AdminStats({ galleries }: { galleries: GalleryRow[] }) {
 	];
 
 	return (
-		<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+		<div
+			className={css({
+				display: "grid",
+				gridTemplateColumns: { base: "repeat(1, 1fr)", sm: "repeat(3, 1fr)" },
+				gap: "4",
+			})}
+		>
 			{tiles.map(({ Icon, label, value }) => (
 				<div
 					key={label}
-					className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs"
+					className={css({
+						backgroundColor: "white",
+						p: "5",
+						borderRadius: "2xl",
+						borderWidth: "1px",
+						borderColor: "slate.200",
+						boxShadow: "xs",
+					})}
 				>
-					<div className="flex items-center gap-2 text-slate-600 text-xs font-medium mb-1">
-						<Icon className="w-4 h-4 text-amber-600" aria-hidden="true" />
+					<div
+						className={css({
+							display: "flex",
+							alignItems: "center",
+							gap: "2",
+							color: "slate.600",
+							fontSize: "xs",
+							fontWeight: "medium",
+							mb: "1",
+						})}
+					>
+						<Icon
+							className={css({ w: "4", h: "4", color: "wedding.gold" })}
+							aria-hidden="true"
+						/>
 						<span>{label}</span>
 					</div>
-					<p className="text-3xl font-bold text-slate-900">{value}</p>
+					<p
+						className={css({
+							fontSize: "3xl",
+							fontWeight: "bold",
+							color: "wedding.slate",
+						})}
+					>
+						{value}
+					</p>
 				</div>
 			))}
 		</div>

@@ -54,7 +54,7 @@ test.describe("Panel Administratora", () => {
 		await expect(page.getByPlaceholder("kontakt@kasiaitomek.pl")).toBeVisible();
 
 		// Zamknięcie modalu przyciskiem X
-		const closeBtn = page.locator("div.fixed button").first();
+		const closeBtn = page.getByRole("button", { name: /zamknij/i });
 		await closeBtn.click();
 		await expect(page.getByText("Nowa Galeria Weselna")).not.toBeVisible();
 	});

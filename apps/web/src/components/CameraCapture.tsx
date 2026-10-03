@@ -3,6 +3,8 @@
 import { Camera, SwitchCamera, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { css, cx } from "styled-system/css";
+import { Button } from "@/components/ui/button";
 import {
 	canvasToJpegFile,
 	captureFrameToCanvas,
@@ -257,13 +259,43 @@ export default function CameraCapture({
 		return (
 			<div
 				role="alert"
-				className="rounded-2xl border border-red-200 bg-red-50 p-5 text-center space-y-3"
+				className={css({
+					borderRadius: "2xl",
+					borderWidth: "1px",
+					borderColor: "red.200",
+					backgroundColor: "red.50",
+					p: "5",
+					textAlign: "center",
+					display: "flex",
+					flexDirection: "column",
+					gap: "3",
+				})}
 			>
-				<p className="text-sm text-red-700 font-medium">{t("cameraError")}</p>
+				<p
+					className={css({
+						fontSize: "sm",
+						color: "red.700",
+						fontWeight: "medium",
+					})}
+				>
+					{t("cameraError")}
+				</p>
 				<button
 					type="button"
 					onClick={onCancel}
-					className="text-xs font-semibold text-red-700 underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:outline-none rounded"
+					className={css({
+						fontSize: "xs",
+						fontWeight: "semibold",
+						color: "red.700",
+						textDecoration: "underline",
+						textUnderlineOffset: "2px",
+						borderRadius: "md",
+						cursor: "pointer",
+						_focusVisible: {
+							outline: "2px solid",
+							outlineColor: "red.400",
+						},
+					})}
 				>
 					{t("cameraBackToFiles")}
 				</button>
@@ -272,24 +304,66 @@ export default function CameraCapture({
 	}
 
 	return (
-		<div className="space-y-3">
-			<div className="relative rounded-2xl overflow-hidden bg-slate-900 aspect-[4/3]">
+		<div
+			className={css({
+				display: "flex",
+				flexDirection: "column",
+				gap: "3",
+			})}
+		>
+			<div
+				className={css({
+					position: "relative",
+					borderRadius: "2xl",
+					overflow: "hidden",
+					backgroundColor: "slate.900",
+					aspectRatio: "4/3",
+				})}
+			>
 				<video
 					ref={videoRef}
 					autoPlay
 					playsInline
 					muted
-					className={`w-full h-full object-cover ${facingMode === "user" ? "scale-x-[-1]" : ""}`}
+					className={cx(
+						css({
+							w: "full",
+							h: "full",
+							objectFit: "cover",
+							transform: facingMode === "user" ? "scaleX(-1)" : undefined,
+						}),
+						facingMode === "user" && "scale-x-[-1]",
+					)}
 					data-testid="camera-preview-video"
 				/>
 
 				{status === "starting" && (
-					<div className="absolute inset-0 flex items-center justify-center text-white text-sm bg-slate-900/60">
+					<div
+						className={css({
+							position: "absolute",
+							inset: "0",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							color: "white",
+							fontSize: "sm",
+							backgroundColor: "rgba(15, 23, 42, 0.6)",
+						})}
+					>
 						{t("cameraStarting")}
 					</div>
 				)}
 
-				<div className="absolute top-2 right-2 flex items-center gap-1.5">
+				<div
+					className={css({
+						position: "absolute",
+						top: "2",
+						right: "2",
+						display: "flex",
+						alignItems: "center",
+						gap: "1.5",
+					})}
+				>
 					{canSwitchCamera && (
 						<button
 							type="button"
@@ -297,9 +371,24 @@ export default function CameraCapture({
 							disabled={status !== "ready"}
 							aria-label={t("cameraSwitchCamera")}
 							title={t("cameraSwitchCamera")}
-							className="p-1.5 rounded-full bg-black/40 text-white hover:bg-black/60 transition disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+							className={css({
+								p: "1.5",
+								borderRadius: "full",
+								backgroundColor: "rgba(0, 0, 0, 0.4)",
+								color: "white",
+								_hover: { backgroundColor: "rgba(0, 0, 0, 0.6)" },
+								cursor: "pointer",
+								_disabled: { opacity: "0.5" },
+								_focusVisible: {
+									outline: "2px solid",
+									outlineColor: "white",
+								},
+							})}
 						>
-							<SwitchCamera className="w-4 h-4" aria-hidden="true" />
+							<SwitchCamera
+								className={css({ w: "4", h: "4" })}
+								aria-hidden="true"
+							/>
 						</button>
 					)}
 					<button
@@ -307,9 +396,20 @@ export default function CameraCapture({
 						onClick={onCancel}
 						aria-label={t("cameraCancel")}
 						title={t("cameraCancel")}
-						className="p-1.5 rounded-full bg-black/40 text-white hover:bg-black/60 transition focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+						className={css({
+							p: "1.5",
+							borderRadius: "full",
+							backgroundColor: "rgba(0, 0, 0, 0.4)",
+							color: "white",
+							_hover: { backgroundColor: "rgba(0, 0, 0, 0.6)" },
+							cursor: "pointer",
+							_focusVisible: {
+								outline: "2px solid",
+								outlineColor: "white",
+							},
+						})}
 					>
-						<X className="w-4 h-4" aria-hidden="true" />
+						<X className={css({ w: "4", h: "4" })} aria-hidden="true" />
 					</button>
 				</div>
 			</div>
@@ -317,20 +417,37 @@ export default function CameraCapture({
 			{/* Ukryty canvas roboczy — kompozycja klatki + ramki motywu przed eksportem do pliku */}
 			<canvas
 				ref={canvasRef}
-				className="hidden"
+				className={css({ display: "none" })}
 				data-testid="photobooth-canvas"
 			/>
 
-			<button
+			<Button
 				type="button"
 				onClick={handleShutter}
 				disabled={status !== "ready" || disabled || isCapturing}
 				aria-label={t("cameraShutter")}
-				className="w-full py-3.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white rounded-2xl font-semibold shadow-lg shadow-amber-600/25 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
+				className={css({
+					w: "full",
+					py: "3.5",
+					bg: "amber.600",
+					_hover: { bg: "amber.700" },
+					color: "white",
+					borderRadius: "2xl",
+					fontWeight: "semibold",
+					boxShadow: "lg",
+					_disabled: {
+						opacity: "0.5",
+						cursor: "not-allowed",
+					},
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					gap: "2",
+				})}
 			>
-				<Camera className="w-5 h-5" aria-hidden="true" />
+				<Camera className={css({ w: "5", h: "5" })} aria-hidden="true" />
 				{t("cameraShutter")}
-			</button>
+			</Button>
 		</div>
 	);
 }

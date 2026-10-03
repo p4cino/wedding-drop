@@ -502,3 +502,21 @@ pnpm openspec view
   - `/opsx-sync`: Synchronizacja zmian i specyfikacji.
   - `/opsx-archive`: Archiwizacja wdrożonej zmiany i aktualizacja głównego drzewa specyfikacji.
 
+---
+
+## 13. System Wzornictwa: Park UI & Panda CSS (Zero-Runtime Styling)
+
+Aplikacja `@wedding-drop/web` wykorzystuje nowoczesny system wzornictwa [Park UI](https://park-ui.com) oparty na maszynach stanów [Ark UI](https://ark-ui.com) oraz silniku stylów [Panda CSS](https://panda-css.com), zastępując dawny Tailwind CSS.
+
+### 13.1. Architektura Stylów i Optymalizacja N100 (Zero-Runtime)
+- **Ekstrakcja w czasie budowy**: Panda CSS analizuje kod źródłowy w fazie kompilacji (`panda codegen`), generując statyczne arkusze stylów w warstwach CSS `@layer reset, base, tokens, recipes, utilities;`. Brak narzutu wykonawczego (zero runtime CSS-in-JS overhead) gwarantuje, że procesor Intel N100 nie marnuje cykli CPU na kalkulację stylów w pamięci RAM.
+- **Silnie typowane tokeny i receptury**: Wszystkie style i warianty komponentów (`button`, `input`, `badge`, `card`, `dialog`, `drawer`, `toast`) są generowane jako bezpieczne typowo funkcje TypeScript w `apps/web/styled-system/`.
+- **Własne tokeny ślubne**: Paleta barw (`wedding.champagne`, `wedding.gold`, `wedding.goldLight`, `wedding.rose`, `wedding.slate`, `wedding.dark`, `wedding.emerald`) oraz czcionki serif/sans skonfigurowane w `apps/web/panda.config.ts`.
+
+### 13.2. Dostępność i Maszyny Stanów (Ark UI)
+- Komponenty interaktywne Park UI korzystają pod spodem ze sprawdzonych automatów stanowych Zag.js / Ark UI, gwarantując pełną zgodność ze standardami **WAI-ARIA**:
+  - `Dialog` (Modal): Automatyczne blokowanie przewijania tła (`preventScroll`), pułapka fokusu wewnątrz modala i obsługa klawisza Escape.
+  - `Drawer`: Płynne wysuwanie z dołu ekranu z obsługą gestów dotykowych na urządzeniach mobilnych.
+  - `Toast`: Reaktywne centrum powiadomień ze stosem powiadomień i automatycznym znikaniem.
+  - `createStyleContext`: Dedykowany helper React kontekstujący receptury wieloczęściowych komponentów (compound components).
+

@@ -2,6 +2,8 @@
 
 import { Camera, Loader2, Upload } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { css } from "styled-system/css";
+import { Button } from "@/components/ui/button";
 import FilePickerDropzone from "@/components/upload/FilePickerDropzone";
 import UploadFileRow from "@/components/upload/UploadFileRow";
 import { useUploadQueue } from "@/hooks/useUploadQueue";
@@ -43,16 +45,54 @@ export function PhotographerImportPanel({
 	};
 
 	return (
-		<div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 space-y-4">
-			<div className="flex items-center gap-3">
-				<div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0">
-					<Camera className="w-5 h-5" aria-hidden="true" />
+		<div
+			className={css({
+				backgroundColor: "white",
+				p: { base: "4", sm: "6" },
+				borderRadius: "2xl",
+				borderWidth: "1px",
+				borderColor: "slate.200",
+				display: "flex",
+				flexDirection: "column",
+				gap: "4",
+			})}
+		>
+			<div
+				className={css({
+					display: "flex",
+					alignItems: "center",
+					gap: "3",
+				})}
+			>
+				<div
+					className={css({
+						w: "10",
+						h: "10",
+						borderRadius: "xl",
+						backgroundColor: "amber.100",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						color: "wedding.gold",
+						flexShrink: 0,
+					})}
+				>
+					<Camera className={css({ w: "5", h: "5" })} aria-hidden="true" />
 				</div>
 				<div>
-					<h3 className="font-serif-luxury text-lg font-bold text-slate-900">
+					<h3
+						className={css({
+							fontFamily: "serif",
+							fontSize: "lg",
+							fontWeight: "bold",
+							color: "wedding.slate",
+						})}
+					>
 						{t("importTitle")}
 					</h3>
-					<p className="text-xs text-slate-500">{t("importSubtitle")}</p>
+					<p className={css({ fontSize: "xs", color: "slate.500" })}>
+						{t("importSubtitle")}
+					</p>
 				</div>
 			</div>
 
@@ -66,7 +106,12 @@ export function PhotographerImportPanel({
 
 			{queue.phase === "done" && (
 				<p
-					className="text-sm text-emerald-600 font-semibold text-center"
+					className={css({
+						fontSize: "sm",
+						color: "emerald.600",
+						fontWeight: "semibold",
+						textAlign: "center",
+					})}
 					aria-live="polite"
 				>
 					{t("importAllUploaded", { count: queue.completedCount })}
@@ -74,9 +119,22 @@ export function PhotographerImportPanel({
 			)}
 
 			{files.length > 0 && (
-				<div className="space-y-2.5">
+				<div
+					className={css({
+						display: "flex",
+						flexDirection: "column",
+						gap: "2.5",
+					})}
+				>
 					<div
-						className="flex justify-between items-center text-xs text-slate-500 px-1"
+						className={css({
+							display: "flex",
+							justifyContent: "space-between",
+							alignItems: "center",
+							fontSize: "xs",
+							color: "slate.500",
+							px: "1",
+						})}
 						aria-live="polite"
 					>
 						<span>{t("importSelectedCount", { count: files.length })}</span>
@@ -84,14 +142,30 @@ export function PhotographerImportPanel({
 							<button
 								type="button"
 								onClick={queue.clear}
-								className="text-slate-400 hover:text-red-500 font-medium"
+								className={css({
+									color: "slate.400",
+									fontWeight: "medium",
+									borderWidth: "0",
+									backgroundColor: "transparent",
+									cursor: "pointer",
+									_hover: { color: "red.500" },
+								})}
 							>
 								{t("importClearAll")}
 							</button>
 						)}
 					</div>
 
-					<div className="max-h-48 overflow-y-auto space-y-2 pr-1">
+					<div
+						className={css({
+							maxH: "48",
+							overflowY: "auto",
+							display: "flex",
+							flexDirection: "column",
+							gap: "2",
+							pr: "1",
+						})}
+					>
 						{files.map((item) => (
 							<UploadFileRow
 								key={item.id}
@@ -106,24 +180,55 @@ export function PhotographerImportPanel({
 						))}
 					</div>
 
-					<button
+					<Button
 						type="button"
 						onClick={startImport}
 						disabled={isUploading || !ownerToken}
-						className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white rounded-2xl font-semibold shadow-lg shadow-amber-600/25 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
+						className={css({
+							w: "full",
+							py: "3",
+							background: "linear-gradient(to right, #b45309, #d97706)",
+							_hover: {
+								background: "linear-gradient(to right, #92400e, #b45309)",
+							},
+							_disabled: {
+								opacity: 0.5,
+								cursor: "not-allowed",
+							},
+							color: "white",
+							borderRadius: "2xl",
+							fontWeight: "semibold",
+							boxShadow: "0 10px 15px -3px rgba(180, 83, 9, 0.25)",
+							transition: "all 0.15s ease",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							gap: "2",
+							cursor: "pointer",
+						})}
 					>
 						{isUploading ? (
 							<>
-								<Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
+								<Loader2
+									className={css({
+										w: "5",
+										h: "5",
+										animation: "spin 1s linear infinite",
+									})}
+									aria-hidden="true"
+								/>
 								{t("importUploadingBtn")}
 							</>
 						) : (
 							<>
-								<Upload className="w-5 h-5" aria-hidden="true" />
+								<Upload
+									className={css({ w: "5", h: "5" })}
+									aria-hidden="true"
+								/>
 								{t("importSubmitBtn", { count: files.length })}
 							</>
 						)}
-					</button>
+					</Button>
 				</div>
 			)}
 		</div>

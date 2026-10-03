@@ -4,6 +4,7 @@ import { Camera } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type React from "react";
 import { useState } from "react";
+import { css } from "styled-system/css";
 import {
 	countByStatus,
 	filterByStatus,
@@ -40,9 +41,28 @@ export const MediaGridWithModeration: React.FC<
 	const filteredMedia = filterByStatus(mediaList, filter);
 
 	return (
-		<div className="space-y-4">
+		<div
+			className={css({
+				display: "flex",
+				flexDirection: "column",
+				gap: "4",
+			})}
+		>
 			{/* Pasek filtrowania i moderacji */}
-			<div className="bg-white p-4 rounded-2xl border border-slate-200/80 flex flex-wrap items-center justify-between gap-4">
+			<div
+				className={css({
+					bg: "white",
+					p: "4",
+					borderRadius: "2xl",
+					borderWidth: "1px",
+					borderColor: "slate.200",
+					display: "flex",
+					flexWrap: "wrap",
+					alignItems: "center",
+					justifyContent: "space-between",
+					gap: "4",
+				})}
+			>
 				<ModerationFilterBar
 					value={filter}
 					onChange={setFilter}
@@ -59,69 +79,159 @@ export const MediaGridWithModeration: React.FC<
 					}}
 				/>
 
-				<p className="text-xs text-slate-500">{t("hiddenHint")}</p>
+				<p className={css({ fontSize: "xs", color: "slate.500" })}>
+					{t("hiddenHint")}
+				</p>
 			</div>
 
 			{/* Siatka moderacji */}
-			<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-				{filteredMedia.map((item) => (
-					<div
-						key={item.id}
-						className={`relative bg-white rounded-2xl overflow-hidden border shadow-xs transition group ${
-							item.status === "hidden"
-								? "opacity-60 border-dashed border-red-300"
-								: "border-slate-200"
-						}`}
-					>
-						<div className="aspect-square relative overflow-hidden bg-slate-100">
-							<img
-								src={item.thumbUrl}
-								alt={item.originalFileName}
-								className="w-full h-full object-cover"
-							/>
-							{item.status === "hidden" && (
-								<div className="absolute inset-0 bg-red-950/40 flex items-center justify-center text-white text-[10px] font-bold uppercase tracking-wider">
-									{t("hiddenOverlay")}
-								</div>
-							)}
+			<div
+				className={css({
+					display: "grid",
+					gridTemplateColumns: {
+						base: "repeat(2, 1fr)",
+						sm: "repeat(3, 1fr)",
+						md: "repeat(4, 1fr)",
+						lg: "repeat(6, 1fr)",
+					},
+					gap: "4",
+				})}
+			>
+				{filteredMedia.map((item) => {
+					const isHidden = item.status === "hidden";
+					return (
+						<div
+							key={item.id}
+							className={css({
+								position: "relative",
+								bg: "white",
+								borderRadius: "2xl",
+								overflow: "hidden",
+								borderWidth: "1px",
+								borderStyle: isHidden ? "dashed" : "solid",
+								borderColor: isHidden ? "red.300" : "slate.200",
+								opacity: isHidden ? 0.6 : 1,
+								boxShadow: "xs",
+								transition: "all 0.2s ease",
+							})}
+						>
+							<div
+								className={css({
+									aspectRatio: "1/1",
+									position: "relative",
+									overflow: "hidden",
+									bg: "slate.100",
+								})}
+							>
+								<img
+									src={item.thumbUrl}
+									alt={item.originalFileName}
+									className={css({
+										w: "full",
+										h: "full",
+										objectFit: "cover",
+									})}
+								/>
+								{isHidden && (
+									<div
+										className={css({
+											position: "absolute",
+											inset: "0",
+											bg: "rgba(69, 10, 10, 0.4)",
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "center",
+											color: "white",
+											fontSize: "10px",
+											fontWeight: "bold",
+											textTransform: "uppercase",
+											letterSpacing: "wider",
+										})}
+									>
+										{t("hiddenOverlay")}
+									</div>
+								)}
 
-							{item.source === "photographer" && (
-								<div
-									className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-full bg-amber-500/90 backdrop-blur-md flex items-center gap-1 text-white shadow-sm"
-									aria-label={t("photographerBadge")}
+								{item.source === "photographer" && (
+									<div
+										className={css({
+											position: "absolute",
+											top: "1.5",
+											left: "1.5",
+											px: "1.5",
+											py: "0.5",
+											borderRadius: "full",
+											bg: "rgba(202, 138, 4, 0.9)",
+											backdropFilter: "blur(12px)",
+											display: "flex",
+											alignItems: "center",
+											gap: "1",
+											color: "white",
+											boxShadow: "sm",
+										})}
+										aria-label={t("photographerBadge")}
+									>
+										<Camera
+											className={css({ w: "2.5", h: "2.5" })}
+											aria-hidden="true"
+										/>
+										<span
+											className={css({
+												fontSize: "9px",
+												fontWeight: "semibold",
+												textTransform: "uppercase",
+												letterSpacing: "wide",
+											})}
+										>
+											{t("photographerBadge")}
+										</span>
+									</div>
+								)}
+							</div>
+
+							{/* Pasek akcji pod zdjęciem */}
+							<div
+								className={css({
+									p: "2.5",
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "space-between",
+									gap: "1",
+									fontSize: "xs",
+								})}
+							>
+								<span
+									className={css({
+										overflow: "hidden",
+										textOverflow: "ellipsis",
+										whiteSpace: "nowrap",
+										color: "slate.600",
+										fontWeight: "medium",
+										fontSize: "11px",
+									})}
 								>
-									<Camera className="w-2.5 h-2.5" aria-hidden="true" />
-									<span className="text-[9px] font-semibold uppercase tracking-wide">
-										{t("photographerBadge")}
-									</span>
-								</div>
-							)}
-						</div>
+									{item.uploaderName}
+								</span>
 
-						{/* Pasek akcji pod zdjęciem */}
-						<div className="p-2.5 flex items-center justify-between gap-1 text-xs">
-							<span className="truncate text-slate-600 font-medium text-[11px]">
-								{item.uploaderName}
-							</span>
-
-							<ModerationActions
-								status={item.status}
-								toggleTitle={
-									item.status === "ready" ? t("hideAction") : t("showAction")
-								}
-								toggleLabel={
-									item.status === "ready"
-										? t("hideAria", { name: item.originalFileName })
-										: t("showAria", { name: item.originalFileName })
-								}
-								deleteTitle={t("deleteAction")}
-								deleteLabel={t("deleteAria", { name: item.originalFileName })}
-								onToggle={() => onToggleStatus(item.id, item.status)}
-								onDelete={() => onDeleteMedia(item.id)}
-							/>
+								<ModerationActions
+									status={item.status}
+									toggleTitle={
+										item.status === "ready" ? t("hideAction") : t("showAction")
+									}
+									toggleLabel={
+										item.status === "ready"
+											? t("hideAria", { name: item.originalFileName })
+											: t("showAria", { name: item.originalFileName })
+									}
+									deleteTitle={t("deleteAction")}
+									deleteLabel={t("deleteAria", { name: item.originalFileName })}
+									onToggle={() => onToggleStatus(item.id, item.status)}
+									onDelete={() => onDeleteMedia(item.id)}
+								/>
+							</div>
 						</div>
-					</div>
-				))}
+					);
+				})}
 			</div>
 		</div>
 	);

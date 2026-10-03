@@ -101,7 +101,7 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 		await expect(fileInput).toBeAttached();
 
 		// Zamknięcie drawera przyciskiem X
-		const closeBtn = page.locator("div.fixed.z-50 button:has(svg)").first();
+		const closeBtn = page.getByRole("button", { name: /zamknij/i });
 		await closeBtn.click();
 		await expect(
 			page.getByText("Bez logowania • Zostaną zapisane w galerii"),
@@ -189,9 +189,7 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 
 		// 1. Symulacja Swipe w lewo (przesunięcie palca z 300px do 100px -> diff > 45px -> Następne zdjęcie)
 		await page.evaluate(() => {
-			const el = document.querySelector(
-				"div.fixed.inset-0.z-50",
-			) as HTMLElement;
+			const el = document.querySelector('[role="dialog"]') as HTMLElement;
 			const fire = (type: string, x: number) => {
 				const ev = new CustomEvent(type, { bubbles: true });
 				Object.defineProperty(ev, "targetTouches", {
@@ -212,9 +210,7 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 
 		// 2. Symulacja Swipe w prawo (przesunięcie palca z 100px do 300px -> diff < -45px -> Poprzednie zdjęcie)
 		await page.evaluate(() => {
-			const el = document.querySelector(
-				"div.fixed.inset-0.z-50",
-			) as HTMLElement;
+			const el = document.querySelector('[role="dialog"]') as HTMLElement;
 			const fire = (type: string, x: number) => {
 				const ev = new CustomEvent(type, { bubbles: true });
 				Object.defineProperty(ev, "targetTouches", {
@@ -360,11 +356,36 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 			};
 			paint();
 
-			const fakeStream = (
-				canvas as HTMLCanvasElement & {
-					captureStream: (frameRate?: number) => MediaStream;
-				}
-			).captureStream(15);
+			let fakeStream: unknown;
+			const canvasWithCapture = canvas as unknown as {
+				captureStream?: (fps: number) => unknown;
+			};
+			if (typeof canvasWithCapture.captureStream === "function") {
+				fakeStream = canvasWithCapture.captureStream(15);
+			} else {
+				const track = {
+					kind: "video",
+					id: "fake-video-track",
+					label: "Fake Camera",
+					enabled: true,
+					muted: false,
+					readyState: "live",
+					stop: () => {},
+					getSettings: () => ({ width: 320, height: 240 }),
+					getCapabilities: () => ({}),
+					applyConstraints: () => Promise.resolve(),
+					addEventListener: () => {},
+					removeEventListener: () => {},
+					dispatchEvent: () => true,
+				};
+				fakeStream = {
+					getTracks: () => [track],
+					getVideoTracks: () => [track],
+					getAudioTracks: () => [],
+					addTrack: () => {},
+					removeTrack: () => {},
+				};
+			}
 
 			const mediaDevicesStub = {
 				getUserMedia: () => Promise.resolve(fakeStream),
@@ -372,6 +393,14 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 			Object.defineProperty(navigator, "mediaDevices", {
 				configurable: true,
 				get: () => mediaDevicesStub,
+			});
+			Object.defineProperty(HTMLVideoElement.prototype, "videoWidth", {
+				configurable: true,
+				get: () => 320,
+			});
+			Object.defineProperty(HTMLVideoElement.prototype, "videoHeight", {
+				configurable: true,
+				get: () => 240,
 			});
 		});
 

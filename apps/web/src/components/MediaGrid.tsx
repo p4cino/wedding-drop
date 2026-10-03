@@ -2,6 +2,7 @@
 
 import { Camera, Image as ImageIcon, Play, User } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { css } from "styled-system/css";
 import EmptyState from "@/components/EmptyState";
 import type { MediaItemData } from "@/lib/gallery-types";
 
@@ -15,8 +16,10 @@ export default function MediaGrid({ items, onItemClick }: MediaGridProps) {
 	if (items.length === 0) {
 		return (
 			<EmptyState
-				className="py-20"
-				icon={<ImageIcon className="w-8 h-8" aria-hidden="true" />}
+				className={css({ py: "20" })}
+				icon={
+					<ImageIcon className={css({ w: "8", h: "8" })} aria-hidden="true" />
+				}
 				title={t("noPhotos")}
 				hint={t("beFirst")}
 			/>
@@ -24,7 +27,18 @@ export default function MediaGrid({ items, onItemClick }: MediaGridProps) {
 	}
 
 	return (
-		<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+		<div
+			className={css({
+				display: "grid",
+				gridTemplateColumns: {
+					base: "repeat(2, 1fr)",
+					sm: "repeat(3, 1fr)",
+					md: "repeat(4, 1fr)",
+					lg: "repeat(5, 1fr)",
+				},
+				gap: { base: "3", sm: "4" },
+			})}
+		>
 			{items.map((item, index) => {
 				const isVideo = item.fileType === "video";
 				const isPhotographer = item.source === "photographer";
@@ -37,21 +51,68 @@ export default function MediaGrid({ items, onItemClick }: MediaGridProps) {
 						key={item.id}
 						onClick={() => onItemClick(index)}
 						aria-label={ariaLabel}
-						className="group relative aspect-square bg-slate-100 rounded-2xl overflow-hidden cursor-pointer shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02] text-left p-0 border-0 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
+						className={css({
+							position: "relative",
+							aspectRatio: "1/1",
+							backgroundColor: "slate.100",
+							borderRadius: "2xl",
+							overflow: "hidden",
+							cursor: "pointer",
+							boxShadow: "sm",
+							textAlign: "left",
+							p: "0",
+							borderWidth: "0",
+							transition: "all 0.3s ease",
+							_hover: {
+								boxShadow: "md",
+								transform: "scale(1.02)",
+							},
+							_focusVisible: {
+								outline: "2px solid",
+								outlineColor: "wedding.gold",
+							},
+						})}
 					>
 						{/* Miniatura */}
 						<img
 							src={item.thumbUrl}
 							alt={item.originalFileName}
 							loading="lazy"
-							className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+							className={css({
+								w: "full",
+								h: "full",
+								objectFit: "cover",
+								transition: "transform 0.5s ease",
+								_hover: { transform: "scale(1.05)" },
+							})}
 						/>
 
 						{/* Znacznik wideo */}
 						{isVideo && (
-							<div className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white shadow-sm">
+							<div
+								className={css({
+									position: "absolute",
+									top: "2.5",
+									right: "2.5",
+									w: "7",
+									h: "7",
+									borderRadius: "full",
+									backgroundColor: "rgba(0, 0, 0, 0.6)",
+									backdropFilter: "blur(12px)",
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									color: "white",
+									boxShadow: "sm",
+								})}
+							>
 								<Play
-									className="w-3.5 h-3.5 fill-current ml-0.5"
+									className={css({
+										w: "3.5",
+										h: "3.5",
+										fill: "currentColor",
+										ml: "0.5",
+									})}
 									aria-hidden="true"
 								/>
 							</div>
@@ -60,24 +121,86 @@ export default function MediaGrid({ items, onItemClick }: MediaGridProps) {
 						{/* Odznaka materiału od fotografa/kamerzysty */}
 						{isPhotographer && (
 							<div
-								className="absolute top-2.5 left-2.5 px-2 py-1 rounded-full bg-amber-500/90 backdrop-blur-md flex items-center gap-1 text-white shadow-sm"
+								className={css({
+									position: "absolute",
+									top: "2.5",
+									left: "2.5",
+									px: "2",
+									py: "1",
+									borderRadius: "full",
+									backgroundColor: "rgba(202, 138, 4, 0.9)",
+									backdropFilter: "blur(12px)",
+									display: "flex",
+									alignItems: "center",
+									gap: "1",
+									color: "white",
+									boxShadow: "sm",
+								})}
 								aria-label={t("photographerBadge")}
 							>
-								<Camera className="w-3 h-3" aria-hidden="true" />
-								<span className="text-[10px] font-semibold uppercase tracking-wide">
+								<Camera
+									className={css({ w: "3", h: "3" })}
+									aria-hidden="true"
+								/>
+								<span
+									className={css({
+										fontSize: "10px",
+										fontWeight: "semibold",
+										textTransform: "uppercase",
+										letterSpacing: "wide",
+									})}
+								>
 									{t("photographerBadge")}
 								</span>
 							</div>
 						)}
 
 						{/* Gradient i podpis u dołu */}
-						<div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/75 via-black/30 to-transparent flex items-center justify-between text-white opacity-95 group-hover:opacity-100 transition">
-							<div className="flex items-center gap-1.5 min-w-0">
+						<div
+							className={css({
+								position: "absolute",
+								left: "0",
+								right: "0",
+								bottom: "0",
+								p: "2.5",
+								background:
+									"linear-gradient(to top, rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.3), transparent)",
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "space-between",
+								color: "white",
+								opacity: 0.95,
+								transition: "opacity 0.2s ease",
+								_hover: { opacity: 1 },
+							})}
+						>
+							<div
+								className={css({
+									display: "flex",
+									alignItems: "center",
+									gap: "1.5",
+									minW: "0",
+								})}
+							>
 								<User
-									className="w-3 h-3 text-amber-300 shrink-0"
+									className={css({
+										w: "3",
+										h: "3",
+										color: "amber.300",
+										flexShrink: 0,
+									})}
 									aria-hidden="true"
 								/>
-								<span className="text-[11px] font-medium truncate drop-shadow-sm">
+								<span
+									className={css({
+										fontSize: "11px",
+										fontWeight: "medium",
+										overflow: "hidden",
+										textOverflow: "ellipsis",
+										whiteSpace: "nowrap",
+										filter: "drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5))",
+									})}
+								>
 									{uploader}
 								</span>
 							</div>
