@@ -161,6 +161,7 @@
 		"cameraError": "Nie udało się uruchomić aparatu. Sprawdź uprawnienia przeglądarki lub użyj zwykłego wyboru pliku.",
 		"cameraBackToFiles": "Wróć do wyboru pliku",
 		"cameraCancel": "Zamknij podgląd aparatu",
+		"cameraSwitchCamera": "Przełącz aparat (przód/tył)",
 		"cameraShutter": "Zrób zdjęcie",
 		"lightboxAria": "Podgląd multimediów: {name}",
 		"slideAnnouncement": "Element {current} z {total}: {name}",

@@ -25,6 +25,7 @@ const fakeStream = () => createFakeStream().stream;
 describe("CameraCapture Component", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		localStorage.clear();
 		captureFrameToCanvasMock.mockReturnValue({ width: 640, height: 480 });
 		canvasToJpegFileMock.mockResolvedValue(
 			new File(["dane"], "photobooth_1.jpg", { type: "image/jpeg" }),
@@ -160,5 +161,101 @@ describe("CameraCapture Component", () => {
 		fireEvent.click(shutter);
 		expect(await screen.findByText("cameraError")).toBeInTheDocument();
 		expect(track.stop).toHaveBeenCalled();
+	});
+
+	it("domyślnie uruchamia tylną kamerę (environment) z elastycznym ograniczeniem ideal", async () => {
+		const gum = mockGetUserMedia(async () => fakeStream());
+
+		render(<CameraCapture onCapture={vi.fn()} onCancel={vi.fn()} />);
+
+		await waitFor(() => {
+			expect(gum).toHaveBeenCalledWith({
+				video: { facingMode: { ideal: "environment" } },
+				audio: false,
+			});
+		});
+
+		const video = screen.getByTestId("camera-preview-video");
+		expect(video.className).not.toContain("scale-x-[-1]");
+	});
+
+	it("wyświetla przycisk przełączenia aparatu, gdy urządzenie posiada więcej niż jedną kamerę", async () => {
+		mockGetUserMedia(
+			async () => fakeStream(),
+			[
+				{ deviceId: "cam1", kind: "videoinput" } as MediaDeviceInfo,
+				{ deviceId: "cam2", kind: "videoinput" } as MediaDeviceInfo,
+			],
+		);
+
+		render(<CameraCapture onCapture={vi.fn()} onCancel={vi.fn()} />);
+
+		const switchBtn = await screen.findByRole("button", {
+			name: "cameraSwitchCamera",
+		});
+		expect(switchBtn).toBeInTheDocument();
+		await waitFor(() => expect(switchBtn).toBeEnabled());
+	});
+
+	it("nie wyświetla przycisku przełączenia aparatu, gdy dostępne jest tylko jedno urządzenie wideo", async () => {
+		mockGetUserMedia(
+			async () => fakeStream(),
+			[{ deviceId: "cam1", kind: "videoinput" } as MediaDeviceInfo],
+		);
+
+		render(<CameraCapture onCapture={vi.fn()} onCancel={vi.fn()} />);
+
+		await screen.findByRole("button", { name: "cameraShutter" });
+		expect(
+			screen.queryByRole("button", { name: "cameraSwitchCamera" }),
+		).not.toBeInTheDocument();
+	});
+
+	it("po kliknięciu przycisku przełączenia zmienia kamerę na przednią (user), zatrzymuje stary strumień i dodaje klasę lustrzaną", async () => {
+		const { stream: firstStream, track: firstTrack } = createFakeStream();
+		const { stream: secondStream } = createFakeStream();
+		let callCount = 0;
+		const gum = mockGetUserMedia(async () => {
+			callCount++;
+			return callCount === 1 ? firstStream : secondStream;
+		});
+
+		render(<CameraCapture onCapture={vi.fn()} onCancel={vi.fn()} />);
+
+		const switchBtn = await screen.findByRole("button", {
+			name: "cameraSwitchCamera",
+		});
+		await waitFor(() => expect(switchBtn).toBeEnabled());
+
+		fireEvent.click(switchBtn);
+
+		await waitFor(() => {
+			expect(firstTrack.stop).toHaveBeenCalled();
+			expect(gum).toHaveBeenLastCalledWith({
+				video: { facingMode: { ideal: "user" } },
+				audio: false,
+			});
+		});
+
+		const video = screen.getByTestId("camera-preview-video");
+		expect(video.className).toContain("scale-x-[-1]");
+		expect(localStorage.getItem("wedding_drop_camera_facing")).toBe("user");
+	});
+
+	it("wczytuje zapamiętaną preferencję kamery z localStorage", async () => {
+		localStorage.setItem("wedding_drop_camera_facing", "user");
+		const gum = mockGetUserMedia(async () => fakeStream());
+
+		render(<CameraCapture onCapture={vi.fn()} onCancel={vi.fn()} />);
+
+		await waitFor(() => {
+			expect(gum).toHaveBeenCalledWith({
+				video: { facingMode: { ideal: "user" } },
+				audio: false,
+			});
+		});
+
+		const video = screen.getByTestId("camera-preview-video");
+		expect(video.className).toContain("scale-x-[-1]");
 	});
 });
