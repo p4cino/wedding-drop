@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { chromium } from "@playwright/test";
+import { chromium, type Page } from "@playwright/test";
 
 // Starannie przygotowane, eleganckie wektory SVG symulujące profesjonalne zdjęcia ślubne
 function createWeddingSvg({
@@ -213,8 +213,47 @@ const MOCK_GALLERY = {
 	},
 };
 
-// biome-ignore lint/suspicious/noUndeclaredEnvVars: script-level environment variable
 const BASE_URL = process.env.BASE_URL || "http://localhost:3001";
+
+async function hideNextDevOverlay(page: Page) {
+	await page.addStyleTag({
+		content: `
+			nextjs-portal,
+			[data-nextjs-toast],
+			#next-route-announcer,
+			[class*="nextjs-dev"],
+			div:has(> button[aria-label="Open Next.js Dev Tools"]),
+			div[data-nextjs-dev-tools-button="true"],
+			button[aria-label="Open Next.js Dev Tools"] {
+				display: none !important;
+				opacity: 0 !important;
+				visibility: hidden !important;
+				pointer-events: none !important;
+			}
+		`,
+	});
+}
+
+async function enableLiveSseMock(page: Page) {
+	// Mockujemy EventSource po stronie przeglądarki, by galeria miała natychmiast status "Na żywo"
+	await page.addInitScript(() => {
+		class MockEventSource {
+			onopen: ((e: any) => void) | null = null;
+			onmessage: ((e: any) => void) | null = null;
+			onerror: ((e: any) => void) | null = null;
+			readyState = 1;
+			constructor(_url: string) {
+				setTimeout(() => {
+					if (this.onopen) {
+						this.onopen(new Event("open"));
+					}
+				}, 50);
+			}
+			close() {}
+		}
+		(window as any).EventSource = MockEventSource;
+	});
+}
 
 async function main() {
 	const rootDir = process.cwd().includes("apps")
@@ -246,6 +285,8 @@ async function main() {
 		});
 
 		const guestPage = await mobileContext.newPage();
+		await enableLiveSseMock(guestPage);
+
 		// Mock API dla gościa
 		await guestPage.route("**/api/gallery/kasia-i-tomek", async (route) => {
 			await route.fulfill({
@@ -274,27 +315,18 @@ async function main() {
 				});
 			},
 		);
-		await guestPage.route(
-			"**/api/gallery/kasia-i-tomek/live*",
-			async (route) => {
-				await route.fulfill({
-					status: 200,
-					contentType: "text/event-stream",
-					body: ": sse mock\n\n",
-				});
-			},
-		);
 
 		await guestPage.goto(`${BASE_URL}/pl/g/kasia-i-tomek`, {
 			waitUntil: "networkidle",
 		});
 		await guestPage.waitForTimeout(600);
+		await hideNextDevOverlay(guestPage);
 		await guestPage.screenshot({
 			path: path.join(outputDir, "01-guest-gallery-mobile.png"),
 			fullPage: false,
 		});
 		console.log(
-			"✓ 01-guest-gallery-mobile.png (Galeria gościa z rankingiem TOP 3 i odznaką fotografa)",
+			"✓ 01-guest-gallery-mobile.png (Galeria gościa z rankingiem TOP 3 i statusem Na żywo)",
 		);
 
 		// ==========================================
@@ -313,6 +345,7 @@ async function main() {
 			if (await signatureInput.isVisible()) {
 				await signatureInput.fill("Wujek Staszek i Ciocia Krysia");
 			}
+			await hideNextDevOverlay(guestPage);
 			await guestPage.screenshot({
 				path: path.join(outputDir, "02-upload-drawer-mobile.png"),
 				fullPage: false,
@@ -326,7 +359,6 @@ async function main() {
 		// 3. Mobile Księga Życzeń (Wishes Book)
 		// ==========================================
 		console.log("3. Przechwytywanie Księgi Życzeń (Mobile)...");
-		// Zamykamy drawer i przełączamy na zakładkę życzeń
 		const closeDrawerBtn = guestPage.locator("button[title*='Zamknij']");
 		if (await closeDrawerBtn.isVisible()) {
 			await closeDrawerBtn.click();
@@ -336,6 +368,7 @@ async function main() {
 		if (await wishesTab.isVisible()) {
 			await wishesTab.click();
 			await guestPage.waitForTimeout(500);
+			await hideNextDevOverlay(guestPage);
 			await guestPage.screenshot({
 				path: path.join(outputDir, "03-guest-wishes-mobile.png"),
 				fullPage: false,
@@ -386,26 +419,18 @@ async function main() {
 				});
 			},
 		);
-		await desktopContext.route(
-			"**/api/gallery/kasia-i-tomek/live*",
-			async (route) => {
-				await route.fulfill({
-					status: 200,
-					contentType: "text/event-stream",
-					body: ": sse mock\n\n",
-				});
-			},
-		);
 
 		// ==========================================
 		// 4. Tryb TV na sali weselnej (TV Slideshow)
 		// ==========================================
 		console.log("4. Przechwytywanie widoku Trybu TV (Pokaz Slajdów)...");
 		const tvPage = await desktopContext.newPage();
+		await enableLiveSseMock(tvPage);
 		await tvPage.goto(`${BASE_URL}/pl/g/kasia-i-tomek/tv`, {
 			waitUntil: "networkidle",
 		});
 		await tvPage.waitForTimeout(800);
+		await hideNextDevOverlay(tvPage);
 		await tvPage.screenshot({
 			path: path.join(outputDir, "04-tv-slideshow.png"),
 			fullPage: false,
@@ -422,11 +447,12 @@ async function main() {
 			waitUntil: "networkidle",
 		});
 		await cardPage.waitForTimeout(800);
+		await hideNextDevOverlay(cardPage);
 		await cardPage.screenshot({
 			path: path.join(outputDir, "05-table-card-creator.png"),
 			fullPage: false,
 		});
-		// Zachowujemy też kompatybilność z 03-table-card-creator.png jeśli potrzebne
+		// Zachowujemy też kompatybilność wsteczną
 		fs.copyFileSync(
 			path.join(outputDir, "05-table-card-creator.png"),
 			path.join(outputDir, "03-table-card-creator.png"),
@@ -441,6 +467,8 @@ async function main() {
 		// ==========================================
 		console.log("6. Przechwytywanie panelu Pary Młodej...");
 		const ownerPage = await desktopContext.newPage();
+		// Zwiększamy nieco wysokość viewportu, by elegancko objąć nagłówek, statystyki, panel fotografa i moderację
+		await ownerPage.setViewportSize({ width: 1440, height: 1020 });
 		await ownerPage.route(
 			"**/api/owner/kasia-i-tomek/session",
 			async (route) => {
@@ -466,11 +494,12 @@ async function main() {
 			waitUntil: "networkidle",
 		});
 		await ownerPage.waitForTimeout(1000);
+		await hideNextDevOverlay(ownerPage);
 		await ownerPage.screenshot({
 			path: path.join(outputDir, "06-owner-dashboard.png"),
 			fullPage: false,
 		});
-		// Zachowujemy też kompatybilność z 04-owner-dashboard.png
+		// Kompatybilność wsteczna
 		fs.copyFileSync(
 			path.join(outputDir, "06-owner-dashboard.png"),
 			path.join(outputDir, "04-owner-dashboard.png"),
@@ -485,13 +514,18 @@ async function main() {
 		// ==========================================
 		console.log("7. Przechwytywanie panelu Administratora...");
 		const adminPage = await desktopContext.newPage();
+		await adminPage.setViewportSize({ width: 1440, height: 900 });
+
+		// Mock uwierzytelnienia administratora
 		await adminPage.route("**/api/admin/auth", async (route) => {
 			await route.fulfill({
 				status: 200,
 				contentType: "application/json",
-				body: JSON.stringify({ token: "mock-admin-token" }),
+				body: JSON.stringify({ adminToken: "mock-admin-token-12345" }),
 			});
 		});
+
+		// Mock listy galerii
 		await adminPage.route("**/api/admin/galleries", async (route) => {
 			await route.fulfill({
 				status: 200,
@@ -504,8 +538,8 @@ async function main() {
 							coupleNames: "Kasia & Tomek",
 							weddingDate: "12.09.2026",
 							contactEmail: "kasia.tomek@example.com",
-							filesCount: 148,
-							totalBytes: 1288490188,
+							filesCount: 248,
+							totalBytes: 1428490188,
 							status: "active",
 						},
 						{
@@ -514,7 +548,7 @@ async function main() {
 							coupleNames: "Ola & Michał",
 							weddingDate: "26.09.2026",
 							contactEmail: "ola.michal@example.com",
-							filesCount: 84,
+							filesCount: 112,
 							totalBytes: 542113840,
 							status: "active",
 						},
@@ -536,19 +570,29 @@ async function main() {
 		await adminPage.goto(`${BASE_URL}/pl/admin`, {
 			waitUntil: "networkidle",
 		});
+
 		const adminLoginInput = adminPage.locator("input[type='text']");
 		if (await adminLoginInput.isVisible()) {
 			await adminLoginInput.fill("admin");
 			const adminPwd = adminPage.locator("input[type='password']");
 			await adminPwd.fill("admin123");
 			await adminPage.getByRole("button", { name: "Zaloguj się" }).click();
-			await adminPage.waitForTimeout(800);
+			// Czekamy na załadowanie tabeli z galeriami
+			await adminPage.waitForSelector(
+				"table, [role='table'], text=Kasia & Tomek",
+				{
+					timeout: 5000,
+				},
+			);
+			await adminPage.waitForTimeout(500);
 		}
+
+		await hideNextDevOverlay(adminPage);
 		await adminPage.screenshot({
 			path: path.join(outputDir, "07-admin-panel.png"),
 			fullPage: false,
 		});
-		// Zachowujemy też kompatybilność z 05-admin-panel.png
+		// Kompatybilność wsteczna
 		fs.copyFileSync(
 			path.join(outputDir, "07-admin-panel.png"),
 			path.join(outputDir, "05-admin-panel.png"),
