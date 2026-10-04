@@ -67,6 +67,9 @@ export async function handleBrandingFileRequest(
 			"Content-Type": mimeType,
 			"Content-Length": fileStat.size,
 			"Cache-Control": "public, max-age=31536000, immutable",
+			"X-Content-Type-Options": "nosniff",
+			// Dawne pliki SVG nie mogą wykonać skryptu na originie aplikacji
+			"Content-Security-Policy": "default-src 'none'; sandbox",
 		});
 
 		const stream = fs.createReadStream(targetPath);

@@ -1,8 +1,8 @@
-import { compare } from "@node-rs/bcrypt";
 import { db, galleries, mediaItems } from "@wedding-drop/db";
 import { and, desc, eq, ne } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
-import { readOwnerToken, verifyAdminToken, verifyOwnerToken } from "@/lib/auth";
+import { authorizeHiddenAccess, hasGuestAccess } from "@/lib/auth";
+import { tooManyRequests } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -31,34 +31,24 @@ export async function GET(
 
 		let canViewHidden = false;
 		if (includeHidden) {
-			const ownerToken = readOwnerToken(req, slug);
-			if (ownerToken && verifyOwnerToken(ownerToken, slug)) {
-				canViewHidden = true;
-			}
-			const ownerPassword = req.headers.get("x-owner-password");
-			if (
-				!canViewHidden &&
-				ownerPassword &&
-				(await compare(ownerPassword, gallery.ownerPasswordHash))
-			) {
-				canViewHidden = true;
-			}
-			const authHeader = req.headers.get("authorization");
-			const bearerToken =
-				authHeader && /^Bearer\s+/i.test(authHeader)
-					? authHeader.replace(/^Bearer\s+/i, "")
-					: null;
-			const adminToken = req.headers.get("x-admin-token") || bearerToken;
-			if (!canViewHidden && adminToken && verifyAdminToken(adminToken)) {
-				canViewHidden = true;
-			}
-
-			if (!canViewHidden) {
+			const access = await authorizeHiddenAccess(
+				req,
+				slug,
+				gallery.ownerPasswordHash,
+			);
+			if (access.retryAfter) return tooManyRequests(access.retryAfter);
+			if (!access.granted) {
 				return NextResponse.json(
 					{ error: "Brak uprawnień do przeglądania ukrytych materiałów" },
 					{ status: 401 },
 				);
 			}
+			canViewHidden = true;
+		} else if (!hasGuestAccess(req, slug, gallery.guestPassword)) {
+			return NextResponse.json(
+				{ error: "Wymagana autoryzacja gościa" },
+				{ status: 401 },
+			);
 		}
 
 		if (!gallery.allowGuestViewing && !canViewHidden) {

@@ -117,6 +117,25 @@ export default function AdminDashboardPage() {
 		}
 	};
 
+	const handleLogout = async () => {
+		const current = token;
+		// Najpierw czyścimy stan lokalny, potem unieważniamy token na serwerze (best effort)
+		setToken(null);
+		setGalleries([]);
+		setIsModalOpen(false);
+		setPassword("");
+		if (current) {
+			try {
+				await fetch("/api/admin/auth/logout", {
+					method: "POST",
+					headers: { "x-admin-token": current },
+				});
+			} catch {
+				// Błąd sieci - token i tak wygaśnie po 8 godzinach
+			}
+		}
+	};
+
 	if (!token) {
 		return (
 			<AdminLoginForm
@@ -186,35 +205,57 @@ export default function AdminDashboardPage() {
 					</div>
 				</div>
 
-				<button
-					type="button"
-					aria-haspopup="dialog"
-					aria-expanded={isModalOpen}
-					onClick={() => setIsModalOpen(true)}
-					className={css({
-						display: "inline-flex",
-						alignItems: "center",
-						gap: "2",
-						px: "4",
-						py: "2.5",
-						borderRadius: "xl",
-						backgroundColor: "amber.600",
-						_hover: { backgroundColor: "amber.700" },
-						color: "white",
-						fontSize: "xs",
-						fontWeight: "semibold",
-						boxShadow: "sm",
-						transition: "all 0.15s ease",
-						_focusVisible: {
-							outline: "2px solid",
-							outlineColor: "amber.500",
-						},
-						cursor: "pointer",
-					})}
+				<div
+					className={css({ display: "flex", alignItems: "center", gap: "2" })}
 				>
-					<Plus className={css({ w: "4", h: "4" })} aria-hidden="true" />
-					<span>{t("newWeddingBtn")}</span>
-				</button>
+					<button
+						type="button"
+						onClick={handleLogout}
+						className={css({
+							px: "4",
+							py: "2.5",
+							borderRadius: "xl",
+							fontSize: "sm",
+							fontWeight: "semibold",
+							color: "slate.700",
+							borderWidth: "1px",
+							borderColor: "slate.200",
+							cursor: "pointer",
+							_hover: { backgroundColor: "slate.50" },
+						})}
+					>
+						{t("logout")}
+					</button>
+					<button
+						type="button"
+						aria-haspopup="dialog"
+						aria-expanded={isModalOpen}
+						onClick={() => setIsModalOpen(true)}
+						className={css({
+							display: "inline-flex",
+							alignItems: "center",
+							gap: "2",
+							px: "4",
+							py: "2.5",
+							borderRadius: "xl",
+							backgroundColor: "amber.600",
+							_hover: { backgroundColor: "amber.700" },
+							color: "white",
+							fontSize: "xs",
+							fontWeight: "semibold",
+							boxShadow: "sm",
+							transition: "all 0.15s ease",
+							_focusVisible: {
+								outline: "2px solid",
+								outlineColor: "amber.500",
+							},
+							cursor: "pointer",
+						})}
+					>
+						<Plus className={css({ w: "4", h: "4" })} aria-hidden="true" />
+						<span>{t("newWeddingBtn")}</span>
+					</button>
+				</div>
 			</header>
 
 			<main

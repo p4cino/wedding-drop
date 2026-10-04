@@ -5,9 +5,13 @@ import { initDatabase } from "@wedding-drop/db";
 import { initTusServer, recoverInterruptedExports } from "@wedding-drop/media";
 import dotenv from "dotenv";
 import next from "next";
-import { verifyOwnerCredentialsForTus } from "./src/lib/auth";
+import {
+	verifyGuestCookieHeader,
+	verifyOwnerCredentialsForTus,
+} from "./src/lib/auth";
 import { handleBrandingFileRequest } from "./src/lib/branding-file-handler";
 import { handleMediaFileRequest } from "./src/lib/media-file-handler";
+import { recordRateLimitHit, TUS_CREATE_LIMIT } from "./src/lib/rate-limit";
 
 dotenv.config();
 
@@ -35,6 +39,17 @@ async function bootstrap() {
 	// aby packages/media nie zależało od Next.js / apps/web (patrz AGENTS.md - kierunek zależności).
 	const tusServer = initTusServer(dataDir, {
 		verifyOwnerCredentials: verifyOwnerCredentialsForTus,
+		verifyGuestAccess: verifyGuestCookieHeader,
+		checkUploadRateLimit: (clientIp, gallerySlug) => {
+			// Bez adresu klienta (brak reverse proxy) nie ma po czym limitować - pomijamy
+			if (!clientIp) return null;
+			const result = recordRateLimitHit(
+				"tus-create",
+				`${clientIp}:${gallerySlug}`,
+				TUS_CREATE_LIMIT,
+			);
+			return result.ok ? null : result.retryAfter;
+		},
 	});
 
 	// 4. Przygotowanie Next.js

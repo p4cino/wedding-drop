@@ -1,5 +1,7 @@
 /** Metadane galerii zwracane przez publiczne `GET /api/gallery/[slug]`. */
 export interface GalleryData {
+	/** Galeria jest chroniona hasłem gościa. */
+	hasPassword?: boolean;
 	id: string;
 	slug: string;
 	coupleNames: string;

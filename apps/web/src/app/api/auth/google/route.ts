@@ -4,6 +4,13 @@ import { getGoogleAuthUrl, isGoogleDriveConfigured } from "@wedding-drop/media";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { verifyOwnerToken } from "@/lib/auth";
+import {
+	AUTH_FAILURE_LIMIT,
+	getClientIp,
+	peekRateLimit,
+	recordRateLimitHit,
+	tooManyRequests,
+} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -78,8 +85,21 @@ export async function POST(req: NextRequest) {
 
 		if (!token && password) {
 			const gallery = galleryResult[0];
+			const limitKey = `${getClientIp(req.headers)}:${slug}`;
+			const limit = peekRateLimit(
+				"owner-password",
+				limitKey,
+				AUTH_FAILURE_LIMIT,
+			);
+			if (!limit.ok) return tooManyRequests(limit.retryAfter);
 			const isValid = await compare(password, gallery.ownerPasswordHash);
 			if (!isValid) {
+				const after = recordRateLimitHit(
+					"owner-password",
+					limitKey,
+					AUTH_FAILURE_LIMIT,
+				);
+				if (!after.ok) return tooManyRequests(after.retryAfter);
 				return NextResponse.json(
 					{ error: "Nieprawidłowe hasło właściciela galerii." },
 					{ status: 401 },

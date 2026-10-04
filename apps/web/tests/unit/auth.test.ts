@@ -46,7 +46,7 @@ describe("Auth HMAC Tokens", () => {
 		const slug = "kasia-i-tomek";
 		const token = generateOwnerToken(slug);
 		const parts = token.split("_");
-		parts[3] =
+		parts[4] =
 			"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
 		expect(verifyOwnerToken(parts.join("_"), slug)).toBe(false);
 	});
@@ -84,7 +84,7 @@ describe("Auth HMAC Tokens", () => {
 		const slug = "kasia-i-tomek";
 		const token = generateGuestToken(slug);
 		const parts = token.split("_");
-		parts[3] =
+		parts[4] =
 			"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
 		expect(verifyGuestToken(parts.join("_"), slug)).toBe(false);
 	});

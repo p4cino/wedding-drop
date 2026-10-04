@@ -325,10 +325,12 @@ docker run --rm -v wedding-drop_app_data:/data -v $(pwd):/backup alpine tar -xzf
 ## 8. Bezpieczeństwo i Ochrona Prywatności
 
 1. **Kryptograficzna Autoryzacja i Separacja Domen HMAC**:
-   - Tokeny administratora (`admin_<timestamp>_<base64User>_<hmac>`) oraz właściciela galerii (`owner_<timestamp>_<base64Slug>_<hmac>`) są kryptograficznie odseparowane zarówno w payloadzie podpisu (`admin:` vs `owner:`), jak i w obsłudze kluczy (`ADMIN_SECRET`, `OWNER_SECRET`).
+   - Tokeny administratora (`admin_<timestamp>_<jti>_<base64User>_<hmac>`) oraz właściciela galerii (`owner_<timestamp>_<jti>_<base64Slug>_<hmac>`) są kryptograficznie odseparowane zarówno w payloadzie podpisu (`admin:` vs `owner:`), jak i w obsłudze kluczy (`ADMIN_SECRET`, `OWNER_SECRET`).
    - Uniemożliwia to eskalację uprawnień poprzez zamianę prefiksów (Token Prefix Swap).
    - W przypadku braku konfiguracji sekretów w zmiennych środowiskowych, aplikacja generuje bezpieczny losowy klucz w pamięci RAM (`crypto.randomBytes(32)`), eliminując jakiekolwiek znane hasła domyślne.
-   - Weryfikacja podpisu realizowana jest za pomocą `crypto.timingSafeEqual` w celu zapobieżenia atakom czasowym (Timing Attacks). Ważność tokenów wynosi 7 dni.
+   - Weryfikacja podpisu realizowana jest za pomocą `crypto.timingSafeEqual` w celu zapobieżenia atakom czasowym (Timing Attacks). Token administratora jest ważny **8 godzin**, token właściciela **7 dni**.
+   - Każdy token ma losowy identyfikator `jti` objęty podpisem. Wylogowanie (`POST /api/admin/auth/logout`, `DELETE /api/owner/:slug/session`) wpisuje `jti` na listę unieważnionych w pamięci procesu do czasu wygaśnięcia tokenu (restart procesu czyści listę). Tokeny w starym formacie (bez `jti`) są odrzucane.
+   - Logowanie administratora zwraca identyczny błąd dla nieistniejącego loginu i błędnego hasła (brak enumeracji kont).
 2. **Bezpieczne Serwowanie Mediów i Ochrona przed Path Traversal**:
    - Endpoint `/media-file/*` jest obsługiwany przez dedykowany handler Node.js z rygorystycznym sprawdzaniem granic katalogu `/data` (`path.resolve`), blokadą sekwencji `..` oraz bajtów zerowych (`\0`).
    - Każde żądanie weryfikuje status materiału w bazie danych PostgreSQL: pliki `hidden` są blokowane kodem `403 Forbidden` dla nieautoryzowanych gości (dostęp wymaga tokenu właściciela lub administratora), a pliki `deleted` zwracają `404 Not Found`.
@@ -336,19 +338,30 @@ docker run --rm -v wedding-drop_app_data:/data -v $(pwd):/backup alpine tar -xzf
 3. **Ochrona przed Stored XSS i Weryfikacja Magic Bytes**:
    - W potoku przetwarzania mediów (`packages/media`) wprowadzono inspekcję sygnatury binarnej (Magic Bytes) dla plików JPEG, PNG, WebP, GIF, MP4, MOV, WebM i HEIC.
    - Wszelkie próby przesłania plików tekstowych, skryptów HTML/SVG/PHP czy zmanipulowanych rozszerzeń są natychmiast odrzucane i usuwane z dysku przed zapisaniem w bazie danych lub zaserwowaniem w galerii.
+   - **Branding (logo/tło)**: dozwolone tylko JPEG/PNG/WebP rozpoznane po magic bytes; **SVG jest odrzucany**. Nazwa i rozszerzenie pliku są generowane przez serwer (`logo.<ext>`, `background.<ext>`), a nazwa od klienta nie bierze udziału w ścieżce zapisu. `/branding-file/*` zwraca `X-Content-Type-Options: nosniff` i `Content-Security-Policy: default-src 'none'; sandbox`.
 4. **Bezpieczeństwo PWA i Wykluczenie Cache API**:
    - Konfiguracja Service Worker (`sw.ts`) wymusza strategię `NetworkOnly` dla wszystkich zapytań `/api/*`, uniemożliwiając cachowanie danych wrażliwych, tokenów sesyjnych oraz odpowiedzi API w `CacheStorage` przeglądarki.
-5. **Brak Indeksowania przez Wyszukiwarki (SEO / RODO)**:
+5. **Rate limiting (`apps/web/src/lib/rate-limit.ts`)**:
+   - Limiter w pamięci procesu (stałe okno, współdzielony przez `globalThis` między Next.js a serwerem TUS, ograniczona liczba kluczy). Klucz: IP z `X-Forwarded-For` (ustawianego przez Caddy) + zasób (slug galerii lub `admin`). Aplikacja zakłada, że port 3000 nie jest wystawiony poza reverse proxy.
+   - **10 nieudanych prób / 15 min** dla: logowania admina, logowania właściciela, hasła gościa, PIN-u ZIP oraz nagłówka `x-owner-password` (poprawne logowanie zeruje licznik). Po przekroczeniu: `429` z `Retry-After`, **bez wywołania bcrypt** (ochrona CPU N100).
+   - **30 życzeń / minutę** (`POST /wishes`) oraz **300 utworzeń uploadu TUS / minutę** na IP i galerię (gość; import fotografa jest zwolniony, bo wymaga tokenu). Limit TUS jest luźniejszy, bo goście na weselu dzielą jeden adres IP (Wi-Fi sali).
+   - Limiter resetuje się po restarcie i działa tylko dla jednej instancji.
+6. **Hasło gościa i PIN**:
+   - Hasło gościa i PIN ZIP są zapisywane jako hash bcrypt (hasła zapisane wcześniej w formacie `scrypt$…` z #62 nadal są akceptowane). Stare wartości plaintext działają nadal i są zamieniane na hash przy pierwszej poprawnej weryfikacji (lazy-upgrade, bez migracji SQL). API zwraca tylko flagi `hasPassword`/`hasPin`.
+   - PIN przyjmowany wyłącznie w nagłówku `x-access-pin` (parametr `?pin=` jest ignorowany).
+   - Gdy galeria ma hasło gościa, sesja gościa (ciasteczko `wd_guest_<slug>`) jest wymagana także dla `GET /media`, `GET`/`POST /wishes`, `GET /live`, `GET /zip` oraz utworzenia uploadu TUS (poza tym publiczne `GET /api/gallery/:slug` zwraca wtedy tylko dane ekranu logowania).
+7. **Limity uploadu**: TUS ma `maxSize` = **1 GiB na plik** (413 powyżej; `Upload-Length` jest wymagany), `maxStorageBytes` galerii obowiązuje gości i fotografa, a niedokończone uploady w `tus_temp` starsze niż 24 h są sprzątane co godzinę.
+8. **Brak Indeksowania przez Wyszukiwarki (SEO / RODO)**:
    - Caddy wysyła nagłówek brzegowy: `X-Robots-Tag: noindex, nofollow, noarchive, nosnippet`.
    - Każda strona HTML posiada meta tag `<meta name="robots" content="noindex, nofollow, noarchive" />`.
-6. **Ochrona Zasobów Maszyny (Intel N100 Anti-DoS)**:
+9. **Ochrona Zasobów Maszyny (Intel N100 Anti-DoS)**:
    - Pobieranie ZIP realizowane jest wyłącznie strumieniowo (`chunked transfer`) – serwer nie ładuje całego archiwum do pamięci RAM.
    - Kolejka obróbki `p-queue` jest ograniczona do `concurrency: 2`.
    - Watchdog `ffmpeg` (25s timeout) chroni przed zawieszeniem wątków procesora na uszkodzonych plikach wideo.
-7. **Fizyczna Izolacja Danych**:
+10. **Fizyczna Izolacja Danych**:
    - Każde wesele posiada unikalny slug oraz odizolowany folder dyskowy.
    - Skasowanie wesela z poziomu panelu administratora fizycznie usuwa pliki z dysku za pomocą `fs.rm`.
-8. **Bezpieczeństwo CORS i Zgodność z HTTPS**:
+11. **Bezpieczeństwo CORS i Zgodność z HTTPS**:
    - Serwer TUS zwraca relatywne adresy zasobów (`relativeLocation: true`), co uniemożliwia niezgodność protokołów za reverse proxy Caddy (brak blokad CORS preflight).
 
 ---

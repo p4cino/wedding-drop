@@ -253,6 +253,8 @@ export default function OwnerDashboardPage() {
 		try {
 			await fetch(`/api/owner/${slug}/session`, {
 				method: "DELETE",
+				// Unieważnia także token trzymany w pamięci (poza tym z ciasteczka)
+				headers: ownerToken ? { "x-owner-token": ownerToken } : undefined,
 			});
 		} catch (_err) {
 			// Błąd sieciowy przy wylogowywaniu

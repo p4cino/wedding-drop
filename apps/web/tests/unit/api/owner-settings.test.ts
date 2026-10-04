@@ -77,6 +77,12 @@ describe("PATCH /api/owner/[slug]/settings", () => {
 		expect(res.status).toBe(200);
 
 		expect(db.update).toHaveBeenCalledWith(galleries);
+		// Hasło gościa trafia do bazy wyłącznie jako hash bcrypt
+		const setArg = vi.mocked(
+			(db as unknown as { set: (v: unknown) => unknown }).set,
+		).mock.calls[0][0] as Record<string, unknown>;
+		expect(setArg.guestPassword).toMatch(/^\$2[abxy]\$/);
+		expect(setArg.guestPassword).not.toBe("newpassword");
 		// Note: We'd check the exact .set call in a perfect world, but chaining is mocked.
 	});
 

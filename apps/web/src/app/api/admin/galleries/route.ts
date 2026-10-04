@@ -12,6 +12,7 @@ import {
 import { desc, eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { verifyAdminToken } from "@/lib/auth";
+import { hashSecret } from "@/lib/credential";
 
 export const dynamic = "force-dynamic";
 
@@ -146,7 +147,7 @@ export async function POST(req: NextRequest) {
 				weddingDate,
 				ownerEmail,
 				ownerPasswordHash,
-				accessPin: accessPin || null,
+				accessPin: accessPin ? await hashSecret(accessPin) : null,
 				maxStorageBytes,
 			})
 			.returning();

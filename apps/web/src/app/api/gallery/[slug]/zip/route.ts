@@ -1,12 +1,20 @@
 import path from "node:path";
 import { Readable } from "node:stream";
-import { compare } from "@node-rs/bcrypt";
 import { db, galleries, mediaItems, wishes } from "@wedding-drop/db";
 import { createGalleryZipStream } from "@wedding-drop/media";
 import { and, desc, eq, ne } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 
-import { readOwnerToken, verifyOwnerToken } from "@/lib/auth";
+import { authorizeHiddenAccess, hasGuestAccess } from "@/lib/auth";
+import { hashSecret, verifySecret } from "@/lib/credential";
+import {
+	AUTH_FAILURE_LIMIT,
+	getClientIp,
+	peekRateLimit,
+	recordRateLimitHit,
+	resetRateLimit,
+	tooManyRequests,
+} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -30,21 +38,22 @@ export async function GET(
 		}
 
 		const gallery = galleryResult[0];
-		const { searchParams } = new URL(req.url);
-		let isOwner = false;
-
-		const ownerToken = readOwnerToken(req, slug);
-		if (ownerToken && verifyOwnerToken(ownerToken, slug)) {
-			isOwner = true;
-		} else {
-			const providedPassword = req.headers.get("x-owner-password");
-			if (providedPassword) {
-				isOwner = await compare(providedPassword, gallery.ownerPasswordHash);
-			}
-		}
+		const access = await authorizeHiddenAccess(
+			req,
+			slug,
+			gallery.ownerPasswordHash,
+		);
+		if (access.retryAfter) return tooManyRequests(access.retryAfter);
+		const isOwner = access.granted;
 
 		// Jeśli to nie jest właściciel, sprawdzamy uprawnienia gościa
 		if (!isOwner) {
+			if (!hasGuestAccess(req, slug, gallery.guestPassword)) {
+				return NextResponse.json(
+					{ error: "Wymagana autoryzacja gościa" },
+					{ status: 401 },
+				);
+			}
 			if (!gallery.allowGuestDownloads) {
 				return NextResponse.json(
 					{ error: "Pobieranie plików zostało wyłączone przez Parę Młodą" },
@@ -52,12 +61,29 @@ export async function GET(
 				);
 			}
 			if (gallery.accessPin) {
-				const pin = req.headers.get("x-access-pin") || searchParams.get("pin");
-				if (pin !== gallery.accessPin) {
+				// PIN wyłącznie z nagłówka (parametr query `pin` jest ignorowany)
+				const pin = req.headers.get("x-access-pin");
+				const key = `${getClientIp(req.headers)}:${slug}`;
+				const limit = peekRateLimit("zip-pin", key, AUTH_FAILURE_LIMIT);
+				if (!limit.ok) return tooManyRequests(limit.retryAfter);
+
+				const result = pin
+					? await verifySecret(gallery.accessPin, pin)
+					: { valid: false, needsUpgrade: false };
+				if (!result.valid) {
+					const after = recordRateLimitHit("zip-pin", key, AUTH_FAILURE_LIMIT);
+					if (!after.ok) return tooManyRequests(after.retryAfter);
 					return NextResponse.json(
 						{ error: "Wymagany prawidłowy kod PIN galerii" },
 						{ status: 401 },
 					);
+				}
+				resetRateLimit("zip-pin", key);
+				if (result.needsUpgrade) {
+					await db
+						.update(galleries)
+						.set({ accessPin: await hashSecret(pin as string) })
+						.where(eq(galleries.id, gallery.id));
 				}
 			}
 		}

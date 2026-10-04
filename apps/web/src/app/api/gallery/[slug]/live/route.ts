@@ -1,10 +1,10 @@
-import { compare } from "@node-rs/bcrypt";
 import type { MediaItem, Wish } from "@wedding-drop/db";
 import { db, galleries } from "@wedding-drop/db";
 import { sseBus } from "@wedding-drop/media";
 import { eq } from "drizzle-orm";
 import type { NextRequest } from "next/server";
-import { readOwnerToken, verifyAdminToken, verifyOwnerToken } from "@/lib/auth";
+import { authorizeHiddenAccess, hasGuestAccess } from "@/lib/auth";
+import { tooManyRequests } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -25,28 +25,16 @@ export async function GET(
 	}
 
 	const gallery = galleryResult[0];
-	let canViewHidden = false;
+	const access = await authorizeHiddenAccess(
+		req,
+		slug,
+		gallery.ownerPasswordHash,
+	);
+	if (access.retryAfter) return tooManyRequests(access.retryAfter);
+	const canViewHidden = access.granted;
 
-	const ownerToken = readOwnerToken(req, slug);
-	if (ownerToken && verifyOwnerToken(ownerToken, slug)) {
-		canViewHidden = true;
-	}
-	const ownerPassword = req.headers.get("x-owner-password");
-	if (
-		!canViewHidden &&
-		ownerPassword &&
-		(await compare(ownerPassword, gallery.ownerPasswordHash))
-	) {
-		canViewHidden = true;
-	}
-	const authHeader = req.headers.get("authorization");
-	const bearerToken =
-		authHeader && /^Bearer\s+/i.test(authHeader)
-			? authHeader.replace(/^Bearer\s+/i, "")
-			: null;
-	const adminToken = req.headers.get("x-admin-token") || bearerToken;
-	if (!canViewHidden && adminToken && verifyAdminToken(adminToken)) {
-		canViewHidden = true;
+	if (!canViewHidden && !hasGuestAccess(req, slug, gallery.guestPassword)) {
+		return new Response("Unauthorized", { status: 401 });
 	}
 
 	const stream = new ReadableStream({

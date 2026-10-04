@@ -1,12 +1,13 @@
 import { cardSettings, db, galleries, galleryBranding } from "@wedding-drop/db";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
+import { hasGuestAccess } from "@/lib/auth";
 import { DEFAULT_CARD_COLORS } from "@/lib/card-defaults";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(
-	_req: NextRequest,
+	req: NextRequest,
 	{ params }: { params: Promise<{ slug: string }> },
 ) {
 	try {
@@ -26,6 +27,9 @@ export async function GET(
 
 		const gallery = galleryResult[0];
 
+		const hasPassword = !!gallery.guestPassword;
+		const fullAccess = hasGuestAccess(req, slug, gallery.guestPassword);
+
 		// Pobranie ustawień karteczki
 		const cardResult = await db
 			.select()
@@ -44,7 +48,28 @@ export async function GET(
 
 		const branding = brandingResult[0];
 
+		const brandingPayload = branding
+			? {
+					logoPath: branding.logoPath,
+					backgroundPath: branding.backgroundPath,
+				}
+			: null;
+
+		if (!fullAccess) {
+			// Galeria z hasłem bez sesji gościa: tylko dane potrzebne do ekranu logowania
+			return NextResponse.json({
+				slug: gallery.slug,
+				coupleNames: gallery.coupleNames,
+				isActive: gallery.isActive,
+				hasPassword,
+				primaryColor: card?.primaryColor || DEFAULT_CARD_COLORS.primary,
+				accentColor: card?.accentColor || DEFAULT_CARD_COLORS.accent,
+				branding: brandingPayload,
+			});
+		}
+
 		return NextResponse.json({
+			hasPassword,
 			id: gallery.id,
 			slug: gallery.slug,
 			coupleNames: gallery.coupleNames,
@@ -63,12 +88,7 @@ export async function GET(
 			allowGuestViewing: gallery.allowGuestViewing,
 			allowGuestUploads: gallery.allowGuestUploads,
 			isApprovalQueueEnabled: gallery.isApprovalQueueEnabled,
-			branding: branding
-				? {
-						logoPath: branding.logoPath,
-						backgroundPath: branding.backgroundPath,
-					}
-				: null,
+			branding: brandingPayload,
 		});
 	} catch (error) {
 		console.error("Błąd pobierania metadanych galerii:", error);

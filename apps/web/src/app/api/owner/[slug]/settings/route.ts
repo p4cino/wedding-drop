@@ -2,7 +2,7 @@ import { db, galleries } from "@wedding-drop/db";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { authenticateOwner } from "@/lib/auth";
-import { hashGuestPassword } from "@/lib/guest-password";
+import { hashSecret } from "@/lib/credential";
 
 export const dynamic = "force-dynamic";
 
@@ -48,8 +48,8 @@ export async function PATCH(
 		if (body.guestPassword !== undefined) {
 			if (body.guestPassword === null || body.guestPassword === "") {
 				updates.guestPassword = null;
-			} else {
-				updates.guestPassword = hashGuestPassword(body.guestPassword);
+			} else if (typeof body.guestPassword === "string") {
+				updates.guestPassword = await hashSecret(body.guestPassword);
 			}
 		}
 

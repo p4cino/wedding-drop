@@ -1,0 +1,34 @@
+# Design
+
+## Context
+
+- Aplikacja to jeden proces Node (`apps/web/server.ts`): TUS i handlery plików (`/media-file`, `/branding-file`) działają **poza** Next.js, więc nie korzystają z route handlerów — wspólna logika (rate limit, tokeny) musi żyć w `apps/web/src/lib` i być importowana przez oba światy (tak jak dziś `auth.ts`).
+- Tokeny: własny format `prefix_ts_base64(id)_hmac`, brak identyfikatora, brak unieważniania. Sekret losowy przy starcie, gdy brak `ADMIN_SECRET` (pkt 4 audytu poza zakresem — nie zmieniamy).
+- `guest_password` i `access_pin` to kolumny `text` z plaintextem; hasło gościa porównywane przez SHA-256 + `timingSafeEqual`.
+- Hasło gościa jest dziś egzekwowane tylko w `/media-file/*`. Istniejący spec `credential-transport` zakazuje poświadczeń w query, ale `/wishes` wciąż je czyta (niezgodność kodu ze specem).
+- TUS nie ma `maxSize`; `maxStorageBytes` sprawdzany tylko dla fotografa.
+
+## Goals / Non-Goals
+
+**Goals:** zamknąć luki z pkt 1, 2, 3, 5–9 audytu bez nowych zależności, bez zmiany schematu DB i bez naruszenia ograniczeń N100 (p-queue 2, FFmpeg 25 s, ZIP streaming, `path.resolve`).
+
+**Non-Goals:** pkt 4 (sekrety), CSP/HSTS w Caddy, rozproszony limiter, logi audytowe, ciasteczko dla tokenu admina.
+
+## Decisions
+
+1. **Branding – magic bytes + nazwa generowana przez serwer.** Funkcja `detectImageType(buffer)` (JPEG `FF D8 FF`, PNG `89 50 4E 47`, WebP `RIFF....WEBP`) → rozszerzenie z mapy `{jpeg:"jpg", png:"png", webp:"webp"}`. Nazwa `logo.<ext>` / `background.<ext>` składana wyłącznie z tych stałych; dodatkowo `path.resolve(fullPath)` musi zaczynać się od `brandingDir + path.sep`. Przy zmianie formatu usuwamy poprzedni plik tego typu (DELETE też wyznacza rozszerzenie z whitelisty, nie z DB). Istniejące `.svg` na dysku: handler serwuje je z CSP `sandbox` + `nosniff` (defense in depth), a UI nie pozwala wgrać nowych. *Alternatywa:* sanityzacja SVG (DOMPurify) — odrzucona: nowa zależność i szeroka powierzchnia ataku dla kosmetycznej funkcji.
+2. **Rate limiter in-memory** (`apps/web/src/lib/rate-limit.ts`): `Map<key, {count, resetAt}>` ze stałym oknem, limit liczby kluczy (np. 10 000, wypieranie najstarszych), `setInterval(...).unref()` sprzątający. API: `checkRateLimit(bucket, key, {max, windowMs}) → {ok, retryAfter}` oraz `resetRateLimit`. Klucz = `ip:resource`. IP z `X-Forwarded-For` (pierwszy wpis ustawiony przez Caddy) lub gniazda. Limity: login owner/admin/guest 10/15 min liczone tylko dla porażek; `x-owner-password`/`x-admin-token` – porażki 10/15 min; PIN ZIP 10/15 min; wishes POST 30/min; TUS create (tylko goście) 300/min — wyższy, bo goście dzielą jeden IP (Wi-Fi sali), a nadużycie ogranicza `maxSize` 1 GiB i limit pojemności; fotograf zwolniony (wymaga tokenu). Sprawdzenie odbywa się **przed** bcrypt. *Alternatywa:* limiter w Caddy (plugin) — wymaga własnego buildu obrazu, odrzucone. Ograniczenie: reset po restarcie, jedna instancja — zaakceptowane.
+3. **Hash hasła gościa i PIN-u.** Moduł `credential.ts`: `hashSecret` (bcrypt, 10 rund, jak reszta repo), `verifySecret(stored, provided)` → jeśli `stored` zaczyna się od `$2` → `bcrypt.compare`; w przeciwnym razie plaintext przez SHA-256 + `timingSafeEqual` i zwrot `needsUpgrade=true`. Wywołujący po sukcesie zapisuje hash (lazy-upgrade) — brak migracji SQL. Zapis w `settings` (owner) i `admin/galleries` POST hashuje. API zwraca tylko `hasPassword`/`hasPin`. Przed implementacją sprawdzić, czy UI panelu nie odczytuje wartości `guestPassword` (grep wskazał jedynie `settings/route.ts`, `auth/route.ts`, `media-file-handler.ts`, `zip/route.ts`, `tus`-free).
+4. **Guard gościa jako wspólna funkcja** `requireGuestAccess(req, gallery)` w `auth.ts`: zwraca ok, jeśli galeria bez hasła, albo ważny `verifyGuestToken` z ciasteczka, albo właściciel/admin. Używana w `media`, `wishes` (GET/POST), `live`, a w TUS przez wstrzykiwany callback (wzorzec `verifyOwnerCredentials` — `packages/media` nie importuje z `apps/web`). Dla `onUploadCreate` używamy `req.headers.cookie`. Metadane `GET /api/gallery/[slug]` bez sesji dla galerii z hasłem: zredukowane pola + `hasPassword`. Klient (`GuestLoginForm`, `gallery-api.ts`) musi obsłużyć 401 z tych tras przez przekierowanie do formularza hasła. **Prywatność:** statusy `hidden`/`deleted`/`pending` nadal nigdy nie trafiają do gościa; zmiana tylko zawęża dostęp.
+5. **Tokeny z `jti`.** Nowy format: `prefix_ts_jti_b64(id)_hmac` (5 segmentów), `jti` = 16 losowych bajtów hex, w podpisie. Stary format jest odrzucany (BREAKING, dokumentowane). Deny-list: `Map<jti, expiresAt>` w pamięci z sprzątaniem; `revokeToken(token)` na wylogowaniu; `verify*Token` sprawdza listę. TTL admina 8 h. Wylogowanie admina: nowa trasa `POST /api/admin/auth/logout`; owner: `DELETE .../session` unieważnia token z nagłówka, jeśli podany (ciasteczko niesie ten sam token — odczyt także z ciasteczka). Restart procesu czyści listę, ale przy braku `ADMIN_SECRET` tokeny i tak giną; przy ustawionym sekrecie ryzyko akceptowane (okno ≤ TTL). Login admina: stały komunikat „Błędne dane logowania”, a dla nieistniejącego użytkownika wykonujemy fikcyjny `compare` na stałym hashu (wyrównanie czasu).
+6. **TUS.** `maxSize: 1024**3` w `new Server` (tus zwraca 413) + wymagany `Upload-Length` (`uploadLengthDeferred` nie jest używany → brak deklaracji = błąd). `checkStorageLimit` uogólniony na gości (ten sam kod, obejmuje oczekujące uploady w `tus_temp` nie — sprawdzamy sumę z DB; akceptowalna tolerancja wyścigu). Rate limit w `onUploadCreate` (IP z `req`). Sprzątanie: `setInterval` co godzinę (`unref`) usuwa w `tus_temp` pliki (`upload_*` i `.json`) starsze niż 24 h po `mtime`. Nie dotyka kolejki p-queue.
+7. **/wishes.** Usunięcie czytania query; wspólny helper uwierzytelniania „czy może widzieć ukryte” (nagłówki + opcjonalnie rate-limited `x-owner-password`) wyciągnięty z powielonych bloków w `media`, `wishes`, `live`, `zip`, by zasady były w jednym miejscu.
+
+## Risks / Trade-offs
+
+- **Limiter za proxy:** błędny `X-Forwarded-For` (bezpośredni dostęp do portu 3000) pozwala obejść limit; compose nie wystawia 3000, więc ryzyko niskie — udokumentować.
+- **Wesele = wspólny NAT:** wielu gości z jednego IP; limity na porażki logowania (nie na sukcesy) i luźne 30/min dla wishes/TUS create zmniejszają ryzyko fałszywych blokad.
+- **Zerwanie sesji przy wdrożeniu:** nowy format tokenów wylogowuje adminów/właścicieli; goście (ciasteczko gościa nie zmienia formatu) nie są dotknięci.
+- **Wymuszenie sesji gościa w SSE/TUS:** błędna obsługa po stronie klienta mogłaby zablokować upload; pokryć testami E2E (guest-journey z hasłem).
+- **Lazy-upgrade** zostawia plaintext dla galerii, do których nikt się nie loguje — akceptowalne; opcjonalnie skrypt jednorazowy poza zakresem.
+- **Usunięcie SVG** psuje workflow właścicieli, którzy mieli SVG — mogą wgrać PNG; istniejące SVG nadal się wyświetlają (z CSP sandbox).

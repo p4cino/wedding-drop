@@ -28,7 +28,7 @@ test.describe("Panel Administratora", () => {
 		await page.getByRole("button", { name: "Zaloguj się" }).click();
 
 		// Komunikat błędu
-		await expect(page.getByText("Błędne hasło")).toBeVisible();
+		await expect(page.getByText("Błędne dane logowania")).toBeVisible();
 		// Brak przejścia do panelu zarządzania
 		await expect(page.getByText("Zarządzanie WeddingDrop")).not.toBeVisible();
 	});

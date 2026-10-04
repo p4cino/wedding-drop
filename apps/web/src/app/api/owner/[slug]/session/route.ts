@@ -5,6 +5,9 @@ import {
 	authenticateOwner,
 	clearOwnerSessionCookie,
 	generateOwnerToken,
+	ownerSessionCookieName,
+	readOwnerToken,
+	revokeToken,
 	setOwnerSessionCookie,
 } from "@/lib/auth";
 import { buildOwnerPanelPayload } from "@/lib/owner-panel-payload";
@@ -51,11 +54,14 @@ export async function GET(
 }
 
 export async function DELETE(
-	_req: NextRequest,
+	req: NextRequest,
 	{ params }: { params: Promise<{ slug: string }> },
 ) {
 	try {
 		const { slug } = await params;
+		// Unieważniamy token z nagłówka oraz ten niesiony w ciasteczku sesji
+		revokeToken(readOwnerToken(req, slug));
+		revokeToken(req.cookies.get(ownerSessionCookieName(slug))?.value);
 		const res = NextResponse.json({ success: true });
 		clearOwnerSessionCookie(res, slug);
 		return res;

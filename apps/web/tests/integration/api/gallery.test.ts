@@ -9,10 +9,9 @@ import { GET as getGallery } from "@/app/api/gallery/[slug]/route";
 import { GET as getZip } from "@/app/api/gallery/[slug]/zip/route";
 import { generateAdminToken, generateOwnerToken } from "@/lib/auth";
 import { hashGuestPassword } from "@/lib/guest-password";
+import { _clearRateLimitsForTests } from "@/lib/rate-limit";
 
 let mockExists = true;
-const mockGuestPasswordUpdates: Record<string, unknown>[] = [];
-
 vi.mock("node:fs", () => ({
 	default: {
 		existsSync: vi.fn(() => mockExists),
@@ -55,6 +54,7 @@ let mockCards: Record<string, unknown>[] = [];
 let mockMedia: Record<string, unknown>[] = [];
 let mockWishesForZip: Record<string, unknown>[] = [];
 let dbShouldThrow = false;
+let updatedGalleryValues: Record<string, unknown>[] = [];
 
 import { cardSettings, galleries, wishes } from "@wedding-drop/db";
 
@@ -63,12 +63,6 @@ vi.mock("@wedding-drop/db", async (importOriginal) => {
 	return {
 		...actual,
 		db: {
-			update: vi.fn(() => ({
-				set: vi.fn((values: Record<string, unknown>) => {
-					mockGuestPasswordUpdates.push(values);
-					return { where: vi.fn().mockResolvedValue(undefined) };
-				}),
-			})),
 			select: vi.fn(() => ({
 				from: vi.fn((table) => {
 					if (dbShouldThrow) throw new Error("DB Error");
@@ -95,6 +89,12 @@ vi.mock("@wedding-drop/db", async (importOriginal) => {
 					};
 				}),
 			})),
+			update: vi.fn(() => ({
+				set: vi.fn((values: Record<string, unknown>) => {
+					updatedGalleryValues.push(values);
+					return { where: vi.fn().mockResolvedValue({}) };
+				}),
+			})),
 		},
 	};
 });
@@ -102,7 +102,8 @@ vi.mock("@wedding-drop/db", async (importOriginal) => {
 describe("Gallery API Routes", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mockGuestPasswordUpdates.length = 0;
+		_clearRateLimitsForTests();
+		updatedGalleryValues = [];
 		mockExists = true;
 		dbShouldThrow = false;
 		mockWishesForZip = [];
@@ -535,6 +536,51 @@ describe("Gallery API Routes", () => {
 			expect(res.status).toBe(200);
 		});
 
+		it("PIN w query jest ignorowany (401)", async () => {
+			mockGalleries[0].accessPin = "4321";
+			const req = new NextRequest(
+				"http://localhost/api/gallery/kasia-i-tomek/zip?pin=4321",
+			);
+			const res = await getZip(req, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+			expect(res.status).toBe(401);
+		});
+
+		it("stary PIN plaintext jest po udanej weryfikacji zastępowany hashem", async () => {
+			mockGalleries[0].accessPin = "4321";
+			const req = new NextRequest(
+				"http://localhost/api/gallery/kasia-i-tomek/zip",
+				{ headers: { "x-access-pin": "4321" } },
+			);
+			await getZip(req, { params: Promise.resolve({ slug: "kasia-i-tomek" }) });
+			expect(updatedGalleryValues).toEqual([{ accessPin: "hashed" }]);
+		});
+
+		it("429 po przekroczeniu 10 błędnych PIN-ach", async () => {
+			mockGalleries[0].accessPin = "4321";
+			const call = () =>
+				getZip(
+					new NextRequest("http://localhost/api/gallery/kasia-i-tomek/zip", {
+						headers: { "x-access-pin": "0000" },
+					}),
+					{ params: Promise.resolve({ slug: "kasia-i-tomek" }) },
+				);
+			for (let i = 0; i < 10; i++) expect((await call()).status).toBe(401);
+			expect((await call()).status).toBe(429);
+		});
+
+		it("galeria z hasłem gościa: ZIP bez sesji gościa zwraca 401", async () => {
+			mockGalleries[0].guestPassword = "haslo";
+			const req = new NextRequest(
+				"http://localhost/api/gallery/kasia-i-tomek/zip",
+			);
+			const res = await getZip(req, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+			expect(res.status).toBe(401);
+		});
+
 		it("powinien zwrócić 404, gdy galeria nie istnieje", async () => {
 			mockGalleries = [];
 			const req = new NextRequest("http://localhost/api/gallery/brak/zip");
@@ -724,27 +770,38 @@ describe("Gallery API Routes", () => {
 			expect(res.status).toBe(200);
 			const cookie = res.headers.get("Set-Cookie");
 			expect(cookie).toContain("wd_guest_kasia-i-tomek=");
-			// Hasło zapisane jawnie (legacy) zostaje przehaszowane po udanym logowaniu
-			expect(mockGuestPasswordUpdates).toHaveLength(1);
-			expect(mockGuestPasswordUpdates[0].guestPassword).toMatch(/^scrypt\$/);
+			// lazy-upgrade: plaintext zastąpiony hashem bcrypt
+			expect(updatedGalleryValues).toEqual([{ guestPassword: "hashed" }]);
 		});
 
-		it("powinien autoryzować gościa dla hasła zapisanego jako scrypt", async () => {
-			mockGalleries[0].guestPassword = hashGuestPassword("haslo_dla_gosci");
+		it("429 po przekroczeniu 10 błędnych hasłach gościa, nawet gdy kolejne jest poprawne", async () => {
+			mockGalleries[0].guestPassword = "haslo_dla_gosci";
+			const call = (password: string) =>
+				authGuest(
+					new NextRequest("http://localhost/api/gallery/kasia-i-tomek/auth", {
+						method: "POST",
+						body: JSON.stringify({ password }),
+					}),
+					{ params: Promise.resolve({ slug: "kasia-i-tomek" }) },
+				);
+			for (let i = 0; i < 10; i++) expect((await call("zle")).status).toBe(401);
+			expect((await call("zle")).status).toBe(429);
+			const res = await call("haslo_dla_gosci");
+			expect(res.status).toBe(429);
+			expect(res.headers.get("Retry-After")).toBeTruthy();
+		});
 
-			const req = new NextRequest(
-				"http://localhost/api/gallery/kasia-i-tomek/auth",
-				{
+		it("powinien autoryzować gościa dla hasła zapisanego jako scrypt (format z #62), bez przehaszowania", async () => {
+			mockGalleries[0].guestPassword = hashGuestPassword("haslo_dla_gosci");
+			const res = await authGuest(
+				new NextRequest("http://localhost/api/gallery/kasia-i-tomek/auth", {
 					method: "POST",
 					body: JSON.stringify({ password: "haslo_dla_gosci" }),
-				},
+				}),
+				{ params: Promise.resolve({ slug: "kasia-i-tomek" }) },
 			);
-			const res = await authGuest(req, {
-				params: Promise.resolve({ slug: "kasia-i-tomek" }),
-			});
-
 			expect(res.status).toBe(200);
-			expect(mockGuestPasswordUpdates).toHaveLength(0);
+			expect(updatedGalleryValues).toHaveLength(0);
 		});
 
 		it("powinien zwrócić 401 jeśli hasło jest niepoprawne", async () => {
