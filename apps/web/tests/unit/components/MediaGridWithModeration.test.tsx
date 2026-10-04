@@ -30,6 +30,17 @@ const sampleMedia: OwnerMediaItem[] = [
 		status: "hidden",
 		createdAt: new Date().toISOString(),
 	},
+	{
+		id: "med-3",
+		uploaderName: "Kuzyn",
+		fileType: "image",
+		originalFileName: "oczekujace.jpg",
+		fileSize: 2048,
+		thumbUrl: "/thumb3.jpg",
+		rawUrl: "/raw3.jpg",
+		status: "pending",
+		createdAt: new Date().toISOString(),
+	},
 ];
 
 describe("MediaGridWithModeration Component", () => {
@@ -42,9 +53,9 @@ describe("MediaGridWithModeration Component", () => {
 			/>,
 		);
 
-		// Wszystkie: widoczny i ukryty element
+		// Wszystkie: widoczny, ukryty i oczekujący element
 		expect(screen.getByText("hiddenOverlay")).toBeInTheDocument();
-		expect(screen.getAllByRole("img")).toHaveLength(2);
+		expect(screen.getAllByRole("img")).toHaveLength(3);
 
 		fireEvent.click(screen.getByText("filterVisible"));
 		expect(screen.queryByText("hiddenOverlay")).not.toBeInTheDocument();
@@ -58,8 +69,11 @@ describe("MediaGridWithModeration Component", () => {
 		expect(screen.getByText("hiddenOverlay")).toBeInTheDocument();
 		expect(screen.getAllByRole("img")).toHaveLength(1);
 
+		fireEvent.click(screen.getByText("filterPending"));
+		expect(screen.getAllByRole("img")).toHaveLength(1);
+
 		fireEvent.click(screen.getByText("filterAll"));
-		expect(screen.getAllByRole("img")).toHaveLength(2);
+		expect(screen.getAllByRole("img")).toHaveLength(3);
 	});
 
 	it("powinien wywołać akcję ukrycia/pokazania zdjęcia oraz usunięcia", () => {
@@ -80,8 +94,8 @@ describe("MediaGridWithModeration Component", () => {
 		expect(onToggleStatusMock).toHaveBeenCalledWith("med-1", "ready");
 
 		// Kliknięcie przełącznika statusu dla drugiego zdjęcia (pokaż)
-		const showBtn = screen.getByTitle("showAction");
-		fireEvent.click(showBtn);
+		const showBtns = screen.getAllByTitle("showAction");
+		fireEvent.click(showBtns[0]);
 		expect(onToggleStatusMock).toHaveBeenCalledWith("med-2", "hidden");
 
 		// Kliknięcie usuwania

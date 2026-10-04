@@ -13,7 +13,7 @@ interface ModerationFilterBarProps {
 	labels: Record<ModerationFilter, string>;
 }
 
-const FILTERS: ModerationFilter[] = ["all", "ready", "hidden"];
+const FILTERS: ModerationFilter[] = ["all", "ready", "hidden", "pending"];
 
 /** Pasek filtrów „wszystkie / widoczne / ukryte" wspólny dla zdjęć i życzeń. */
 export function ModerationFilterBar({

@@ -21,6 +21,12 @@ export const galleries = pgTable("galleries", {
 	isActive: boolean("is_active").notNull().default(true),
 	allowGuestDownloads: boolean("allow_guest_downloads").notNull().default(true),
 	allowVideos: boolean("allow_videos").notNull().default(true),
+	guestPassword: text("guest_password"),
+	isApprovalQueueEnabled: boolean("is_approval_queue_enabled")
+		.notNull()
+		.default(false),
+	allowGuestUploads: boolean("allow_guest_uploads").notNull().default(true),
+	allowGuestViewing: boolean("allow_guest_viewing").notNull().default(true),
 	maxStorageBytes: bigint("max_storage_bytes", { mode: "number" })
 		.notNull()
 		.default(0), // 0 = bez limitu
@@ -151,6 +157,22 @@ export const galleryGdriveExports = pgTable("gallery_gdrive_exports", {
 		.notNull(),
 });
 
+export const galleryBranding = pgTable("gallery_branding", {
+	id: uuid("id").defaultRandom().primaryKey(),
+	galleryId: uuid("gallery_id")
+		.notNull()
+		.unique()
+		.references(() => galleries.id, { onDelete: "cascade" }),
+	logoPath: text("logo_path"),
+	backgroundPath: text("background_path"),
+	createdAt: timestamp("created_at", { withTimezone: true })
+		.defaultNow()
+		.notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true })
+		.defaultNow()
+		.notNull(),
+});
+
 export type Gallery = typeof galleries.$inferSelect;
 export type NewGallery = typeof galleries.$inferInsert;
 export type CardSetting = typeof cardSettings.$inferSelect;
@@ -160,3 +182,5 @@ export type Wish = typeof wishes.$inferSelect;
 export type NewWish = typeof wishes.$inferInsert;
 export type GalleryGdriveExport = typeof galleryGdriveExports.$inferSelect;
 export type NewGalleryGdriveExport = typeof galleryGdriveExports.$inferInsert;
+export type GalleryBranding = typeof galleryBranding.$inferSelect;
+export type NewGalleryBranding = typeof galleryBranding.$inferInsert;

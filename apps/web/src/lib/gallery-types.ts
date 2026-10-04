@@ -17,6 +17,13 @@ export interface GalleryData {
 		primaryColor?: string | null;
 		accentColor?: string | null;
 	} | null;
+	branding?: {
+		logoPath: string | null;
+		backgroundPath: string | null;
+	} | null;
+	allowGuestViewing: boolean;
+	allowGuestUploads: boolean;
+	isApprovalQueueEnabled: boolean;
 }
 
 export interface MediaItemData {

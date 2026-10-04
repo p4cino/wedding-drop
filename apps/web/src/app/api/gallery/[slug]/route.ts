@@ -1,4 +1,4 @@
-import { cardSettings, db, galleries } from "@wedding-drop/db";
+import { cardSettings, db, galleries, galleryBranding } from "@wedding-drop/db";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { DEFAULT_CARD_COLORS } from "@/lib/card-defaults";
@@ -35,6 +35,15 @@ export async function GET(
 
 		const card = cardResult[0];
 
+		// Pobranie ustawień brandingu
+		const brandingResult = await db
+			.select()
+			.from(galleryBranding)
+			.where(eq(galleryBranding.galleryId, gallery.id))
+			.limit(1);
+
+		const branding = brandingResult[0];
+
 		return NextResponse.json({
 			id: gallery.id,
 			slug: gallery.slug,
@@ -50,6 +59,16 @@ export async function GET(
 			// samych, publicznie już czytanych danych co GET .../card/pdf.
 			primaryColor: card?.primaryColor || DEFAULT_CARD_COLORS.primary,
 			accentColor: card?.accentColor || DEFAULT_CARD_COLORS.accent,
+			// Nowe uprawnienia
+			allowGuestViewing: gallery.allowGuestViewing,
+			allowGuestUploads: gallery.allowGuestUploads,
+			isApprovalQueueEnabled: gallery.isApprovalQueueEnabled,
+			branding: branding
+				? {
+						logoPath: branding.logoPath,
+						backgroundPath: branding.backgroundPath,
+					}
+				: null,
 		});
 	} catch (error) {
 		console.error("Błąd pobierania metadanych galerii:", error);

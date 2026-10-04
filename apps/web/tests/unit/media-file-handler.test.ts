@@ -11,11 +11,17 @@ import {
 	it,
 	vi,
 } from "vitest";
-import { generateAdminToken, generateOwnerToken } from "@/lib/auth";
+import {
+	generateAdminToken,
+	generateGuestToken,
+	generateOwnerToken,
+	guestSessionCookieName,
+} from "@/lib/auth";
 import { handleMediaFileRequest } from "@/lib/media-file-handler";
 
 let mockMediaItemStatus: string | null = "ready";
 let mockGallerySlug = "test-slug";
+let mockGuestPassword: null | string = null;
 
 vi.mock("@wedding-drop/db", async (importOriginal) => {
 	const actual = await importOriginal<Record<string, unknown>>();
@@ -32,6 +38,7 @@ vi.mock("@wedding-drop/db", async (importOriginal) => {
 									{
 										status: mockMediaItemStatus,
 										gallerySlug: mockGallerySlug,
+										guestPassword: mockGuestPassword,
 									},
 								];
 							}),
@@ -121,6 +128,7 @@ describe("handleMediaFileRequest", () => {
 	beforeEach(() => {
 		mockMediaItemStatus = "ready";
 		mockGallerySlug = "test-slug";
+		mockGuestPassword = null;
 	});
 
 	it("powinien zignorować zapytania niebędące /media-file/ i zwrócić false", async () => {
@@ -240,6 +248,21 @@ describe("handleMediaFileRequest", () => {
 		expect(res.statusCode).toBe(403);
 	});
 
+	it("powinien zablokować plik ze statusem pending dla niezalogowanego gościa (kod 403)", async () => {
+		mockMediaItemStatus = "pending";
+		const req = createMockReq({
+			url: "/media-file/galleries/test-slug/sample.jpg",
+		});
+		const res = new MockResponse();
+		const handled = await handleMediaFileRequest(
+			req,
+			res as unknown as ServerResponse,
+			testDataDir,
+		);
+		expect(handled).toBe(true);
+		expect(res.statusCode).toBe(403);
+	});
+
 	it("powinien zezwolić na dostęp do pliku ze statusem hidden dla właściciela z tokenem", async () => {
 		mockMediaItemStatus = "hidden";
 		const ownerToken = generateOwnerToken("test-slug");
@@ -289,5 +312,42 @@ describe("handleMediaFileRequest", () => {
 		);
 		expect(handled).toBe(true);
 		expect(res.statusCode).toBe(404);
+	});
+
+	it("powinien zablokować plik ze statusem ready, jeśli galeria wymaga hasła gościa, ale gość nie jest zalogowany", async () => {
+		mockMediaItemStatus = "ready";
+		mockGuestPassword = "secret-password";
+		const req = createMockReq({
+			url: "/media-file/galleries/test-slug/sample.jpg",
+		});
+		const res = new MockResponse();
+		const handled = await handleMediaFileRequest(
+			req,
+			res as unknown as ServerResponse,
+			testDataDir,
+		);
+		expect(handled).toBe(true);
+		expect(res.statusCode).toBe(403);
+	});
+
+	it("powinien zezwolić na dostęp do pliku ze statusem ready z hasłem gościa, jeśli gość ma poprawny token", async () => {
+		mockMediaItemStatus = "ready";
+		mockGuestPassword = "secret-password";
+		const guestToken = generateGuestToken("test-slug");
+		const req = createMockReq({
+			url: "/media-file/galleries/test-slug/sample.jpg",
+			headers: {
+				cookie: `${guestSessionCookieName("test-slug")}=${encodeURIComponent(guestToken)}`,
+			},
+		});
+		const res = new MockResponse();
+		const handled = await handleMediaFileRequest(
+			req,
+			res as unknown as ServerResponse,
+			testDataDir,
+		);
+		expect(handled).toBe(true);
+		await waitForResponse(res);
+		expect(res.statusCode).toBe(200);
 	});
 });

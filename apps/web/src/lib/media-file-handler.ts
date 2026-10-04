@@ -4,8 +4,10 @@ import path from "node:path";
 import { db, galleries, mediaItems } from "@wedding-drop/db";
 import { eq, or } from "drizzle-orm";
 import {
+	guestSessionCookieName,
 	ownerSessionCookieName,
 	verifyAdminToken,
+	verifyGuestToken,
 	verifyOwnerToken,
 } from "./auth";
 
@@ -126,6 +128,7 @@ export async function handleMediaFileRequest(
 			.select({
 				status: mediaItems.status,
 				gallerySlug: galleries.slug,
+				guestPassword: galleries.guestPassword,
 			})
 			.from(mediaItems)
 			.innerJoin(galleries, eq(mediaItems.galleryId, galleries.id))
@@ -144,12 +147,45 @@ export async function handleMediaFileRequest(
 				res.end("Not Found");
 				return true;
 			}
-			if (item.status === "hidden") {
+			if (item.status === "hidden" || item.status === "pending") {
 				const isAuthorized = checkIsAuthorizedForHidden(req, item.gallerySlug);
 				if (!isAuthorized) {
 					res.writeHead(403, { "Content-Type": "text/plain" });
-					res.end("Forbidden: Hidden media requires authorization");
+					res.end(
+						`Forbidden: ${item.status === "hidden" ? "Hidden" : "Pending"} media requires authorization`,
+					);
 					return true;
+				}
+			} else if (item.guestPassword) {
+				// Jeśli plik nie jest ukryty (status 'ready' / 'pending'), ale galeria jest chroniona hasłem
+				// Musimy sprawdzić, czy użytkownik ma aktywną sesję gościa (lub jest adminem/ownerem)
+				const isAuthorizedForHidden = checkIsAuthorizedForHidden(
+					req,
+					item.gallerySlug,
+				);
+				if (!isAuthorizedForHidden) {
+					const cookieHeader = req.headers.cookie;
+					let isGuestAuthorized = false;
+					if (cookieHeader) {
+						const cookieName = guestSessionCookieName(item.gallerySlug);
+						const match = cookieHeader.match(
+							new RegExp(`(?:^|;\\s*)${cookieName}=([^;]*)`),
+						);
+						if (
+							match &&
+							verifyGuestToken(decodeURIComponent(match[1]), item.gallerySlug)
+						) {
+							isGuestAuthorized = true;
+						}
+					}
+
+					if (!isGuestAuthorized) {
+						res.writeHead(403, { "Content-Type": "text/plain" });
+						res.end(
+							"Forbidden: Protected gallery requires guest authorization",
+						);
+						return true;
+					}
 				}
 			}
 		}

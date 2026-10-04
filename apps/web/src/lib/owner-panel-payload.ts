@@ -2,6 +2,7 @@ import {
 	cardSettings,
 	db,
 	type galleries,
+	galleryBranding,
 	type galleryGdriveExports,
 	mediaItems,
 } from "@wedding-drop/db";
@@ -34,6 +35,12 @@ export async function buildOwnerPanelPayload(
 		.where(eq(cardSettings.galleryId, gallery.id))
 		.limit(1);
 
+	const branding = await db
+		.select()
+		.from(galleryBranding)
+		.where(eq(galleryBranding.galleryId, gallery.id))
+		.limit(1);
+
 	return {
 		success: true,
 		gallery: {
@@ -43,12 +50,21 @@ export async function buildOwnerPanelPayload(
 			weddingDate: gallery.weddingDate,
 			allowGuestDownloads: gallery.allowGuestDownloads,
 			allowVideos: gallery.allowVideos,
+			allowGuestUploads: gallery.allowGuestUploads,
+			allowGuestViewing: gallery.allowGuestViewing,
+			isApprovalQueueEnabled: gallery.isApprovalQueueEnabled,
 			hasGDrive: Boolean(gdrive?.refreshToken),
 			gdriveAccountEmail: gdrive?.accountEmail,
 			gdriveExportStatus: gdrive?.exportStatus,
 			gdriveExportProgress: gdrive?.exportProgress || null,
 			gdriveExportedAt: gdrive?.exportedAt,
 			gdriveRootFolderId: gdrive?.rootFolderId,
+			branding: branding[0]
+				? {
+						logoPath: branding[0].logoPath,
+						backgroundPath: branding[0].backgroundPath,
+					}
+				: null,
 		},
 		stats: stats[0] || { totalFiles: 0, totalBytes: 0 },
 		cardSettings: card[0] || null,

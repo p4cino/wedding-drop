@@ -561,4 +561,93 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 		// Czwarty gość (Nieznajomy Gość, 1 materiał) nie mieści się na podium TOP 3
 		await expect(leaderboard.getByText("Nieznajomy Gość")).not.toBeVisible();
 	});
+
+	test("UC10: powinien ukryć zdjęcia i wyświetlić komunikat o trybie prywatnym, jeśli galeria ma allowGuestViewing ustawione na false", async ({
+		page,
+	}) => {
+		// Mock dla /api/gallery/[slug] zwracający allowGuestViewing: false
+		await page.route("**/api/gallery/kasia-i-tomek", async (route) => {
+			if (route.request().method() === "GET") {
+				await route.fulfill({
+					status: 200,
+					contentType: "application/json",
+					body: JSON.stringify({
+						id: "gal-1",
+						slug: "kasia-i-tomek",
+						coupleNames: "Kasia & Tomek",
+						weddingDate: "2026-09-12",
+						allowGuestDownloads: true,
+						allowGuestViewing: false, // <-- Kluczowa zmiana
+						allowVideos: true,
+					}),
+				});
+			} else {
+				await route.continue();
+			}
+		});
+
+		// Mock dla /api/gallery/[slug]/media zwracający pustą tablicę
+		await page.route("**/api/gallery/kasia-i-tomek/media", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({ media: [] }),
+			});
+		});
+
+		await page.goto("/g/kasia-i-tomek");
+
+		// Sprawdzamy, czy widoczny jest komunikat o trybie prywatnym
+		await expect(
+			page.getByText(
+				"Galeria jest w trybie prywatnym. Możesz swobodnie dodawać zdjęcia – zobaczy je tylko Para Młoda.",
+			),
+		).toBeVisible();
+
+		// Sprawdzamy, czy siatka zdjęć i brak zdjęć ("Brak zdjęć w tej galerii") SĄ NIEWIDOCZNE
+		await expect(page.getByText("Brak zdjęć w tej galerii")).not.toBeVisible();
+
+		// Ranking najaktywniejszych gości też powinien być niewidoczny w trybie prywatnym
+		await expect(
+			page.getByRole("region", { name: "Najaktywniejsi goście" }),
+		).not.toBeVisible();
+
+		// Pływający przycisk dodawania zdjęć (FAB) MUSI nadal być widoczny i aktywny
+		const uploadBtn = page.getByRole("button", {
+			name: /Dodaj zdjęcia i filmy/i,
+		});
+		await expect(uploadBtn).toBeVisible();
+	});
+
+	test("UC11: powinien ukryć przycisk dodawania zdjęć, jeśli galeria ma allowGuestUploads ustawione na false", async ({
+		page,
+	}) => {
+		await page.route("**/api/gallery/kasia-i-tomek", async (route) => {
+			if (route.request().method() === "GET") {
+				await route.fulfill({
+					status: 200,
+					contentType: "application/json",
+					body: JSON.stringify({
+						id: "gal-1",
+						slug: "kasia-i-tomek",
+						coupleNames: "Kasia & Tomek",
+						weddingDate: "2026-09-12",
+						allowGuestDownloads: true,
+						allowGuestViewing: true,
+						allowGuestUploads: false, // <-- Kluczowa zmiana
+						allowVideos: true,
+					}),
+				});
+			} else {
+				await route.continue();
+			}
+		});
+
+		await page.goto("/g/kasia-i-tomek");
+
+		const uploadBtn = page.getByRole("button", {
+			name: /Dodaj zdjęcia i filmy/i,
+		});
+		await expect(uploadBtn).not.toBeVisible();
+	});
 });

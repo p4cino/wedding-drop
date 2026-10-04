@@ -1,6 +1,10 @@
+import { compare } from "@node-rs/bcrypt";
 import type { MediaItem, Wish } from "@wedding-drop/db";
+import { db, galleries } from "@wedding-drop/db";
 import { sseBus } from "@wedding-drop/media";
+import { eq } from "drizzle-orm";
 import type { NextRequest } from "next/server";
+import { readOwnerToken, verifyAdminToken, verifyOwnerToken } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +13,41 @@ export async function GET(
 	{ params }: { params: Promise<{ slug: string }> },
 ) {
 	const { slug } = await params;
+
+	const galleryResult = await db
+		.select()
+		.from(galleries)
+		.where(eq(galleries.slug, slug))
+		.limit(1);
+
+	if (!galleryResult.length) {
+		return new Response("Not Found", { status: 404 });
+	}
+
+	const gallery = galleryResult[0];
+	let canViewHidden = false;
+
+	const ownerToken = readOwnerToken(req, slug);
+	if (ownerToken && verifyOwnerToken(ownerToken, slug)) {
+		canViewHidden = true;
+	}
+	const ownerPassword = req.headers.get("x-owner-password");
+	if (
+		!canViewHidden &&
+		ownerPassword &&
+		(await compare(ownerPassword, gallery.ownerPasswordHash))
+	) {
+		canViewHidden = true;
+	}
+	const authHeader = req.headers.get("authorization");
+	const bearerToken =
+		authHeader && /^Bearer\s+/i.test(authHeader)
+			? authHeader.replace(/^Bearer\s+/i, "")
+			: null;
+	const adminToken = req.headers.get("x-admin-token") || bearerToken;
+	if (!canViewHidden && adminToken && verifyAdminToken(adminToken)) {
+		canViewHidden = true;
+	}
 
 	const stream = new ReadableStream({
 		start(controller) {
@@ -110,9 +149,15 @@ export async function GET(
 				}
 			};
 
-			sseBus.on(eventName, onNewMedia);
-			sseBus.on(updateEventName, onMediaUpdated);
-			sseBus.on(gdriveEventName, onGDriveProgress);
+			if (gallery.allowGuestViewing || canViewHidden) {
+				sseBus.on(eventName, onNewMedia);
+				sseBus.on(updateEventName, onMediaUpdated);
+			}
+
+			if (canViewHidden) {
+				sseBus.on(gdriveEventName, onGDriveProgress);
+			}
+
 			sseBus.on(newWishEventName, onNewWish);
 			sseBus.on(wishUpdatedEventName, onWishUpdated);
 
@@ -128,9 +173,13 @@ export async function GET(
 			// Sprzątanie po rozłączeniu gościa
 			req.signal.addEventListener("abort", () => {
 				clearInterval(pingInterval);
-				sseBus.off(eventName, onNewMedia);
-				sseBus.off(updateEventName, onMediaUpdated);
-				sseBus.off(gdriveEventName, onGDriveProgress);
+				if (gallery.allowGuestViewing || canViewHidden) {
+					sseBus.off(eventName, onNewMedia);
+					sseBus.off(updateEventName, onMediaUpdated);
+				}
+				if (canViewHidden) {
+					sseBus.off(gdriveEventName, onGDriveProgress);
+				}
 				sseBus.off(newWishEventName, onNewWish);
 				sseBus.off(wishUpdatedEventName, onWishUpdated);
 				try {

@@ -71,6 +71,9 @@ export const WishesModeration: React.FC<WishesModerationProps> = ({
 						hidden: t("filterHidden", {
 							count: countByStatus(wishesList, "hidden"),
 						}),
+						pending: t("filterPending", {
+							count: countByStatus(wishesList, "pending"),
+						}),
 					}}
 				/>
 			</div>

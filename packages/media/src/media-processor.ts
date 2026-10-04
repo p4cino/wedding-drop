@@ -113,7 +113,10 @@ async function processMediaTask(task: ProcessTask) {
 				width: mediaProps.width,
 				height: mediaProps.height,
 				duration: mediaProps.duration,
-				status: "ready",
+				status:
+					gallery.isApprovalQueueEnabled && source !== "photographer"
+						? "pending"
+						: "ready",
 			})
 			.returning();
 

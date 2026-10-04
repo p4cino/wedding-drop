@@ -1,6 +1,7 @@
 import { sseBus } from "@wedding-drop/media";
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { POST as authGuest } from "@/app/api/gallery/[slug]/auth/route";
 import { GET as getPdf } from "@/app/api/gallery/[slug]/card/pdf/route";
 import { GET as getLive } from "@/app/api/gallery/[slug]/live/route";
 import { GET as getMedia } from "@/app/api/gallery/[slug]/media/route";
@@ -105,6 +106,9 @@ describe("Gallery API Routes", () => {
 				isActive: true,
 				allowGuestDownloads: true,
 				allowVideos: true,
+				allowGuestUploads: true,
+				allowGuestViewing: true,
+				isApprovalQueueEnabled: false,
 				accessPin: null,
 			},
 		];
@@ -660,6 +664,61 @@ describe("Gallery API Routes", () => {
 				// 3. Rozłączenie - trigger abort
 				abortController.abort();
 			}
+		});
+	});
+
+	describe("POST /api/gallery/[slug]/auth", () => {
+		it("powinien autoryzować gościa jeśli hasło jest poprawne", async () => {
+			mockGalleries[0].guestPassword = "haslo_dla_gosci";
+
+			const req = new NextRequest(
+				"http://localhost/api/gallery/kasia-i-tomek/auth",
+				{
+					method: "POST",
+					body: JSON.stringify({ password: "haslo_dla_gosci" }),
+				},
+			);
+			const res = await authGuest(req, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+
+			expect(res.status).toBe(200);
+			const cookie = res.headers.get("Set-Cookie");
+			expect(cookie).toContain("wd_guest_kasia-i-tomek=");
+		});
+
+		it("powinien zwrócić 401 jeśli hasło jest niepoprawne", async () => {
+			mockGalleries[0].guestPassword = "haslo_dla_gosci";
+
+			const req = new NextRequest(
+				"http://localhost/api/gallery/kasia-i-tomek/auth",
+				{
+					method: "POST",
+					body: JSON.stringify({ password: "zle_haslo" }),
+				},
+			);
+			const res = await authGuest(req, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+
+			expect(res.status).toBe(401);
+		});
+
+		it("powinien zwrócić 400 jeśli galeria nie wymaga hasła", async () => {
+			mockGalleries[0].guestPassword = null;
+
+			const req = new NextRequest(
+				"http://localhost/api/gallery/kasia-i-tomek/auth",
+				{
+					method: "POST",
+					body: JSON.stringify({ password: "haslo_dla_gosci" }),
+				},
+			);
+			const res = await authGuest(req, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+
+			expect(res.status).toBe(400);
 		});
 	});
 });

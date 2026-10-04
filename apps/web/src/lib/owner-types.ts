@@ -33,12 +33,19 @@ export interface OwnerPanelGallery {
 	weddingDate?: string;
 	allowGuestDownloads?: boolean;
 	allowVideos?: boolean;
+	allowGuestUploads?: boolean;
+	allowGuestViewing?: boolean;
+	isApprovalQueueEnabled?: boolean;
 	hasGDrive?: boolean;
 	gdriveAccountEmail?: string | null;
 	gdriveExportStatus?: GDriveExportStatus | null;
 	gdriveExportProgress?: GDriveProgress | null;
 	gdriveExportedAt?: string | null;
 	gdriveRootFolderId?: string | null;
+	branding?: {
+		logoPath: string | null;
+		backgroundPath: string | null;
+	} | null;
 }
 
 /** Ładunek panelu właściciela (wspólny dla `POST .../auth` i `GET .../session`). */
