@@ -4,7 +4,6 @@ import { Camera, CheckCircle2, Loader2, Upload, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { css, cx } from "styled-system/css";
-import CameraCapture from "@/components/CameraCapture";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import FilePickerDropzone from "@/components/upload/FilePickerDropzone";
@@ -12,7 +11,6 @@ import UploadFileRow from "@/components/upload/UploadFileRow";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { useUploadQueue } from "@/hooks/useUploadQueue";
-import { isCameraSupported } from "@/lib/photobooth";
 
 interface UploaderDrawerProps {
 	gallerySlug: string;
@@ -34,15 +32,12 @@ export default function UploaderDrawer({
 	accentColor,
 }: UploaderDrawerProps) {
 	const [uploaderName, setUploaderName] = useState("");
-	const [isCameraMode, setIsCameraMode] = useState(false);
 	const t = useTranslations("GuestGallery");
 	const queue = useUploadQueue({
 		errorMessage: t("uploadError"),
 		onFinished: () => onUploadSuccess?.(),
 	});
 	const { isUploading, clear: clearQueue } = queue;
-
-	const cameraSupported = isCameraSupported();
 
 	const handleClose = () => {
 		if (isUploading) return;
@@ -53,7 +48,6 @@ export default function UploaderDrawer({
 	useEffect(() => {
 		if (!isOpen) {
 			clearQueue();
-			setIsCameraMode(false);
 		}
 	}, [isOpen, clearQueue]);
 
@@ -63,13 +57,6 @@ export default function UploaderDrawer({
 	useFocusTrap(dialogRef, isOpen);
 
 	if (!isOpen) return null;
-
-	// Zdjęcie zrobione w przeglądarce (`CameraCapture`) trafia do dokładnie tej
-	// samej kolejki co plik wybrany ręcznie z dysku — zero rozgałęzień w logice wysyłki.
-	const handleCameraCapture = (file: File) => {
-		queue.addFiles([file]);
-		setIsCameraMode(false);
-	};
 
 	const startUpload = () => {
 		const name = uploaderName.trim() || t("defaultUploaderName");
@@ -213,50 +200,59 @@ export default function UploaderDrawer({
 						/>
 					</div>
 
-					{/* Strefa wyboru plików / aparat w przeglądarce */}
-					{isCameraMode ? (
-						<CameraCapture
-							primaryColor={primaryColor}
-							accentColor={accentColor}
-							disabled={isUploading}
-							onCapture={handleCameraCapture}
-							onCancel={() => setIsCameraMode(false)}
-						/>
-					) : (
-						<>
-							<FilePickerDropzone
-								disabled={isUploading}
-								title={t("dropzoneTitle")}
-								hint={t("dropzoneHint")}
-								onFiles={queue.addFiles}
-							/>
+					{/* Strefa wyboru plików / aparat natywny */}
+					<FilePickerDropzone
+						disabled={isUploading}
+						title={t("dropzoneTitle")}
+						hint={t("dropzoneHint")}
+						onFiles={queue.addFiles}
+					/>
 
-							{cameraSupported && (
-								<Button
-									type="button"
-									variant="outline"
-									disabled={isUploading}
-									onClick={() => setIsCameraMode(true)}
-									aria-label={t("cameraOptionBtn")}
-									className={css({
-										w: "full",
-										py: "2.5",
-										borderRadius: "xl",
-										display: "flex",
-										alignItems: "center",
-										justifyContent: "center",
-										gap: "2",
-									})}
-								>
-									<Camera
-										className={css({ w: "4", h: "4" })}
-										aria-hidden="true"
-									/>
-									{t("cameraOptionBtn")}
-								</Button>
-							)}
-						</>
-					)}
+					<Button
+						type="button"
+						variant="outline"
+						disabled={isUploading}
+						onClick={() =>
+							document.getElementById("native-camera-input")?.click()
+						}
+						aria-label={t("cameraOptionBtn")}
+						className={css({
+							w: "full",
+							py: "2.5",
+							borderRadius: "xl",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							gap: "2",
+							position: "relative",
+							overflow: "hidden",
+						})}
+					>
+						<Camera className={css({ w: "4", h: "4" })} aria-hidden="true" />
+						{t("cameraOptionBtn")}
+					</Button>
+					<input
+						id="native-camera-input"
+						type="file"
+						accept="image/*,video/*"
+						capture="environment"
+						onChange={(e) => {
+							if (e.target.files?.length) {
+								queue.addFiles(Array.from(e.target.files));
+							}
+							e.target.value = "";
+						}}
+						className={css({
+							position: "absolute",
+							width: "1px",
+							height: "1px",
+							padding: "0",
+							margin: "-1px",
+							overflow: "hidden",
+							clip: "rect(0, 0, 0, 0)",
+							border: "0",
+						})}
+					/>
 
 					{justFinished && files.length === 0 && (
 						<p

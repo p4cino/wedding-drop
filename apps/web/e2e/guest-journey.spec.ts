@@ -336,102 +336,38 @@ test.describe("Ścieżka Gościa Weselnego (Mobile & Desktop)", () => {
 		);
 	});
 
-	test("UC8: powinien pozwolić zrobić zdjęcie aparatem w przeglądarce (photobooth) i wysłać je do galerii tym samym potokiem co zwykły upload", async ({
+	test("UC8: powinien pozwolić dodać zdjęcie z aparatu (przez input capture) i wysłać je do galerii", async ({
 		page,
 	}) => {
-		// Symulacja getUserMedia fałszywym strumieniem opartym o canvas (bez realnej
-		// kamery/uprawnień) — działa identycznie w Chromium i WebKit, bo canvas.captureStream()
-		// jest standardowym API HTML5, a nie sztuczką specyficzną dla jednej przeglądarki.
-		await page.addInitScript(() => {
-			const canvas = document.createElement("canvas");
-			canvas.width = 320;
-			canvas.height = 240;
-			const ctx = canvas.getContext("2d");
-			const paint = () => {
-				if (ctx) {
-					ctx.fillStyle = "goldenrod";
-					ctx.fillRect(0, 0, canvas.width, canvas.height);
-				}
-				requestAnimationFrame(paint);
-			};
-			paint();
-
-			let fakeStream: unknown;
-			const canvasWithCapture = canvas as unknown as {
-				captureStream?: (fps: number) => unknown;
-			};
-			if (typeof canvasWithCapture.captureStream === "function") {
-				fakeStream = canvasWithCapture.captureStream(15);
-			} else {
-				const track = {
-					kind: "video",
-					id: "fake-video-track",
-					label: "Fake Camera",
-					enabled: true,
-					muted: false,
-					readyState: "live",
-					stop: () => {},
-					getSettings: () => ({ width: 320, height: 240 }),
-					getCapabilities: () => ({}),
-					applyConstraints: () => Promise.resolve(),
-					addEventListener: () => {},
-					removeEventListener: () => {},
-					dispatchEvent: () => true,
-				};
-				fakeStream = {
-					getTracks: () => [track],
-					getVideoTracks: () => [track],
-					getAudioTracks: () => [],
-					addTrack: () => {},
-					removeTrack: () => {},
-				};
-			}
-
-			const mediaDevicesStub = {
-				getUserMedia: () => Promise.resolve(fakeStream),
-			};
-			Object.defineProperty(navigator, "mediaDevices", {
-				configurable: true,
-				get: () => mediaDevicesStub,
-			});
-			Object.defineProperty(HTMLVideoElement.prototype, "videoWidth", {
-				configurable: true,
-				get: () => 320,
-			});
-			Object.defineProperty(HTMLVideoElement.prototype, "videoHeight", {
-				configurable: true,
-				get: () => 240,
-			});
-		});
-
 		await page.goto("/g/kasia-i-tomek");
 
-		// Otwarcie drawera i przełączenie na tryb aparatu w przeglądarce
+		// Otwarcie drawera
 		await page.getByRole("button", { name: /Dodaj zdjęcia i filmy/i }).click();
-		await page.getByRole("button", { name: "Zrób zdjęcie" }).click();
-
-		// Podgląd na żywo z (fałszywej) kamery + gotowy przycisk spustu migawki
-		const shutterBtn = page.getByRole("button", { name: "Zrób zdjęcie" });
-		await expect(shutterBtn).toBeEnabled({ timeout: 15000 });
-		// Krótkie oczekiwanie na załadowanie faktycznych wymiarów strumienia wideo
-		// (video.videoWidth/videoHeight) zanim klatka zostanie zrzucona na canvas
-		await page.waitForTimeout(500);
 
 		// Podpis gościa dla zrobionego zdjęcia
 		const nameInput = page.getByPlaceholder("np. Ciocia Kasia i Wujek Michał");
 		await nameInput.fill("Photobooth E2E Gość");
 
-		// Spust migawki -> kompozycja canvas + ramka motywu -> plik JPEG w kolejce
-		await shutterBtn.click();
-		const queuedFileName = page.getByText(/photobooth_\d+\.jpg/);
-		await expect(queuedFileName).toBeVisible();
-		// Dokładna, unikalna (znacznik czasu) nazwa pliku z tego konkretnego przebiegu testu —
-		// unika niejednoznaczności strict-mode, gdy w tej samej, współdzielonej galerii
-		// zostały już wcześniej zdjęcia z photobooth z innych przebiegów/profili Playwrighta.
-		const exactFileName = (await queuedFileName.textContent())?.trim();
-		expect(exactFileName).toMatch(/^photobooth_\d+\.jpg$/);
+		// Symulacja zrobienia zdjęcia z aparatu
+		// (Playwright nie otwiera natywnego UI aparatu, po prostu ustawiamy plik w ukrytym input#native-camera-input)
+		const timestamp = Date.now();
+		const exactFileName = `photobooth_${timestamp}.jpg`;
 
-		// Wysyłka dokładnie tym samym przyciskiem/potokiem TUS co zwykły upload
+		// Prawdziwy, minimalny obrazek JPEG 1x1 px zakodowany w Base64
+		// (aby Sharp na backendzie poprawnie przetworzył miniaturkę bez wywalania błędu Vips)
+		const b64Jpeg =
+			"/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=";
+		await page.locator("input#native-camera-input").setInputFiles({
+			name: exactFileName,
+			mimeType: "image/jpeg",
+			buffer: Buffer.from(b64Jpeg, "base64"),
+		});
+
+		// Plik w kolejce
+		const queuedFileName = page.getByText(exactFileName);
+		await expect(queuedFileName).toBeVisible();
+
+		// Wysyłka dokładnie tym samym potokiem TUS co zwykły upload
 		await page.getByRole("button", { name: /Wyślij do galerii/i }).click();
 		await expect(page.getByText("Gotowe, wróć do galerii")).toBeVisible({
 			timeout: 30000,
