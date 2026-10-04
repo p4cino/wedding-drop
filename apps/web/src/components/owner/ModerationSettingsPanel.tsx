@@ -31,6 +31,57 @@ export const ModerationSettingsPanel: React.FC<
 	const [guestPassword, setGuestPassword] = useState("");
 	const [isSaving, setIsSaving] = useState(false);
 
+	const SettingToggle = ({
+		icon: Icon,
+		label,
+		hint,
+		checked,
+		onChange,
+	}: {
+		icon: React.ElementType;
+		label: string;
+		hint: string;
+		checked: boolean;
+		onChange: (val: boolean) => void;
+	}) => (
+		<label
+			className={css({
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "space-between",
+				cursor: "pointer",
+				p: "4",
+				borderWidth: "1px",
+				borderColor: "slate.200",
+				borderRadius: "xl",
+				transition: "border-color 0.2s ease",
+				_hover: { borderColor: "wedding.gold" },
+			})}
+		>
+			<div className={css({ display: "flex", alignItems: "center", gap: "3" })}>
+				<Icon className={css({ w: "4", h: "4", color: "slate.400" })} />
+				<div>
+					<p
+						className={css({
+							fontSize: "sm",
+							fontWeight: "medium",
+							color: "slate.900",
+						})}
+					>
+						{label}
+					</p>
+					<p className={css({ fontSize: "xs", color: "slate.500" })}>{hint}</p>
+				</div>
+			</div>
+			<input
+				type="checkbox"
+				checked={checked}
+				onChange={(e) => onChange(e.target.checked)}
+				className={css({ w: "4", h: "4", accentColor: "wedding.gold" })}
+			/>
+		</label>
+	);
+
 	const handleSave = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setIsSaving(true);
@@ -100,160 +151,36 @@ export const ModerationSettingsPanel: React.FC<
 						gap: "4",
 					})}
 				>
-					{/* allowGuestUploads Toggle */}
-					<label
-						className={css({
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "space-between",
-							cursor: "pointer",
-							p: "4",
-							borderWidth: "1px",
-							borderColor: "slate.200",
-							borderRadius: "xl",
-							transition: "border-color 0.2s ease",
-							_hover: { borderColor: "wedding.gold" },
-						})}
-					>
-						<div
-							className={css({
-								display: "flex",
-								alignItems: "center",
-								gap: "3",
-							})}
-						>
-							<Upload className={css({ w: "4", h: "4", color: "slate.400" })} />
-							<div>
-								<p
-									className={css({
-										fontSize: "sm",
-										fontWeight: "medium",
-										color: "slate.900",
-									})}
-								>
-									{t("allowGuestUploadsLabel")}
-								</p>
-								<p className={css({ fontSize: "xs", color: "slate.500" })}>
-									{t("allowGuestUploadsHint")}
-								</p>
-							</div>
-						</div>
-						<input
-							type="checkbox"
-							checked={localSettings.allowGuestUploads}
-							onChange={(e) =>
-								setLocalSettings({
-									...localSettings,
-									allowGuestUploads: e.target.checked,
-								})
-							}
-							className={css({ w: "4", h: "4", accentColor: "wedding.gold" })}
-						/>
-					</label>
-
-					{/* allowGuestViewing Toggle */}
-					<label
-						className={css({
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "space-between",
-							cursor: "pointer",
-							p: "4",
-							borderWidth: "1px",
-							borderColor: "slate.200",
-							borderRadius: "xl",
-							transition: "border-color 0.2s ease",
-							_hover: { borderColor: "wedding.gold" },
-						})}
-					>
-						<div
-							className={css({
-								display: "flex",
-								alignItems: "center",
-								gap: "3",
-							})}
-						>
-							<Eye className={css({ w: "4", h: "4", color: "slate.400" })} />
-							<div>
-								<p
-									className={css({
-										fontSize: "sm",
-										fontWeight: "medium",
-										color: "slate.900",
-									})}
-								>
-									{t("allowGuestViewingLabel")}
-								</p>
-								<p className={css({ fontSize: "xs", color: "slate.500" })}>
-									{t("allowGuestViewingHint")}
-								</p>
-							</div>
-						</div>
-						<input
-							type="checkbox"
-							checked={localSettings.allowGuestViewing}
-							onChange={(e) =>
-								setLocalSettings({
-									...localSettings,
-									allowGuestViewing: e.target.checked,
-								})
-							}
-							className={css({ w: "4", h: "4", accentColor: "wedding.gold" })}
-						/>
-					</label>
-
-					{/* isApprovalQueueEnabled Toggle */}
-					<label
-						className={css({
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "space-between",
-							cursor: "pointer",
-							p: "4",
-							borderWidth: "1px",
-							borderColor: "slate.200",
-							borderRadius: "xl",
-							transition: "border-color 0.2s ease",
-							_hover: { borderColor: "wedding.gold" },
-						})}
-					>
-						<div
-							className={css({
-								display: "flex",
-								alignItems: "center",
-								gap: "3",
-							})}
-						>
-							<ShieldCheck
-								className={css({ w: "4", h: "4", color: "slate.400" })}
-							/>
-							<div>
-								<p
-									className={css({
-										fontSize: "sm",
-										fontWeight: "medium",
-										color: "slate.900",
-									})}
-								>
-									{t("isApprovalQueueEnabledLabel")}
-								</p>
-								<p className={css({ fontSize: "xs", color: "slate.500" })}>
-									{t("isApprovalQueueEnabledHint")}
-								</p>
-							</div>
-						</div>
-						<input
-							type="checkbox"
-							checked={localSettings.isApprovalQueueEnabled}
-							onChange={(e) =>
-								setLocalSettings({
-									...localSettings,
-									isApprovalQueueEnabled: e.target.checked,
-								})
-							}
-							className={css({ w: "4", h: "4", accentColor: "wedding.gold" })}
-						/>
-					</label>
+					<SettingToggle
+						icon={Upload}
+						label={t("allowGuestUploadsLabel")}
+						hint={t("allowGuestUploadsHint")}
+						checked={localSettings.allowGuestUploads ?? false}
+						onChange={(checked) =>
+							setLocalSettings({ ...localSettings, allowGuestUploads: checked })
+						}
+					/>
+					<SettingToggle
+						icon={Eye}
+						label={t("allowGuestViewingLabel")}
+						hint={t("allowGuestViewingHint")}
+						checked={localSettings.allowGuestViewing ?? false}
+						onChange={(checked) =>
+							setLocalSettings({ ...localSettings, allowGuestViewing: checked })
+						}
+					/>
+					<SettingToggle
+						icon={ShieldCheck}
+						label={t("isApprovalQueueEnabledLabel")}
+						hint={t("isApprovalQueueEnabledHint")}
+						checked={localSettings.isApprovalQueueEnabled ?? false}
+						onChange={(checked) =>
+							setLocalSettings({
+								...localSettings,
+								isApprovalQueueEnabled: checked,
+							})
+						}
+					/>
 
 					{/* Guest Password Input */}
 					<div
