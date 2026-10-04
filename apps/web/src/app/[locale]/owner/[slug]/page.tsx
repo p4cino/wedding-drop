@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { css } from "styled-system/css";
 import { GDriveBackupCard } from "@/components/owner/GDriveBackupCard";
 import { GDriveExportModal } from "@/components/owner/GDriveExportModal";
 import {
@@ -341,7 +342,9 @@ export default function OwnerDashboardPage() {
 	const videosCount = mediaList.filter((m) => m.fileType === "video").length;
 
 	return (
-		<div className="min-h-screen bg-[#FAF8F5] pb-20">
+		<div
+			className={css({ minH: "100vh", backgroundColor: "#FAF8F5", pb: "20" })}
+		>
 			<Toast
 				toast={toast}
 				closeLabel={t("closeToast")}
@@ -355,7 +358,17 @@ export default function OwnerDashboardPage() {
 				onLogout={handleLogout}
 			/>
 
-			<main className="max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-8">
+			<main
+				className={css({
+					maxW: "7xl",
+					mx: "auto",
+					px: { base: "4", sm: "8" },
+					py: "8",
+					display: "flex",
+					flexDirection: "column",
+					gap: "8",
+				})}
+			>
 				<OwnerStatsGrid
 					imagesCount={imagesCount}
 					videosCount={videosCount}

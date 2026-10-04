@@ -5,6 +5,7 @@ import { Plus, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
+import { css } from "styled-system/css";
 import { AdminLoginForm } from "@/components/admin/AdminLoginForm";
 import { AdminStats } from "@/components/admin/AdminStats";
 import {
@@ -131,17 +132,57 @@ export default function AdminDashboardPage() {
 	}
 
 	return (
-		<div className="min-h-screen bg-[#FAF8F5] pb-20">
-			<header className="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-30 flex items-center justify-between">
-				<div className="flex items-center gap-3">
-					<div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-white">
-						<ShieldCheck className="w-5 h-5" aria-hidden="true" />
+		<div
+			className={css({ minH: "100vh", backgroundColor: "#FAF8F5", pb: "20" })}
+		>
+			<header
+				className={css({
+					backgroundColor: "white",
+					borderBottomWidth: "1px",
+					borderBottomColor: "slate.200",
+					px: "6",
+					py: "4",
+					position: "sticky",
+					top: "0",
+					zIndex: 30,
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "space-between",
+				})}
+			>
+				<div
+					className={css({ display: "flex", alignItems: "center", gap: "3" })}
+				>
+					<div
+						className={css({
+							w: "9",
+							h: "9",
+							borderRadius: "xl",
+							backgroundColor: "slate.900",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							color: "white",
+						})}
+					>
+						<ShieldCheck
+							className={css({ w: "5", h: "5" })}
+							aria-hidden="true"
+						/>
 					</div>
 					<div>
-						<h1 className="font-bold text-slate-900 text-base">
+						<h1
+							className={css({
+								fontWeight: "bold",
+								color: "slate.900",
+								fontSize: "base",
+							})}
+						>
 							{t("navTitle")}
 						</h1>
-						<p className="text-xs text-slate-500">{t("navSubtitle")}</p>
+						<p className={css({ fontSize: "xs", color: "slate.500" })}>
+							{t("navSubtitle")}
+						</p>
 					</div>
 				</div>
 
@@ -150,18 +191,55 @@ export default function AdminDashboardPage() {
 					aria-haspopup="dialog"
 					aria-expanded={isModalOpen}
 					onClick={() => setIsModalOpen(true)}
-					className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-sm transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
+					className={css({
+						display: "inline-flex",
+						alignItems: "center",
+						gap: "2",
+						px: "4",
+						py: "2.5",
+						borderRadius: "xl",
+						backgroundColor: "amber.600",
+						_hover: { backgroundColor: "amber.700" },
+						color: "white",
+						fontSize: "xs",
+						fontWeight: "semibold",
+						boxShadow: "sm",
+						transition: "all 0.15s ease",
+						_focusVisible: {
+							outline: "2px solid",
+							outlineColor: "amber.500",
+						},
+						cursor: "pointer",
+					})}
 				>
-					<Plus className="w-4 h-4" aria-hidden="true" />
+					<Plus className={css({ w: "4", h: "4" })} aria-hidden="true" />
 					<span>{t("newWeddingBtn")}</span>
 				</button>
 			</header>
 
-			<main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+			<main
+				className={css({
+					maxW: "7xl",
+					mx: "auto",
+					px: "6",
+					py: "8",
+					display: "flex",
+					flexDirection: "column",
+					gap: "8",
+				})}
+			>
 				{notice && (
 					<div
 						role="alert"
-						className="p-3 text-xs bg-red-50 text-red-700 rounded-xl border border-red-200"
+						className={css({
+							p: "3",
+							fontSize: "xs",
+							backgroundColor: "red.50",
+							color: "red.700",
+							borderRadius: "xl",
+							borderWidth: "1px",
+							borderColor: "red.200",
+						})}
 					>
 						{notice}
 					</div>

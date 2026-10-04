@@ -171,7 +171,7 @@ describe("UploaderDrawer Component", () => {
 		fireEvent.click(screen.getByRole("button", { name: "submitBtn" }));
 
 		await waitFor(() => {
-			expect(container.querySelector(".text-red-500")).toBeInTheDocument();
+			expect(container.querySelector(".c_red\\.500")).toBeInTheDocument();
 		});
 
 		expect(screen.queryByText("ok.jpg")).toBeNull();
@@ -197,7 +197,7 @@ describe("UploaderDrawer Component", () => {
 		expect(screen.getByText("foto.jpg")).toBeInTheDocument();
 
 		// Usunięcie pliku
-		const deleteBtn = container.querySelector("button.hover\\:text-red-500");
+		const deleteBtn = screen.getByTestId("remove-file-btn");
 		expect(deleteBtn).toBeInTheDocument();
 		if (deleteBtn) {
 			fireEvent.click(deleteBtn);
@@ -228,7 +228,7 @@ describe("UploaderDrawer Component", () => {
 		fireEvent.click(uploadBtn);
 
 		await waitFor(() => {
-			expect(container.querySelector(".text-red-500")).toBeInTheDocument();
+			expect(container.querySelector(".c_red\\.500")).toBeInTheDocument();
 		});
 
 		// Sam błąd — pozycja zostaje na liście (brak pełnego wyczyszczenia)

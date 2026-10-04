@@ -1,6 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type React from "react";
+import { css } from "styled-system/css";
 import { Link } from "@/i18n/routing";
 
 export default function LegalLayout({
@@ -10,22 +11,68 @@ export default function LegalLayout({
 }) {
 	const t = useTranslations("Common");
 	return (
-		<div className="min-h-screen bg-[#FAF8F5] flex flex-col">
-			<header className="max-w-4xl mx-auto w-full px-6 py-8">
+		<div
+			className={css({
+				minH: "100vh",
+				backgroundColor: "#FAF8F5",
+				display: "flex",
+				flexDirection: "column",
+			})}
+		>
+			<header
+				className={css({
+					maxW: "4xl",
+					mx: "auto",
+					w: "full",
+					px: "6",
+					py: "8",
+				})}
+			>
 				<Link
 					href="/"
-					className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none rounded-lg py-1"
+					className={css({
+						display: "inline-flex",
+						alignItems: "center",
+						gap: "2",
+						fontSize: "sm",
+						fontWeight: "semibold",
+						color: "slate.600",
+						_hover: { color: "slate.900" },
+						transition: "all 0.3s ease",
+						_focusVisible: { outline: "2px solid", outlineColor: "amber.500" },
+						borderRadius: "lg",
+						py: "1",
+					})}
 				>
-					<ArrowLeft className="w-4 h-4" aria-hidden="true" />
+					<ArrowLeft className={css({ w: "4", h: "4" })} aria-hidden="true" />
 					{t("backToHome")}
 				</Link>
 			</header>
 
-			<main className="max-w-3xl mx-auto w-full px-6 py-8 flex-1">
+			<main
+				className={css({
+					maxW: "3xl",
+					mx: "auto",
+					w: "full",
+					px: "6",
+					py: "8",
+					flex: 1,
+				})}
+			>
 				{children}
 			</main>
 
-			<footer className="border-t border-slate-200/60 py-6 mt-12 text-center text-xs text-slate-500">
+			<footer
+				className={css({
+					borderTopWidth: "1px",
+					borderColor: "slate.200",
+					py: "6",
+					mt: "12",
+					textAlign: "center",
+					fontSize: "xs",
+					color: "slate.500",
+				})}
+			>
 				<p>{t("footerTagline")}</p>
 			</footer>
 		</div>
