@@ -351,7 +351,7 @@ export default function CardCustomizerPage() {
 							aria-labelledby="color-palette-label"
 							className={css({
 								display: "grid",
-								gridTemplateColumns: "2",
+								gridTemplateColumns: "repeat(2, 1fr)",
 								gap: "2",
 							})}
 						>
@@ -444,7 +444,7 @@ export default function CardCustomizerPage() {
 					<div
 						className={css({
 							display: "grid",
-							gridTemplateColumns: "2",
+							gridTemplateColumns: "repeat(2, 1fr)",
 							gap: "3",
 							pt: "1",
 						})}
