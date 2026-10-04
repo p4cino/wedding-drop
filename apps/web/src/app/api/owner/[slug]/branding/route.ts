@@ -36,9 +36,11 @@ export async function POST(
 		}
 
 		const dataDir = process.env.DATA_DIR || path.join(process.cwd(), "data");
-		const safeDataDir = path.resolve(dataDir);
+		const safeDataDir = path.resolve(/* turbopackIgnore: true */ dataDir);
 		const brandingDir = path.join(safeDataDir, "galleries", slug, "branding");
-		const safeBrandingDir = path.resolve(brandingDir);
+		const safeBrandingDir = path.resolve(
+			/* turbopackIgnore: true */ brandingDir,
+		);
 		if (!safeBrandingDir.startsWith(safeDataDir)) {
 			return NextResponse.json({ error: "Invalid path" }, { status: 403 });
 		}
