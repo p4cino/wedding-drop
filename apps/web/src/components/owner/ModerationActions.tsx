@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, EyeOff, Trash2 } from "lucide-react";
+import { Check, Eye, EyeOff, Trash2 } from "lucide-react";
 import { css } from "styled-system/css";
 import type { ModerationStatus } from "@/lib/moderation";
 
@@ -26,6 +26,7 @@ export function ModerationActions({
 	onDelete,
 }: ModerationActionsProps) {
 	const isReady = status === "ready";
+	const isPending = status === "pending";
 	return (
 		<div
 			className={css({
@@ -46,19 +47,37 @@ export function ModerationActions({
 					transition: "all 0.15s ease",
 					cursor: "pointer",
 					borderWidth: "0",
-					color: isReady ? "slate.600" : "wedding.gold",
-					backgroundColor: isReady ? "transparent" : "amber.50",
+					color: isReady
+						? "slate.600"
+						: isPending
+							? "green.600"
+							: "wedding.gold",
+					backgroundColor: isReady
+						? "transparent"
+						: isPending
+							? "green.50"
+							: "amber.50",
 					_hover: {
-						color: isReady ? "slate.900" : "wedding.gold",
-						backgroundColor: isReady ? "slate.100" : "amber.100",
+						color: isReady
+							? "slate.900"
+							: isPending
+								? "green.700"
+								: "wedding.gold",
+						backgroundColor: isReady
+							? "slate.100"
+							: isPending
+								? "green.100"
+								: "amber.100",
 					},
 					_focusVisible: {
 						outline: "2px solid",
-						outlineColor: "wedding.gold",
+						outlineColor: isPending ? "green.500" : "wedding.gold",
 					},
 				})}
 			>
-				{isReady ? (
+				{isPending ? (
+					<Check className={css({ w: "3.5", h: "3.5" })} aria-hidden="true" />
+				) : isReady ? (
 					<Eye className={css({ w: "3.5", h: "3.5" })} aria-hidden="true" />
 				) : (
 					<EyeOff className={css({ w: "3.5", h: "3.5" })} aria-hidden="true" />

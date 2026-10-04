@@ -25,6 +25,26 @@ export function setOwnerSessionCookie(
 	});
 }
 
+export function guestSessionCookieName(slug: string): string {
+	return `wd_guest_${slug}`;
+}
+
+export function setGuestSessionCookie(
+	res: NextResponse,
+	slug: string,
+	token: string,
+): void {
+	res.cookies.set({
+		name: guestSessionCookieName(slug),
+		value: token,
+		httpOnly: true,
+		sameSite: "strict",
+		path: "/",
+		maxAge: OWNER_SESSION_MAX_AGE,
+		secure: process.env.NODE_ENV === "production",
+	});
+}
+
 export function clearOwnerSessionCookie(res: NextResponse, slug: string): void {
 	res.cookies.set({
 		name: ownerSessionCookieName(slug),
@@ -73,6 +93,15 @@ export function readOwnerToken(
 		if (cookieToken) return cookieToken;
 	}
 
+	return null;
+}
+
+export function readGuestToken(
+	req: NextRequest | Request,
+	slug: string,
+): string | null {
+	const cookieToken = getCookieValue(req, guestSessionCookieName(slug));
+	if (cookieToken) return cookieToken;
 	return null;
 }
 
@@ -175,6 +204,55 @@ export function verifyOwnerToken(
 	}
 
 	const payload = `owner:${timestamp}.${slug}`;
+	const expectedHmac = crypto
+		.createHmac("sha256", getOwnerSecret())
+		.update(payload)
+		.digest("hex");
+
+	try {
+		const providedBuf = Buffer.from(providedHmac, "hex");
+		const expectedBuf = Buffer.from(expectedHmac, "hex");
+		if (providedBuf.length !== expectedBuf.length) return false;
+		return crypto.timingSafeEqual(providedBuf, expectedBuf);
+	} catch {
+		return false;
+	}
+}
+
+export function generateGuestToken(slug: string): string {
+	const timestamp = Date.now();
+	const payload = `guest:${timestamp}.${slug}`;
+	const hmac = crypto
+		.createHmac("sha256", getOwnerSecret())
+		.update(payload)
+		.digest("hex");
+	return `guest_${timestamp}_${Buffer.from(slug).toString("base64")}_${hmac}`;
+}
+
+export function verifyGuestToken(
+	token: string | null | undefined,
+	expectedSlug: string,
+): boolean {
+	if (!token?.startsWith("guest_")) return false;
+	const parts = token.split("_");
+	if (parts.length !== 4) return false;
+	const timestamp = parseInt(parts[1], 10);
+	const slug = Buffer.from(parts[2], "base64").toString("utf-8");
+	const providedHmac = parts[3];
+
+	if (slug !== expectedSlug) return false;
+
+	// Token ważny przez 7 dni
+	const maxAge = 7 * 24 * 60 * 60 * 1000;
+	if (
+		Number.isNaN(timestamp) ||
+		Date.now() - timestamp > maxAge ||
+		timestamp > Date.now() + 60000
+	) {
+		return false;
+	}
+
+	const payload = `guest:${timestamp}.${slug}`;
 	const expectedHmac = crypto
 		.createHmac("sha256", getOwnerSecret())
 		.update(payload)

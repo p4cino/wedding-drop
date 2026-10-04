@@ -61,6 +61,11 @@ export async function GET(
 			}
 		}
 
+		if (!gallery.allowGuestViewing && !canViewHidden) {
+			// Goście nie mogą przeglądać zdjęć, jeśli allowGuestViewing === false
+			return NextResponse.json({ media: [] });
+		}
+
 		const condition = canViewHidden
 			? and(
 					eq(mediaItems.galleryId, gallery.id),

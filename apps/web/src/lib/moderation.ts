@@ -1,5 +1,5 @@
 /** Status elementu widocznego w moderacji właściciela (usunięte nie trafiają do listy). */
-export type ModerationStatus = "ready" | "hidden";
+export type ModerationStatus = "ready" | "hidden" | "pending";
 
 /** Filtr listy moderacji: wszystkie albo tylko o danym statusie. */
 export type ModerationFilter = "all" | ModerationStatus;
@@ -20,5 +20,6 @@ export function countByStatus<T extends { status: ModerationStatus }>(
 
 /** Status po przełączeniu „ukryj/pokaż". */
 export function toggledStatus(status: ModerationStatus): ModerationStatus {
+	if (status === "pending") return "ready";
 	return status === "ready" ? "hidden" : "ready";
 }

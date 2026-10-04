@@ -76,6 +76,9 @@ export const MediaGridWithModeration: React.FC<
 						hidden: t("filterHidden", {
 							count: countByStatus(mediaList, "hidden"),
 						}),
+						pending: t("filterPending", {
+							count: countByStatus(mediaList, "pending"),
+						}),
 					}}
 				/>
 

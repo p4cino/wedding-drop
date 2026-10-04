@@ -158,6 +158,14 @@ export function initTusServer(dataDir: string, options: TusServerOptions = {}) {
 						body: sizeCheck.message,
 					};
 				}
+			} else {
+				// Upload gościa
+				if (gallery.allowGuestUploads === false) {
+					throw {
+						status_code: 403,
+						body: "Błąd: Przesyłanie plików przez gości jest wyłączone w tej galerii.",
+					};
+				}
 			}
 
 			return { metadata };

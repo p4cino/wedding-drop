@@ -78,10 +78,16 @@ Szybki podgląd wszystkich ślubów, zarządzanie przestrzenią dyskową oraz b�
 2. **Dla Pary Młodej (Właściciela Galerii)**:
    - Panel zarządzania dostępny pod `/owner/[slug]`.
    - **Utwardzona sesja właściciela**: Bezpieczne ciasteczko sesji `HttpOnly; SameSite=Strict; Path=/api` (brak haseł i tokenów w `sessionStorage` oraz w URL-ach). Automatyczne wznawianie sesji po odświeżeniu i przycisk wylogowania.
+   - **Personalizacja galerii (Branding)**: Własne logo (zastępujące tekst na górze ekranu) oraz niestandardowe tło (widoczne za zdjęciami pod przyciemniającą nakładką), konfiguracja wprost z panelu administracyjnego.
    - Podgląd liczby zdjęć, filmów oraz sumarycznego zajętego miejsca na dysku.
    - **Import materiałów fotografa/kamerzysty**: masowy, wznawialny import profesjonalnych zdjęć i filmów (ten sam protokół TUS co upload gości) do tej samej galerii i chronologii — dostępny wyłącznie po zalogowaniu właściciela. Zaimportowane pliki są oznaczone w siatce galerii odróżniającą odznaką "Fotograf" i przechodzą przez dokładnie tę samą, ograniczoną kolejkę przetwarzania (`p-queue` concurrency: 2) co uploady gości — bez priorytetu ani osobnego limitu. Jeśli administrator ustawił limit pojemności galerii (`maxStorageBytes`), import fotografa go respektuje i odrzuci pojedyncze pliki przekraczające limit (nie wpływając na pozostałe pliki tej samej paczki importu).
    - **Pobieranie całej galerii jako jeden plik ZIP**: Generowanie strumieniowe w locie (`archiver`) bez obciążania pamięci RAM serwera (z uwzględnieniem zdjęć ukrytych dla uwierzytelnionej Pary Młodej). Jeśli galeria zawiera życzenia, ZIP zawiera dodatkowo plik tekstowy `zyczenia.txt` z treścią i autorami wszystkich widocznych wpisów.
    - **Moderacja na żywo**: Szybkie ukrywanie zdjęć niepożądanych jednym kliknięciem oraz usuwanie — zmiana statusu natychmiast synchronizuje się ze wszystkimi telefonami na sali weselnej przez SSE (`media-updated`).
+   - **Zaawansowane uprawnienia (Toggles)**: Właściciel galerii z poziomu swojego panelu może w dowolnej chwili:
+     - wyłączyć możliwość wgrywania nowych zdjęć (zamrożenie galerii, np. po poprawinach),
+     - wyłączyć możliwość podglądu galerii przez gości (ukrycie zdjęć),
+     - nałożyć opcjonalne **hasło dostępu** dla gości w celu dodatkowej ochrony prywatności,
+     - włączyć **Kolejkę Akceptacji** (nowe uploady od gości mają status `pending` i oczekują na zatwierdzenie przez właściciela przed ich upublicznieniem).
    - **Moderacja Księgi Życzeń**: Ten sam mechanizm ukrywania/trwałego usuwania dostępny również dla wpisów w księdze życzeń (SSE `wish-updated`), z filtrowaniem po statusie (wszystkie/widoczne/ukryte).
    - Bezpośredni dostęp do generatora winietki na stolik oraz do trybu TV.
 

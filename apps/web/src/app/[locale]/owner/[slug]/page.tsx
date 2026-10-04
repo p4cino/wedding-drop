@@ -6,12 +6,14 @@ import { useTranslations } from "next-intl";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { css } from "styled-system/css";
+import { GalleryBrandingPanel } from "@/components/owner/GalleryBrandingPanel";
 import { GDriveBackupCard } from "@/components/owner/GDriveBackupCard";
 import { GDriveExportModal } from "@/components/owner/GDriveExportModal";
 import {
 	MediaGridWithModeration,
 	type OwnerMediaItem,
 } from "@/components/owner/MediaGridWithModeration";
+import { ModerationSettingsPanel } from "@/components/owner/ModerationSettingsPanel";
 import { OwnerHeader } from "@/components/owner/OwnerHeader";
 import { OwnerLoginForm } from "@/components/owner/OwnerLoginForm";
 import { OwnerStatsGrid } from "@/components/owner/OwnerStatsGrid";
@@ -387,6 +389,37 @@ export default function OwnerDashboardPage() {
 					gallerySlug={slug}
 					ownerToken={ownerToken}
 					onImportSuccess={() => loadMedia()}
+				/>
+
+				<GalleryBrandingPanel
+					gallerySlug={slug}
+					ownerToken={ownerToken}
+					currentLogoPath={galleryInfo?.branding?.logoPath}
+					currentBackgroundPath={galleryInfo?.branding?.backgroundPath}
+					onBrandingUpdated={restoreSession}
+				/>
+
+				<ModerationSettingsPanel
+					settings={{
+						allowGuestUploads: galleryInfo?.allowGuestUploads,
+						allowGuestViewing: galleryInfo?.allowGuestViewing,
+						isApprovalQueueEnabled: galleryInfo?.isApprovalQueueEnabled,
+					}}
+					onSave={async (newSettings) => {
+						const res = await api(
+							"PATCH",
+							`/api/owner/${slug}/settings`,
+							newSettings,
+						);
+						if (res.ok) {
+							setToast({ type: "success", text: t("settingsSaveSuccess") });
+							restoreSession();
+							return true;
+						} else {
+							showError();
+							return false;
+						}
+					}}
 				/>
 
 				<MediaGridWithModeration

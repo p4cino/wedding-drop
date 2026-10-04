@@ -158,6 +158,65 @@ describe("tus-server configuration", () => {
 		}
 	});
 
+	describe("onUploadCreate - blokada gości (allowGuestUploads)", () => {
+		it("powinien odrzucić upload gościa (403), gdy allowGuestUploads jest fałszywe", async () => {
+			mockGalleryResult = [
+				{ id: "gal-1", allowGuestUploads: false, maxStorageBytes: 0 },
+			];
+			const server = initTusServer(tempDir);
+			const onUploadCreate = server.options.onUploadCreate;
+
+			if (onUploadCreate) {
+				await expect(
+					onUploadCreate(
+						{} as never,
+						{
+							size: 1000,
+							metadata: {
+								gallerySlug: "kasia-i-tomek",
+							},
+						} as never,
+					),
+				).rejects.toMatchObject({
+					status_code: 403,
+					body: expect.stringContaining(
+						"Przesyłanie plików przez gości jest wyłączone",
+					),
+				});
+			}
+		});
+
+		it("powinien zaakceptować upload fotografa, nawet gdy allowGuestUploads jest fałszywe", async () => {
+			mockGalleryResult = [
+				{ id: "gal-1", allowGuestUploads: false, maxStorageBytes: 0 },
+			];
+			const verifyOwnerCredentials = vi.fn().mockReturnValue(true);
+			const server = initTusServer(tempDir, { verifyOwnerCredentials });
+			const onUploadCreate = server.options.onUploadCreate;
+
+			if (onUploadCreate) {
+				const res = await onUploadCreate(
+					{} as never,
+					{
+						size: 1000,
+						metadata: {
+							gallerySlug: "kasia-i-tomek",
+							source: "photographer",
+							ownerToken: "valid-token",
+						},
+					} as never,
+				);
+				expect(res).toEqual({
+					metadata: {
+						gallerySlug: "kasia-i-tomek",
+						source: "photographer",
+						ownerToken: "valid-token",
+					},
+				});
+			}
+		});
+	});
+
 	describe("onUploadCreate - import fotografa (source: photographer)", () => {
 		it("powinien odrzucić upload fotografa (401), gdy nie wstrzyknięto funkcji weryfikującej", async () => {
 			const server = initTusServer(tempDir);

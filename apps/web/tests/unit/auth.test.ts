@@ -3,11 +3,16 @@ import { describe, expect, it } from "vitest";
 import {
 	clearOwnerSessionCookie,
 	generateAdminToken,
+	generateGuestToken,
 	generateOwnerToken,
+	guestSessionCookieName,
 	ownerSessionCookieName,
+	readGuestToken,
 	readOwnerToken,
+	setGuestSessionCookie,
 	setOwnerSessionCookie,
 	verifyAdminToken,
+	verifyGuestToken,
 	verifyOwnerCredentialsForTus,
 	verifyOwnerToken,
 } from "@/lib/auth";
@@ -61,6 +66,27 @@ describe("Auth HMAC Tokens", () => {
 		const adminToken = generateAdminToken("kasia-i-tomek");
 		const forgedOwnerToken = adminToken.replace(/^admin_/, "owner_");
 		expect(verifyOwnerToken(forgedOwnerToken, "kasia-i-tomek")).toBe(false);
+	});
+
+	it("powinien poprawnie wygenerować i zweryfikować token gościa", () => {
+		const slug = "kasia-i-tomek";
+		const token = generateGuestToken(slug);
+		expect(token.startsWith("guest_")).toBe(true);
+		expect(verifyGuestToken(token, slug)).toBe(true);
+	});
+
+	it("powinien odrzucić token gościa dla innej galerii", () => {
+		const token = generateGuestToken("kasia-i-tomek");
+		expect(verifyGuestToken(token, "inna-para")).toBe(false);
+	});
+
+	it("powinien odrzucić sfałszowany token gościa", () => {
+		const slug = "kasia-i-tomek";
+		const token = generateGuestToken(slug);
+		const parts = token.split("_");
+		parts[3] =
+			"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+		expect(verifyGuestToken(parts.join("_"), slug)).toBe(false);
 	});
 });
 
@@ -141,6 +167,48 @@ describe("Owner Session Cookie Helpers", () => {
 		expect(cookie?.path).toBe("/api");
 		expect(cookie?.httpOnly).toBe(true);
 		expect(cookie?.sameSite).toBe("strict");
+	});
+});
+
+describe("Guest Session Cookie Helpers", () => {
+	it("generuje poprawną nazwę ciasteczka dla gościa", () => {
+		expect(guestSessionCookieName("kasia-i-tomek")).toBe(
+			"wd_guest_kasia-i-tomek",
+		);
+	});
+
+	it("ustawia ciasteczko sesji z poprawnymi atrybutami (development)", () => {
+		const origEnv = process.env.NODE_ENV;
+		try {
+			(process.env as Record<string, string | undefined>).NODE_ENV =
+				"development";
+			const res = NextResponse.json({ ok: true });
+			setGuestSessionCookie(res, "kasia-i-tomek", "test-token");
+			const cookie = res.cookies.get("wd_guest_kasia-i-tomek");
+			expect(cookie).toBeDefined();
+			expect(cookie?.value).toBe("test-token");
+			expect(cookie?.httpOnly).toBe(true);
+			expect(cookie?.sameSite).toBe("strict");
+			expect(cookie?.path).toBe("/");
+			expect(cookie?.maxAge).toBe(7 * 24 * 60 * 60);
+			expect(cookie?.secure).toBe(false);
+		} finally {
+			(process.env as Record<string, string | undefined>).NODE_ENV = origEnv;
+		}
+	});
+
+	it("ustawia atrybut secure w produkcji dla sesji gościa", () => {
+		const origEnv = process.env.NODE_ENV;
+		try {
+			(process.env as Record<string, string | undefined>).NODE_ENV =
+				"production";
+			const res = NextResponse.json({ ok: true });
+			setGuestSessionCookie(res, "kasia-i-tomek", "test-token");
+			const cookie = res.cookies.get("wd_guest_kasia-i-tomek");
+			expect(cookie?.secure).toBe(true);
+		} finally {
+			(process.env as Record<string, string | undefined>).NODE_ENV = origEnv;
+		}
 	});
 });
 

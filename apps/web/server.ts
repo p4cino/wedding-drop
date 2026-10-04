@@ -6,6 +6,7 @@ import { initTusServer, recoverInterruptedExports } from "@wedding-drop/media";
 import dotenv from "dotenv";
 import next from "next";
 import { verifyOwnerCredentialsForTus } from "./src/lib/auth";
+import { handleBrandingFileRequest } from "./src/lib/branding-file-handler";
 import { handleMediaFileRequest } from "./src/lib/media-file-handler";
 
 dotenv.config();
@@ -55,6 +56,18 @@ async function bootstrap() {
 				if (handled) return;
 			} catch (err) {
 				console.error("[Server] Błąd obsługi pliku multimedialnego:", err);
+				res.writeHead(500, { "Content-Type": "text/plain" });
+				res.end("Internal Server Error");
+				return;
+			}
+		}
+
+		if (url.startsWith("/branding-file/")) {
+			try {
+				const handled = await handleBrandingFileRequest(req, res, dataDir);
+				if (handled) return;
+			} catch (err) {
+				console.error("[Server] Błąd obsługi pliku brandingowego:", err);
 				res.writeHead(500, { "Content-Type": "text/plain" });
 				res.end("Internal Server Error");
 				return;

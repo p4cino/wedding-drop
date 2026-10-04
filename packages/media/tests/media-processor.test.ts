@@ -399,3 +399,43 @@ describe("media-processor service", () => {
 		vi.useRealTimers();
 	});
 });
+
+it("powinien nadać status 'pending', gdy isApprovalQueueEnabled jest true, a źródło to 'guest'", async () => {
+	mockGalleryResult = [{ id: "mock-gal-id", isApprovalQueueEnabled: true }];
+
+	const task: ProcessTask = {
+		uploadId: "upl-guest-pending",
+		tempFilePath: "/tmp/fake-file.jpg",
+		gallerySlug: "kasia-i-tomek",
+		uploaderName: "Gość",
+		originalName: "foto.jpg",
+		fileType: "image",
+		mimeType: "image/jpeg",
+		fileSize: 5000,
+		dataDir: "/tmp/data",
+		source: "guest",
+	};
+
+	await scheduleMediaProcessing(task);
+	expect(lastInsertedValues).toMatchObject({ status: "pending" });
+});
+
+it("powinien nadać status 'ready', gdy isApprovalQueueEnabled jest true, ale źródło to 'photographer'", async () => {
+	mockGalleryResult = [{ id: "mock-gal-id", isApprovalQueueEnabled: true }];
+
+	const task: ProcessTask = {
+		uploadId: "upl-photog-ready",
+		tempFilePath: "/tmp/fake-file.jpg",
+		gallerySlug: "kasia-i-tomek",
+		uploaderName: "Fotograf",
+		originalName: "foto.jpg",
+		fileType: "image",
+		mimeType: "image/jpeg",
+		fileSize: 5000,
+		dataDir: "/tmp/data",
+		source: "photographer",
+	};
+
+	await scheduleMediaProcessing(task);
+	expect(lastInsertedValues).toMatchObject({ status: "ready" });
+});
