@@ -53,7 +53,7 @@ export function GalleryBrandingPanel({
 				} catch (e) {}
 				setError(errMsg);
 			}
-		} catch (err) {
+		} catch {
 			setError("Błąd sieci");
 		} finally {
 			setLoading(null);
@@ -81,10 +81,10 @@ export function GalleryBrandingPanel({
 				try {
 					const data = await res.json();
 					if (data.error) errMsg = data.error;
-				} catch (e) {}
+				} catch {}
 				setError(errMsg);
 			}
-		} catch (err) {
+		} catch {
 			setError("Błąd sieci");
 		} finally {
 			setLoading(null);
