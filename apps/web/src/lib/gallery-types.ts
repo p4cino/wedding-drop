@@ -31,6 +31,7 @@ export interface MediaItemData {
 	uploaderName: string;
 	source?: "guest" | "photographer";
 	fileType: "image" | "video";
+	mediaType?: "photo" | "video" | "audio";
 	mimeType: string;
 	originalFileName: string;
 	thumbUrl: string;

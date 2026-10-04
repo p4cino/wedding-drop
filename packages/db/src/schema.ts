@@ -71,6 +71,7 @@ export const mediaItems = pgTable(
 		uploaderName: text("uploader_name").notNull().default("Gość weselny"),
 		source: text("source").notNull().default("guest"), // 'guest' | 'photographer'
 		fileType: text("file_type").notNull(), // 'image' | 'video'
+		mediaType: text("media_type").notNull().default("photo"), // 'photo' | 'video' | 'audio'
 		mimeType: text("mime_type").notNull(),
 		originalFileName: text("original_file_name").notNull(),
 		fileSize: bigint("file_size", { mode: "number" }).notNull(),

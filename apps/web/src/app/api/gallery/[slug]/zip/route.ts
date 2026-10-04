@@ -105,8 +105,14 @@ export async function GET(
 
 		const dataDir = process.env.DATA_DIR || path.join(process.cwd(), "data");
 
+		const zipEntries = items.map((item) => ({
+			storagePath: item.storagePath,
+			originalFileName: item.originalFileName,
+			mediaType: (item.mediaType || "photo") as "photo" | "video" | "audio",
+		}));
+
 		const { stream: passThrough, addedCount } = createGalleryZipStream(
-			items,
+			zipEntries,
 			dataDir,
 			wishesText,
 		);

@@ -533,8 +533,6 @@ export default function GuestGalleryPage() {
 				{!isUploadsDisabled && (
 					<UploaderDrawer
 						gallerySlug={slug}
-						primaryColor={gallery.primaryColor}
-						accentColor={gallery.accentColor}
 						isOpen={isUploaderOpen}
 						onClose={() => {
 							setIsUploaderOpen(false);

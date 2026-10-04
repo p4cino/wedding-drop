@@ -59,7 +59,8 @@ export default function FilePickerDropzone({
 				ref={inputRef}
 				type="file"
 				multiple
-				accept="image/*,video/*"
+				accept="image/*,video/*,audio/*"
+				capture="environment"
 				onChange={handleChange}
 				className={css({ display: "none" })}
 			/>

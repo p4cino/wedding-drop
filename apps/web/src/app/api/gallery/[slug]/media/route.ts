@@ -87,6 +87,7 @@ export async function GET(
 			uploaderName: m.uploaderName,
 			source: m.source,
 			fileType: m.fileType,
+			mediaType: m.mediaType,
 			mimeType: m.mimeType,
 			originalFileName: m.originalFileName,
 			fileSize: m.fileSize,

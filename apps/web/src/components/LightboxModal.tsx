@@ -324,7 +324,20 @@ export default function LightboxModal({
 					p: { base: "2", sm: "12" },
 				})}
 			>
-				{current.fileType === "video" ? (
+				{current.mediaType === "audio" ? (
+					<audio
+						src={current.rawUrl}
+						controls
+						autoPlay
+						aria-label={`Nagranie audio: ${current.originalFileName}`}
+						className={css({
+							width: "full",
+							maxWidth: "md",
+							borderRadius: "xl",
+							boxShadow: "2xl",
+						})}
+					/>
+				) : current.fileType === "video" || current.mediaType === "video" ? (
 					<video
 						src={current.rawUrl}
 						controls

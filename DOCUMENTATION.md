@@ -539,4 +539,47 @@ Obraz produkcyjny kontenera `wedding_web` (`node:24-alpine`) został zoptymalizo
 - **Lekki SDK Dysku Google**: Zastąpienie monolitu `googleapis` dedykowanym pakietem `@googleapis/drive` zmniejsza magazyn modułów o ponad 200 MB.
 - **Zgodność z Next.js 16**: Routing brzegowy korzysta z nowej konwencji `src/proxy.ts` (Network Proxy), a ostrzeżenia Turbopacka dla Service Workera są wyciszone flagą `SERWIST_SUPPRESS_TURBOPACK_WARNING=1`.
 
+---
+
+## 15. Guestbook Audio/Video — Nagrywanie i Przechowywanie Wiadomości
+
+Funkcja umożliwia gościom nagrywanie krótkich wiadomości audio i wideo (max. 60 sekund każda) bezpośrednio z przeglądarki, które trafiają do tej samej galerii co zdjęcia.
+
+### 15.1. Frontend — MediaRecorder API i Fallback
+- **AudioVideoRecorder Component** (`src/components/upload/AudioVideoRecorder.tsx`): Reaktywny komponent React wykorzystujący `navigator.mediaDevices.getUserMedia()` do dostępu do mikrofonu (audio) i kamery (wideo).
+  - Nagrywanie odbywa się w formatach WebM (Chrome) lub MP4 (Safari).
+  -Limit czasu nagrywania wynosi domyślnie 60 sekund (konfigurowalny).
+  - Goście mogą odtworzyć nagranie przed wysłaniem w dedicowanym componentie Preview.
+  - **Fallback dla urządzeń niezgodnych**: Na starszych wersjach iOS Safari (gdzie MediaRecorder API jest słaby lub niedostępny) użytkownik może wybrać nagranie audio/wideo za pomocą natywnego interfejsu systemu (`<input type="file" accept="audio/*,video/*" capture="environment" />`), co gwarantuje kompatybilność 100%.
+
+### 15.2. Backend — Przetwarzanie TUS i Medii
+- **TUS Server** (`packages/media/src/tus-server.ts`): Rozszerzony hook `onUploadFinish` do wykrycia typu MIME (`audio/*`, `video/*`, `image/*`) i ustawienia odpowiedniego `mediaType` w metadanych.
+- **Media Processor** (`packages/media/src/media-processor.ts`):
+  - Audio: Przesyłane są bezpośrednio do katalogu galerii, bez generowania miniatury (bo nie mają obrazu).
+  - Video: Przetwarzane przez FFmpeg z 25-sekundowym watchdogiem SIGKILL (compliance Intel N100).
+  - Concurrency: Obowiązkowa kolejka `p-queue` z `concurrency: 2` — audio i video dzielą tę samą, ograniczoną kolejkę co uploady zdjęć gości.
+
+### 15.3. Baza Danych — Kolumna `mediaType`
+- **Nowa kolumna w `media_items` tabeli**: `mediaType: 'photo' | 'video' | 'audio'` (domyślnie `'photo'`).
+- Każde nagranie (audio/video od gościa) uzyskuje status `pending` (jeśli `isApprovalQueueEnabled`) lub `ready`, jak zwykłe zdjęcia.
+- Reguły widoczności (`status: "ready"`, wyłączenie `hidden`/`deleted` dla gości) działają identycznie jak dla zdjęć.
+
+### 15.4. Frontend — Wyświetlanie w Galerii
+- **MediaGrid**: Ikony rozpoznajcze:
+  - 🎵 Mikrofon (kolor biały) dla nagrań audio.
+  - ▶️ Play (kolor biały) dla wideo.
+  - Zdjęcia nie mają ikony.
+- **LightboxModal**: Renderowanie odpowiednich elementów HTML5:
+  - Audio: `<audio controls autoPlay src={...} />`.
+  - Video: `<video controls autoPlay playsInline src={...} />`.
+  - Zdjęcia: `<img src={...} />`.
+  - Gesty dotykowe (swipe) działają bez konfliktów z paskami kontroli odtwarzacza.
+
+### 15.5. Pobieranie ZIP — Organizacja Katalogów
+- **createGalleryZipStream** (`packages/media/src/zip-streamer.ts`): Nagrania sortowane do podkatalogów:
+  - `photos/` — zdjęcia.
+  - `audio/` — nagrania audio.
+  - `video/` — nagrania wideo.
+- Struktura jest tworzona dynamicznie w strumieniu (`archiver`) — brak buforowania całego archiwum w RAM.
+
 

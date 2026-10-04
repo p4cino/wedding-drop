@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { css, cx } from "styled-system/css";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import AudioVideoRecorder from "@/components/upload/AudioVideoRecorder";
 import FilePickerDropzone from "@/components/upload/FilePickerDropzone";
 import UploadFileRow from "@/components/upload/UploadFileRow";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
@@ -28,9 +29,7 @@ export default function UploaderDrawer({
 	isOpen,
 	onClose,
 	onUploadSuccess,
-	primaryColor,
-	accentColor,
-}: UploaderDrawerProps) {
+}: Omit<UploaderDrawerProps, "primaryColor" | "accentColor">) {
 	const [uploaderName, setUploaderName] = useState("");
 	const t = useTranslations("GuestGallery");
 	const queue = useUploadQueue({
@@ -208,6 +207,21 @@ export default function UploaderDrawer({
 						onFiles={queue.addFiles}
 					/>
 
+					{/* Nagrywanie audio/wideo */}
+					<AudioVideoRecorder
+						disabled={isUploading}
+						onRecordingComplete={(blob, type) => {
+							const file = new File(
+								[blob],
+								`recording_${Date.now()}.${type === "audio" ? "webm" : "webm"}`,
+								{
+									type: type === "audio" ? "audio/webm" : "video/webm",
+								},
+							);
+							queue.addFiles([file]);
+						}}
+					/>
+
 					<Button
 						type="button"
 						variant="outline"
@@ -234,7 +248,7 @@ export default function UploaderDrawer({
 					<input
 						id="native-camera-input"
 						type="file"
-						accept="image/*,video/*"
+						accept="image/*,video/*,audio/*"
 						capture="environment"
 						onChange={(e) => {
 							if (e.target.files?.length) {

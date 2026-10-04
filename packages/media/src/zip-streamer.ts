@@ -6,6 +6,7 @@ import { ZipArchive } from "archiver";
 export interface ZipFileEntry {
 	storagePath: string;
 	originalFileName: string;
+	mediaType?: "photo" | "video" | "audio";
 }
 
 export interface ZipStreamResult {
@@ -43,7 +44,14 @@ export function createGalleryZipStream(
 		const fullPath = path.join(dataDir, item.storagePath);
 		if (fs.existsSync(fullPath)) {
 			const safeName = item.originalFileName.replace(/[^a-zA-Z0-9._-]/g, "_");
-			const entryName = `${String(idx + 1).padStart(3, "0")}_${safeName}`;
+			const mediaType = item.mediaType || "photo";
+			const subdir =
+				mediaType === "audio"
+					? "audio"
+					: mediaType === "video"
+						? "video"
+						: "photos";
+			const entryName = `${subdir}/${String(idx + 1).padStart(3, "0")}_${safeName}`;
 			archive.file(fullPath, { name: entryName });
 			addedCount++;
 		}

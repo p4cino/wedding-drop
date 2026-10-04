@@ -127,10 +127,14 @@ export function initTusServer(dataDir: string, options: TusServerOptions = {}) {
 			const isVideo =
 				mimeType?.startsWith("video") ||
 				/\.(mp4|mov|avi|webm)$/i.test(originalName || "");
-			if (isVideo && gallery.allowVideos === false) {
+			const isAudio =
+				mimeType?.startsWith("audio") ||
+				/\.(mp3|wav|aac|m4a|webm)$/i.test(originalName || "");
+
+			if ((isVideo || isAudio) && gallery.allowVideos === false) {
 				throw {
 					status_code: 403,
-					body: "Błąd: Wgrywanie filmów jest wyłączone w tej galerii.",
+					body: "Błąd: Wgrywanie filmów i nagrań jest wyłączone w tej galerii.",
 				};
 			}
 
@@ -192,11 +196,25 @@ export function initTusServer(dataDir: string, options: TusServerOptions = {}) {
 		const isVideo =
 			mimeType.startsWith("video") ||
 			/\.(mp4|mov|avi|webm)$/i.test(originalName);
+		const isAudio =
+			mimeType.startsWith("audio") ||
+			/\.(mp3|wav|aac|m4a|webm)$/i.test(originalName);
+
+		let fileType: "image" | "video" | "audio" = "image";
+		let mediaType: "photo" | "video" | "audio" = "photo";
+
+		if (isAudio) {
+			fileType = "video"; // audio is stored/processed like video
+			mediaType = "audio";
+		} else if (isVideo) {
+			fileType = "video";
+			mediaType = "video";
+		}
 
 		const tempFilePath = path.join(uploadDir, upload.id);
 
 		console.log(
-			`[TUS] Ukończono upload ${upload.id} dla galerii ${gallerySlug} (${upload.size} bajtów, źródło: ${source})`,
+			`[TUS] Ukończono upload ${upload.id} dla galerii ${gallerySlug} (${upload.size} bajtów, źródło: ${source}, mediaType: ${mediaType})`,
 		);
 
 		// Asynchroniczne przekazanie do kolejki obróbki - dokładnie ta sama, ograniczona
@@ -207,8 +225,9 @@ export function initTusServer(dataDir: string, options: TusServerOptions = {}) {
 			gallerySlug,
 			uploaderName,
 			originalName,
-			fileType: isVideo ? "video" : "image",
+			fileType,
 			mimeType,
+			mediaType,
 			fileSize: upload.size || 0,
 			dataDir,
 			source,

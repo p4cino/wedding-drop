@@ -17,8 +17,9 @@ export interface ProcessTask {
 	gallerySlug: string;
 	uploaderName: string;
 	originalName: string;
-	fileType: "image" | "video";
+	fileType: "image" | "video" | "audio";
 	mimeType: string;
+	mediaType?: "photo" | "video" | "audio";
 	fileSize: number;
 	dataDir: string;
 	source?: "guest" | "photographer";
@@ -37,6 +38,7 @@ async function processMediaTask(task: ProcessTask) {
 		originalName,
 		fileType,
 		mimeType,
+		mediaType,
 		fileSize,
 		dataDir,
 		source = "guest",
@@ -44,10 +46,12 @@ async function processMediaTask(task: ProcessTask) {
 
 	try {
 		// Weryfikacja sygnatury pliku i magic bytes przed przeniesieniem do galerii (ochrona przed Stored XSS)
+		// Audio jest traktowany jak video dla walidacji
+		const validationFileType = fileType === "audio" ? "video" : fileType;
 		const validation = await validateMediaFile(
 			tempFilePath,
 			originalName,
-			fileType,
+			validationFileType,
 		);
 		if (!validation.valid) {
 			console.warn(
@@ -85,7 +89,9 @@ async function processMediaTask(task: ProcessTask) {
 		const mediaProps =
 			fileType === "image"
 				? await processImage(targetRawPath, targetThumbPath)
-				: await processVideo(targetRawPath, targetThumbPath);
+				: mediaType === "audio"
+					? await processAudio()
+					: await processVideo(targetRawPath, targetThumbPath);
 
 		const relativeRaw = path.posix.join(
 			"galleries",
@@ -93,9 +99,12 @@ async function processMediaTask(task: ProcessTask) {
 			"raw",
 			rawFileName,
 		);
-		const relativeThumb = existsSync(targetThumbPath)
-			? path.posix.join("galleries", gallerySlug, "thumbs", thumbFileName)
-			: relativeRaw;
+		const relativeThumb =
+			mediaType === "audio"
+				? relativeRaw // Audio files use raw file as thumb path
+				: existsSync(targetThumbPath)
+					? path.posix.join("galleries", gallerySlug, "thumbs", thumbFileName)
+					: relativeRaw;
 
 		const [newMedia] = await db
 			.insert(mediaItems)
@@ -103,6 +112,7 @@ async function processMediaTask(task: ProcessTask) {
 				galleryId: gallery.id,
 				uploaderName: uploaderName || "Gość weselny",
 				fileType,
+				mediaType: mediaType || (fileType === "video" ? "video" : "photo"),
 				source,
 				mimeType:
 					mimeType || (fileType === "video" ? "video/mp4" : "image/jpeg"),
@@ -151,6 +161,11 @@ async function processVideo(rawPath: string, thumbPath: string) {
 	} catch (err) {
 		console.warn("[Processor] FFmpeg error:", err);
 	}
+	return { width: null, height: null, duration: null };
+}
+
+async function processAudio() {
+	// Audio files don't need thumbnails, just metadata extraction
 	return { width: null, height: null, duration: null };
 }
 

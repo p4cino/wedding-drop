@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, Image as ImageIcon, Play, User } from "lucide-react";
+import { Camera, Image as ImageIcon, Mic, Play, User } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { css } from "styled-system/css";
 import EmptyState from "@/components/EmptyState";
@@ -40,10 +40,13 @@ export default function MediaGrid({ items, onItemClick }: MediaGridProps) {
 			})}
 		>
 			{items.map((item, index) => {
-				const isVideo = item.fileType === "video";
+				const mediaType =
+					item.mediaType || (item.fileType === "video" ? "video" : "photo");
+				const isAudio = mediaType === "audio";
+				const isVideo = mediaType === "video";
 				const isPhotographer = item.source === "photographer";
 				const uploader = item.uploaderName || t("defaultUploaderName");
-				const ariaLabel = `${isVideo ? t("videoAria") : t("imageAria")}: ${item.originalFileName}, ${t("uploaderLabel")} ${uploader}`;
+				const ariaLabel = `${isAudio ? "Nagranie audio" : isVideo ? t("videoAria") : t("imageAria")}: ${item.originalFileName}, ${t("uploaderLabel")} ${uploader}`;
 
 				return (
 					<button
@@ -87,8 +90,8 @@ export default function MediaGrid({ items, onItemClick }: MediaGridProps) {
 							})}
 						/>
 
-						{/* Znacznik wideo */}
-						{isVideo && (
+						{/* Znacznik wideo/audio */}
+						{(isVideo || isAudio) && (
 							<div
 								className={css({
 									position: "absolute",
@@ -105,16 +108,28 @@ export default function MediaGrid({ items, onItemClick }: MediaGridProps) {
 									color: "white",
 									boxShadow: "sm",
 								})}
+								aria-label={isAudio ? "Nagranie audio" : "Nagranie wideo"}
 							>
-								<Play
-									className={css({
-										w: "3.5",
-										h: "3.5",
-										fill: "currentColor",
-										ml: "0.5",
-									})}
-									aria-hidden="true"
-								/>
+								{isAudio ? (
+									<Mic
+										className={css({
+											w: "3.5",
+											h: "3.5",
+											fill: "currentColor",
+										})}
+										aria-hidden="true"
+									/>
+								) : (
+									<Play
+										className={css({
+											w: "3.5",
+											h: "3.5",
+											fill: "currentColor",
+											ml: "0.5",
+										})}
+										aria-hidden="true"
+									/>
+								)}
 							</div>
 						)}
 
