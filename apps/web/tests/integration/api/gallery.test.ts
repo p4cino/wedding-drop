@@ -8,6 +8,7 @@ import { GET as getMedia } from "@/app/api/gallery/[slug]/media/route";
 import { GET as getGallery } from "@/app/api/gallery/[slug]/route";
 import { GET as getZip } from "@/app/api/gallery/[slug]/zip/route";
 import { generateAdminToken, generateOwnerToken } from "@/lib/auth";
+import { hashGuestPassword } from "@/lib/guest-password";
 import { _clearRateLimitsForTests } from "@/lib/rate-limit";
 
 let mockExists = true;
@@ -788,6 +789,19 @@ describe("Gallery API Routes", () => {
 			const res = await call("haslo_dla_gosci");
 			expect(res.status).toBe(429);
 			expect(res.headers.get("Retry-After")).toBeTruthy();
+		});
+
+		it("powinien autoryzować gościa dla hasła zapisanego jako scrypt (format z #62), bez przehaszowania", async () => {
+			mockGalleries[0].guestPassword = hashGuestPassword("haslo_dla_gosci");
+			const res = await authGuest(
+				new NextRequest("http://localhost/api/gallery/kasia-i-tomek/auth", {
+					method: "POST",
+					body: JSON.stringify({ password: "haslo_dla_gosci" }),
+				}),
+				{ params: Promise.resolve({ slug: "kasia-i-tomek" }) },
+			);
+			expect(res.status).toBe(200);
+			expect(updatedGalleryValues).toHaveLength(0);
 		});
 
 		it("powinien zwrócić 401 jeśli hasło jest niepoprawne", async () => {

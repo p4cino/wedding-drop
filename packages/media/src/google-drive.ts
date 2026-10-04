@@ -40,11 +40,13 @@ export function isGoogleDriveConfigured(): boolean {
 }
 
 function getSignedStateSecret(): string {
-	return (
-		process.env.ADMIN_SECRET ||
-		process.env.ADMIN_PASSWORD ||
-		"wedding-admin-secret-fallback-key"
-	);
+	const secret = process.env.ADMIN_SECRET || process.env.ADMIN_PASSWORD;
+	if (!secret) {
+		throw new Error(
+			"Brak ADMIN_SECRET/ADMIN_PASSWORD – nie można podpisać stanu OAuth",
+		);
+	}
+	return secret;
 }
 
 /**

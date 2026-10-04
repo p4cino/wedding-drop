@@ -347,7 +347,7 @@ docker run --rm -v wedding-drop_app_data:/data -v $(pwd):/backup alpine tar -xzf
    - **30 życzeń / minutę** (`POST /wishes`) oraz **300 utworzeń uploadu TUS / minutę** na IP i galerię (gość; import fotografa jest zwolniony, bo wymaga tokenu). Limit TUS jest luźniejszy, bo goście na weselu dzielą jeden adres IP (Wi-Fi sali).
    - Limiter resetuje się po restarcie i działa tylko dla jednej instancji.
 6. **Hasło gościa i PIN**:
-   - Hasło gościa i PIN ZIP są zapisywane jako hash bcrypt. Stare wartości plaintext działają nadal i są zamieniane na hash przy pierwszej poprawnej weryfikacji (lazy-upgrade, bez migracji SQL). API zwraca tylko flagi `hasPassword`/`hasPin`.
+   - Hasło gościa i PIN ZIP są zapisywane jako hash bcrypt (hasła zapisane wcześniej w formacie `scrypt$…` z #62 nadal są akceptowane). Stare wartości plaintext działają nadal i są zamieniane na hash przy pierwszej poprawnej weryfikacji (lazy-upgrade, bez migracji SQL). API zwraca tylko flagi `hasPassword`/`hasPin`.
    - PIN przyjmowany wyłącznie w nagłówku `x-access-pin` (parametr `?pin=` jest ignorowany).
    - Gdy galeria ma hasło gościa, sesja gościa (ciasteczko `wd_guest_<slug>`) jest wymagana także dla `GET /media`, `GET`/`POST /wishes`, `GET /live`, `GET /zip` oraz utworzenia uploadu TUS (poza tym publiczne `GET /api/gallery/:slug` zwraca wtedy tylko dane ekranu logowania).
 7. **Limity uploadu**: TUS ma `maxSize` = **1 GiB na plik** (413 powyżej; `Upload-Length` jest wymagany), `maxStorageBytes` galerii obowiązuje gości i fotografa, a niedokończone uploady w `tus_temp` starsze niż 24 h są sprzątane co godzinę.

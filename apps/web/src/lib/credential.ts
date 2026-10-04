@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { compare, hash } from "@node-rs/bcrypt";
+import { verifyGuestPassword } from "./guest-password";
 
 const BCRYPT_ROUNDS = 10;
 
@@ -35,6 +36,13 @@ export async function verifySecret(
 			valid = false;
 		}
 		return { valid, needsUpgrade: false };
+	}
+	// Hasła zapisane w formacie scrypt (wprowadzonym wcześniej w #62) pozostają ważne
+	if (stored.startsWith("scrypt$")) {
+		return {
+			valid: verifyGuestPassword(provided, stored).valid,
+			needsUpgrade: false,
+		};
 	}
 	const valid = timingSafePlainEqual(provided, stored);
 	return { valid, needsUpgrade: valid };

@@ -29,3 +29,15 @@ describe("credential", () => {
 		expect(isBcryptHash("$2b$10$abc")).toBe(true);
 	});
 });
+
+describe("credential - zgodność ze scrypt z #62", () => {
+	it("akceptuje hasło zapisane w formacie scrypt bez przehaszowania", async () => {
+		const { hashGuestPassword } = await import("@/lib/guest-password");
+		const stored = hashGuestPassword("tajne123");
+		expect(await verifySecret(stored, "tajne123")).toEqual({
+			valid: true,
+			needsUpgrade: false,
+		});
+		expect((await verifySecret(stored, "zle")).valid).toBe(false);
+	});
+});
