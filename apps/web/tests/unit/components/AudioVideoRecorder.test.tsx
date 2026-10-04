@@ -79,21 +79,19 @@ describe("AudioVideoRecorder", () => {
 		);
 	});
 
-	it("przełącza kamerę na tylną przed nagraniem", async () => {
-		const getUserMedia = stubMediaDevices();
+	it("po 'anuluj' wraca do wyboru i zwalnia adres podglądu", async () => {
+		stubMediaDevices();
 		render(<AudioVideoRecorder onRecorded={vi.fn()} />);
 
-		fireEvent.click(await screen.findByLabelText("cameraSwitchCamera"));
-		fireEvent.click(screen.getByText("recorderRecordVideo"));
-		await screen.findByLabelText("recorderStop");
-		expect(getUserMedia).toHaveBeenCalledWith(
-			expect.objectContaining({
-				video: expect.objectContaining({ facingMode: "environment" }),
-			}),
-		);
+		fireEvent.click(await screen.findByText("recorderRecordAudio"));
+		fireEvent.click(await screen.findByLabelText("recorderStop"));
+		fireEvent.click(await screen.findByText("recorderCancel"));
+
+		expect(await screen.findByText("recorderRecordAudio")).toBeInTheDocument();
+		expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:preview");
 	});
 
-	it("po 'nagraj ponownie' wraca do wyboru i zwalnia adres podglądu", async () => {
+	it("po 'nagraj ponownie' od razu zaczyna nowe nagranie tego samego typu", async () => {
 		stubMediaDevices();
 		render(<AudioVideoRecorder onRecorded={vi.fn()} />);
 
@@ -101,7 +99,8 @@ describe("AudioVideoRecorder", () => {
 		fireEvent.click(await screen.findByLabelText("recorderStop"));
 		fireEvent.click(await screen.findByText("recorderRetake"));
 
-		expect(await screen.findByText("recorderRecordAudio")).toBeInTheDocument();
+		fireEvent.click(await screen.findByLabelText("recorderStop"));
+		await screen.findByText("recorderPreviewAudio");
 		expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:preview");
 	});
 

@@ -5,7 +5,7 @@ import { Check, ExternalLink, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type React from "react";
 import { useReducer, useRef, useState } from "react";
-import { css } from "styled-system/css";
+import { css, cx } from "styled-system/css";
 import NewTabLabel from "@/components/NewTabLabel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -241,17 +241,37 @@ export function CreateGalleryModal({
 									key={link.path("")}
 									href={link.path(created.slug)}
 									target="_blank"
-									className={`flex items-center justify-between p-3 rounded-xl border text-xs font-semibold focus-visible:ring-2 focus-visible:outline-none ${link.modalTone}`}
+									className={cx(
+										css({
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "space-between",
+											gap: "2",
+											p: "3",
+											borderRadius: "xl",
+											borderWidth: "1px",
+											fontSize: "xs",
+											fontWeight: "semibold",
+											_focusVisible: { outline: "none" },
+										}),
+										link.modalTone,
+									)}
 								>
 									<span>{t(link.modalLabelKey)}</span>
 									{link.Icon ? (
 										<link.Icon
-											className={`w-4 h-4 ${link.modalIconTone}`}
+											className={cx(
+												css({ w: "4", h: "4", flexShrink: "0" }),
+												link.modalIconTone,
+											)}
 											aria-hidden="true"
 										/>
 									) : (
 										<ExternalLink
-											className={`w-4 h-4 ${link.modalIconTone}`}
+											className={cx(
+												css({ w: "4", h: "4", flexShrink: "0" }),
+												link.modalIconTone,
+											)}
 											aria-hidden="true"
 										/>
 									)}
