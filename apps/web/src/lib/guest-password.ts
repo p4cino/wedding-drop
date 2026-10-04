@@ -34,10 +34,11 @@ export function verifyGuestPassword(
 		};
 	}
 
-	// Legacy: hasło zapisane jawnie – porównanie w stałym czasie na hashach HMAC
-	const key = crypto.randomBytes(32);
-	const a = crypto.createHmac("sha256", key).update(password).digest();
-	const b = crypto.createHmac("sha256", key).update(stored).digest();
+	// Legacy: hasło zapisane jawnie – porównanie w stałym czasie na wynikach scrypt
+	// (losowa sól wyrównuje długości; wpis i tak zostanie przehaszowany po logowaniu)
+	const salt = crypto.randomBytes(16);
+	const a = crypto.scryptSync(password, salt, KEY_LEN);
+	const b = crypto.scryptSync(stored, salt, KEY_LEN);
 	const valid = crypto.timingSafeEqual(a, b);
 	return { valid, needsRehash: valid };
 }
