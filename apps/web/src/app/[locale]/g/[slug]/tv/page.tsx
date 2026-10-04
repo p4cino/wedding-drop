@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import QRCode from "qrcode";
 import { useCallback, useEffect, useState } from "react";
 import { css } from "styled-system/css";
+import AudioPlaceholder from "@/components/AudioPlaceholder";
 import GalleryStatusScreen from "@/components/GalleryStatusScreen";
 import { useLiveGallery } from "@/hooks/useLiveGallery";
 import type { LiveEvent } from "@/lib/live-gallery";
@@ -90,18 +91,29 @@ export default function TvSlideshowPage() {
 		>
 			{/* Prezentowany materiał — dla wideo pokazujemy statyczną miniaturę bez dźwięku (zob. design.md) */}
 			{current ? (
-				<img
-					key={current.id}
-					src={current.fileType === "video" ? current.thumbUrl : current.rawUrl}
-					alt=""
-					className={css({
-						position: "absolute",
-						inset: "0",
-						w: "full",
-						h: "full",
-						objectFit: "contain",
-					})}
-				/>
+				current.fileType === "audio" ? (
+					<div
+						key={current.id}
+						className={css({ position: "absolute", inset: "0" })}
+					>
+						<AudioPlaceholder />
+					</div>
+				) : (
+					<img
+						key={current.id}
+						src={
+							current.fileType === "video" ? current.thumbUrl : current.rawUrl
+						}
+						alt=""
+						className={css({
+							position: "absolute",
+							inset: "0",
+							w: "full",
+							h: "full",
+							objectFit: "contain",
+						})}
+					/>
+				)
 			) : (
 				<div
 					className={css({

@@ -69,6 +69,7 @@ export async function GET(
 							id: mediaItem.id,
 							uploaderName: mediaItem.uploaderName,
 							fileType: mediaItem.fileType,
+							mediaType: mediaItem.mediaType,
 							mimeType: mediaItem.mimeType,
 							originalFileName: mediaItem.originalFileName,
 							fileSize: mediaItem.fileSize,

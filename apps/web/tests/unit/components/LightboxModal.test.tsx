@@ -362,4 +362,118 @@ describe("LightboxModal Component", () => {
 			screen.getByLabelText("videoAria: film1.mp4", { exact: false }),
 		).toBeInTheDocument();
 	});
+
+	it("renderuje <audio> dla nagrania audio", () => {
+		const audioItem: MediaItemData = {
+			id: "a1",
+			uploaderName: "Babcia",
+			fileType: "audio",
+			mediaType: "audio",
+			mimeType: "audio/webm",
+			originalFileName: "zyczenia.webm",
+			thumbUrl: "/raw/zyczenia.webm",
+			rawUrl: "/raw/zyczenia.webm",
+			createdAt: "2026-09-12",
+		};
+		const { container } = render(
+			<LightboxModal
+				items={[audioItem]}
+				currentIndex={0}
+				onClose={vi.fn()}
+				onNavigate={vi.fn()}
+			/>,
+		);
+		const audio = container.querySelector("audio");
+		expect(audio).toHaveAttribute("src", "/raw/zyczenia.webm");
+		expect(audio).toHaveAttribute("aria-label", "audioAria: zyczenia.webm");
+		expect(container.querySelector("video")).toBeNull();
+	});
+
+	describe("swipe a kontrolki odtwarzacza", () => {
+		const makeItems = (): MediaItemData[] => [
+			{
+				id: "v1",
+				uploaderName: "Marta",
+				fileType: "video",
+				mediaType: "video",
+				mimeType: "video/mp4",
+				originalFileName: "film.mp4",
+				thumbUrl: "/t.webp",
+				rawUrl: "/film.mp4",
+				createdAt: "2026-09-12",
+			},
+			{
+				id: "a1",
+				uploaderName: "Babcia",
+				fileType: "audio",
+				mediaType: "audio",
+				mimeType: "audio/webm",
+				originalFileName: "zyczenia.webm",
+				thumbUrl: "/z.webm",
+				rawUrl: "/z.webm",
+				createdAt: "2026-09-12",
+			},
+		];
+
+		const swipeLeft = (el: Element, y: number) => {
+			fireEvent.touchStart(el, {
+				targetTouches: [{ clientX: 300, clientY: y }],
+			});
+			fireEvent.touchMove(el, {
+				targetTouches: [{ clientX: 100, clientY: y }],
+			});
+			fireEvent.touchEnd(el);
+		};
+
+		it("nie przewija galerii, gdy przeciągany jest pasek kontrolek wideo", () => {
+			const onNavigate = vi.fn();
+			const { container } = render(
+				<LightboxModal
+					items={makeItems()}
+					currentIndex={0}
+					onClose={vi.fn()}
+					onNavigate={onNavigate}
+				/>,
+			);
+			const video = container.querySelector("video") as HTMLVideoElement;
+			video.getBoundingClientRect = () => ({ bottom: 300 }) as DOMRect;
+
+			swipeLeft(video, 290); // dolne 64 px = kontrolki
+			expect(onNavigate).not.toHaveBeenCalled();
+		});
+
+		it("przewija galerię, gdy swipe zaczyna się na obrazie wideo", () => {
+			const onNavigate = vi.fn();
+			const { container } = render(
+				<LightboxModal
+					items={makeItems()}
+					currentIndex={0}
+					onClose={vi.fn()}
+					onNavigate={onNavigate}
+				/>,
+			);
+			const video = container.querySelector("video") as HTMLVideoElement;
+			video.getBoundingClientRect = () => ({ bottom: 300 }) as DOMRect;
+
+			swipeLeft(video, 50);
+			expect(onNavigate).toHaveBeenCalledWith(1);
+		});
+
+		it("nigdy nie przewija galerii dotykiem na odtwarzaczu audio", () => {
+			const onNavigate = vi.fn();
+			const { container } = render(
+				<LightboxModal
+					items={makeItems()}
+					currentIndex={1}
+					onClose={vi.fn()}
+					onNavigate={onNavigate}
+				/>,
+			);
+			const audio = container.querySelector("audio") as HTMLAudioElement;
+			audio.getBoundingClientRect = () => ({ bottom: 40 }) as DOMRect;
+
+			swipeLeft(audio, 5);
+			expect(onNavigate).not.toHaveBeenCalled();
+		});
+	});
 });

@@ -17,8 +17,9 @@ export interface ProcessTask {
 	gallerySlug: string;
 	uploaderName: string;
 	originalName: string;
-	fileType: "image" | "video";
+	fileType: "image" | "video" | "audio";
 	mimeType: string;
+	mediaType?: "photo" | "video" | "audio";
 	fileSize: number;
 	dataDir: string;
 	source?: "guest" | "photographer";
@@ -37,6 +38,7 @@ async function processMediaTask(task: ProcessTask) {
 		originalName,
 		fileType,
 		mimeType,
+		mediaType,
 		fileSize,
 		dataDir,
 		source = "guest",
@@ -85,7 +87,9 @@ async function processMediaTask(task: ProcessTask) {
 		const mediaProps =
 			fileType === "image"
 				? await processImage(targetRawPath, targetThumbPath)
-				: await processVideo(targetRawPath, targetThumbPath);
+				: fileType === "audio"
+					? await processAudio()
+					: await processVideo(targetRawPath, targetThumbPath);
 
 		const relativeRaw = path.posix.join(
 			"galleries",
@@ -93,9 +97,11 @@ async function processMediaTask(task: ProcessTask) {
 			"raw",
 			rawFileName,
 		);
-		const relativeThumb = existsSync(targetThumbPath)
-			? path.posix.join("galleries", gallerySlug, "thumbs", thumbFileName)
-			: relativeRaw;
+		// Audio nie ma miniatury; kolumna jest NOT NULL, a UI pokazuje ikonę zamiast obrazka
+		const relativeThumb =
+			fileType !== "audio" && existsSync(targetThumbPath)
+				? path.posix.join("galleries", gallerySlug, "thumbs", thumbFileName)
+				: relativeRaw;
 
 		const [newMedia] = await db
 			.insert(mediaItems)
@@ -103,9 +109,21 @@ async function processMediaTask(task: ProcessTask) {
 				galleryId: gallery.id,
 				uploaderName: uploaderName || "Gość weselny",
 				fileType,
+				mediaType:
+					mediaType ||
+					(fileType === "audio"
+						? "audio"
+						: fileType === "video"
+							? "video"
+							: "photo"),
 				source,
 				mimeType:
-					mimeType || (fileType === "video" ? "video/mp4" : "image/jpeg"),
+					mimeType ||
+					(fileType === "video"
+						? "video/mp4"
+						: fileType === "audio"
+							? "audio/mpeg"
+							: "image/jpeg"),
 				originalFileName: originalName,
 				fileSize,
 				storagePath: relativeRaw,
@@ -151,6 +169,10 @@ async function processVideo(rawPath: string, thumbPath: string) {
 	} catch (err) {
 		console.warn("[Processor] FFmpeg error:", err);
 	}
+	return { width: null, height: null, duration: null };
+}
+
+async function processAudio() {
 	return { width: null, height: null, duration: null };
 }
 

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { css, cx } from "styled-system/css";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import AudioVideoRecorder from "@/components/upload/AudioVideoRecorder";
 import FilePickerDropzone from "@/components/upload/FilePickerDropzone";
 import UploadFileRow from "@/components/upload/UploadFileRow";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
@@ -206,6 +207,12 @@ export default function UploaderDrawer({
 						title={t("dropzoneTitle")}
 						hint={t("dropzoneHint")}
 						onFiles={queue.addFiles}
+					/>
+
+					{/* Nagrywanie audio/wideo */}
+					<AudioVideoRecorder
+						disabled={isUploading}
+						onRecorded={(file) => queue.addFiles([file])}
 					/>
 
 					<Button

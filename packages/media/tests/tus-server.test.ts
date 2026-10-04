@@ -153,7 +153,9 @@ describe("tus-server configuration", () => {
 				),
 			).rejects.toMatchObject({
 				status_code: 403,
-				body: expect.stringContaining("Wgrywanie filmów jest wyłączone"),
+				body: expect.stringContaining(
+					"Wgrywanie filmów i nagrań jest wyłączone",
+				),
 			});
 		}
 	});
@@ -491,6 +493,62 @@ describe("tus-server configuration", () => {
 			}),
 		);
 	});
+
+	it("onUploadCreate powinien odrzucić nagranie audio (403), gdy galeria nie zezwala na filmy", async () => {
+		mockGalleryResult = [
+			{ id: "gal-1", maxStorageBytes: 0, isActive: true, allowVideos: false },
+		];
+		const onUploadCreate = initTusServer(tempDir).options.onUploadCreate;
+
+		await expect(
+			onUploadCreate?.(
+				{} as never,
+				{
+					metadata: {
+						gallerySlug: "kasia-i-tomek",
+						fileType: "audio/webm",
+						originalName: "zyczenia.webm",
+					},
+				} as never,
+			),
+		).rejects.toMatchObject({ status_code: 403 });
+	});
+
+	it.each([
+		["video/webm", "zyczenia_1.webm", "video", "video"],
+		["audio/webm", "zyczenia_2.webm", "audio", "audio"],
+		["audio/mp4", "zyczenia_3.mp4", "audio", "audio"],
+		["image/jpeg", "foto.jpg", "image", "photo"],
+	])(
+		"POST_FINISH klasyfikuje %s (%s) jako fileType=%s, mediaType=%s",
+		(mime, name, fileType, mediaType) => {
+			const server = initTusServer(tempDir);
+			vi.clearAllMocks();
+
+			(
+				server as unknown as {
+					emit: (e: string, req: unknown, res: unknown, up: unknown) => void;
+				}
+			).emit(
+				EVENTS.POST_FINISH,
+				{},
+				{},
+				{
+					id: "upl-kind",
+					size: 10,
+					metadata: {
+						gallerySlug: "kasia-i-tomek",
+						originalName: name,
+						fileType: mime,
+					},
+				},
+			);
+
+			expect(scheduleMediaProcessing).toHaveBeenCalledWith(
+				expect.objectContaining({ fileType, mediaType }),
+			);
+		},
+	);
 
 	it("powinien pominąć przetwarzanie w POST_FINISH, gdy brak gallerySlug", async () => {
 		const server = initTusServer(tempDir);

@@ -539,4 +539,36 @@ Obraz produkcyjny kontenera `wedding_web` (`node:24-alpine`) został zoptymalizo
 - **Lekki SDK Dysku Google**: Zastąpienie monolitu `googleapis` dedykowanym pakietem `@googleapis/drive` zmniejsza magazyn modułów o ponad 200 MB.
 - **Zgodność z Next.js 16**: Routing brzegowy korzysta z nowej konwencji `src/proxy.ts` (Network Proxy), a ostrzeżenia Turbopacka dla Service Workera są wyciszone flagą `SERWIST_SUPPRESS_TURBOPACK_WARNING=1`.
 
+---
 
+## 15. Życzenia audio/wideo (nagrywanie w przeglądarce)
+
+Goście mogą nagrać krótką wiadomość audio lub wideo (domyślnie do 60 s) bezpośrednio w szufladzie uploadu. Nagranie trafia do tej samej galerii, tego samego protokołu TUS i tej samej kolejki przetwarzania co zdjęcia. Pliki są przechowywane w oryginalnym formacie nagrania (WebM w Chrome/Firefox, MP4 w Safari) — serwer ich nie transkoduje.
+
+### 15.1. Frontend
+
+- `components/upload/AudioVideoRecorder.tsx` — nagrywanie przez `MediaRecorder` z podglądem na żywo (wideo), odsłuchem/odtworzeniem przed dodaniem do wysyłki, limitem czasu (`maxDurationSeconds`, domyślnie 60 s, wymuszanym timerem po stronie klienta) oraz wyborem kamery przód/tył. Gotowy plik trafia do `useUploadQueue` jak każdy inny.
+- `lib/recorder-formats.ts` — wybór formatu wspieranego przez przeglądarkę (`pickRecorderMimeType`) oraz nazwa i typ MIME pliku wyprowadzane z faktycznego formatu nagrania, nie z założeń o przeglądarce.
+- **Fallback**: gdy brak `MediaRecorder`/`getUserMedia` (np. starsze iOS, kontekst niezabezpieczony), komponent pokazuje dwa przyciski otwierające natywny wybór/nagranie (`<input accept="audio/*|video/*" capture>`).
+- Wszystkie teksty pochodzą z `messages/{pl,en,de}.json` (przestrzeń `GuestGallery`, klucze `recorder*` i `audioAria`).
+
+### 15.2. Backend (`packages/media`)
+
+- `media-kind.ts` — `classifyMedia(mime, nazwa)` jest jedynym miejscem klasyfikacji uploadu (`image`/`video`/`audio` → `photo`/`video`/`audio`). MIME ma pierwszeństwo; `.webm` bez MIME jest wideo.
+- `tus-server.ts` — flaga galerii `allowVideos` blokuje zarówno filmy, jak i nagrania audio. `POST_FINISH` przekazuje do kolejki `fileType` i `mediaType`.
+- `media-processor.ts` — wideo: miniatura FFmpeg z watchdogiem 25 s (`SIGKILL`); audio: bez FFmpeg i Sharp, bez miniatury (`thumb_path` wskazuje plik źródłowy, a UI pokazuje ikonę mikrofonu). Kolejka `p-queue` nadal ma `concurrency: 2`.
+- `file-validator.ts` — walidacja sygnatur binarnych obejmuje audio (MP3/ID3, ramka MPEG/ADTS, WAV, OGG, FLAC, MP4/M4A, WebM).
+
+### 15.3. Baza danych
+
+Kolumna `media_items.media_type` (`photo` | `video` | `audio`, domyślnie `photo`). Migracja `0006` ustawia `video` dla istniejących wierszy z `file_type = 'video'`. `file_type` przyjmuje teraz także `audio`.
+
+### 15.4. Galeria
+
+- `MediaGrid`, panel moderacji właściciela i tryb TV pokazują ikonę mikrofonu zamiast miniatury dla audio; kafelki wideo i audio mają odznakę w rogu.
+- `LightboxModal` renderuje `<audio controls>` / `<video controls>` / `<img>` zależnie od `fileType`.
+- SSE `new-media` oraz `GET /api/gallery/[slug]/media` zwracają `mediaType`.
+
+### 15.5. Eksport ZIP
+
+`createGalleryZipStream` zostawia zdjęcia w korzeniu archiwum, a nagrania układa w `audio/` i `video/`. Archiwum jest nadal strumieniowane (`archiver`), bez buforowania w pamięci. Eksport do Google Drive wysyła audio do tego samego folderu co wideo.

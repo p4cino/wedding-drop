@@ -9,6 +9,7 @@ import {
 	tusUploadMetadataDto,
 } from "@wedding-drop/db";
 import { eq, sql } from "drizzle-orm";
+import { classifyMedia } from "./media-kind";
 import { scheduleMediaProcessing } from "./media-processor";
 
 /**
@@ -124,13 +125,11 @@ export function initTusServer(dataDir: string, options: TusServerOptions = {}) {
 				};
 			}
 
-			const isVideo =
-				mimeType?.startsWith("video") ||
-				/\.(mp4|mov|avi|webm)$/i.test(originalName || "");
-			if (isVideo && gallery.allowVideos === false) {
+			const { mediaType: incomingKind } = classifyMedia(mimeType, originalName);
+			if (incomingKind !== "photo" && gallery.allowVideos === false) {
 				throw {
 					status_code: 403,
-					body: "Błąd: Wgrywanie filmów jest wyłączone w tej galerii.",
+					body: "Błąd: Wgrywanie filmów i nagrań jest wyłączone w tej galerii.",
 				};
 			}
 
@@ -189,14 +188,12 @@ export function initTusServer(dataDir: string, options: TusServerOptions = {}) {
 			fileType: mimeType,
 			source,
 		} = parseResult.data;
-		const isVideo =
-			mimeType.startsWith("video") ||
-			/\.(mp4|mov|avi|webm)$/i.test(originalName);
+		const { fileType, mediaType } = classifyMedia(mimeType, originalName);
 
 		const tempFilePath = path.join(uploadDir, upload.id);
 
 		console.log(
-			`[TUS] Ukończono upload ${upload.id} dla galerii ${gallerySlug} (${upload.size} bajtów, źródło: ${source})`,
+			`[TUS] Ukończono upload ${upload.id} dla galerii ${gallerySlug} (${upload.size} bajtów, źródło: ${source}, mediaType: ${mediaType})`,
 		);
 
 		// Asynchroniczne przekazanie do kolejki obróbki - dokładnie ta sama, ograniczona
@@ -207,8 +204,9 @@ export function initTusServer(dataDir: string, options: TusServerOptions = {}) {
 			gallerySlug,
 			uploaderName,
 			originalName,
-			fileType: isVideo ? "video" : "image",
+			fileType,
 			mimeType,
+			mediaType,
 			fileSize: upload.size || 0,
 			dataDir,
 			source,

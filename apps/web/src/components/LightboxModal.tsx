@@ -63,6 +63,17 @@ function NavButton({
 	);
 }
 
+/** Przeciąganie suwaka odtwarzacza nie może przewijać galerii: dotyk startujący na pasku kontrolek nie trafia do `useSwipe`. */
+function guardControlsSwipe(
+	e: React.TouchEvent<HTMLElement>,
+	controlsHeight: number,
+) {
+	const rect = e.currentTarget.getBoundingClientRect();
+	if (e.targetTouches[0].clientY >= rect.bottom - controlsHeight) {
+		e.stopPropagation();
+	}
+}
+
 export default function LightboxModal({
 	items,
 	currentIndex,
@@ -324,12 +335,29 @@ export default function LightboxModal({
 					p: { base: "2", sm: "12" },
 				})}
 			>
-				{current.fileType === "video" ? (
+				{current.fileType === "audio" ? (
+					<audio
+						src={current.rawUrl}
+						controls
+						autoPlay
+						onTouchStart={(e) =>
+							guardControlsSwipe(e, Number.POSITIVE_INFINITY)
+						}
+						aria-label={`${t("audioAria")}: ${current.originalFileName}`}
+						className={css({
+							width: "full",
+							maxWidth: "md",
+							borderRadius: "xl",
+							boxShadow: "2xl",
+						})}
+					/>
+				) : current.fileType === "video" ? (
 					<video
 						src={current.rawUrl}
 						controls
 						autoPlay
 						playsInline
+						onTouchStart={(e) => guardControlsSwipe(e, 64)}
 						aria-label={`${t("videoAria")}: ${current.originalFileName}`}
 						className={css({
 							maxWidth: "full",

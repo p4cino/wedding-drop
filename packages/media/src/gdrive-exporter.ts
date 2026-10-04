@@ -297,7 +297,7 @@ async function runExportTask(
 				let targetFolder = photosFolderId;
 				if (item.status === "hidden") {
 					targetFolder = hiddenFolderId || photosFolderId;
-				} else if (item.fileType === "video") {
+				} else if (item.fileType === "video" || item.fileType === "audio") {
 					targetFolder = videosFolderId;
 				}
 

@@ -146,6 +146,31 @@ describe("media-processor service", () => {
 		);
 	});
 
+	it("powinien zapisać nagranie audio bez FFmpeg/Sharp i bez miniatury (thumbPath = plik źródłowy)", async () => {
+		await scheduleMediaProcessing({
+			uploadId: "upl-audio-1",
+			tempFilePath: "/tmp/fake-audio.webm",
+			gallerySlug: "kasia-i-tomek",
+			uploaderName: "Babcia",
+			originalName: "zyczenia.webm",
+			fileType: "audio",
+			mediaType: "audio",
+			mimeType: "audio/webm",
+			fileSize: 4000,
+			dataDir: "/tmp/data",
+		});
+
+		expect(spawn).not.toHaveBeenCalled();
+		expect(sharp).not.toHaveBeenCalled();
+		expect(lastInsertedValues).toMatchObject({
+			fileType: "audio",
+			mediaType: "audio",
+			mimeType: "audio/webm",
+		});
+		expect(lastInsertedValues?.thumbPath).toBe(lastInsertedValues?.storagePath);
+		expect(sseBus.notifyNewMedia).toHaveBeenCalled();
+	});
+
 	it("powinien obsłużyć błąd, gdy galeria nie istnieje w bazie", async () => {
 		mockGalleryResult = [];
 		const task: ProcessTask = {

@@ -107,4 +107,26 @@ describe("MediaGrid Component", () => {
 			screen.getByRole("button", { name: /^videoAria: b\.mp4,/ }),
 		).toBeInTheDocument();
 	});
+
+	it("renderuje nagranie audio jako ikonę (bez <img>) z etykietą i18n", () => {
+		const items: MediaItemData[] = [
+			{
+				id: "a1",
+				uploaderName: "Babcia",
+				fileType: "audio",
+				mediaType: "audio",
+				mimeType: "audio/webm",
+				originalFileName: "zyczenia.webm",
+				thumbUrl: "/raw/zyczenia.webm",
+				rawUrl: "/raw/zyczenia.webm",
+				createdAt: "2026-09-12",
+			},
+		];
+		render(<MediaGrid items={items} onItemClick={vi.fn()} />);
+
+		expect(screen.queryByRole("img")).not.toBeInTheDocument();
+		expect(
+			screen.getByRole("button", { name: /^audioAria: zyczenia\.webm/ }),
+		).toBeInTheDocument();
+	});
 });

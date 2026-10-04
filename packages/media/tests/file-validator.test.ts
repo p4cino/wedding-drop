@@ -134,4 +134,90 @@ describe("validateMediaFile (Magic Bytes & Anti-XSS)", () => {
 			"Sygnatura pliku nie odpowiada obsługiwanemu formatowi wideo",
 		);
 	});
+
+	describe("audio", () => {
+		const cases: [string, Buffer, string][] = [
+			[
+				"mp3 ID3",
+				Buffer.concat([Buffer.from("ID3"), Buffer.alloc(40, 1)]),
+				".mp3",
+			],
+			[
+				"mp3 ramka",
+				Buffer.concat([
+					Buffer.from([0xff, 0xfb, 0x90, 0x00]),
+					Buffer.alloc(40, 1),
+				]),
+				".mp3",
+			],
+			[
+				"wav",
+				Buffer.concat([
+					Buffer.from("RIFF"),
+					Buffer.alloc(4),
+					Buffer.from("WAVE"),
+					Buffer.alloc(40),
+				]),
+				".wav",
+			],
+			[
+				"ogg",
+				Buffer.concat([Buffer.from("OggS"), Buffer.alloc(40, 1)]),
+				".ogg",
+			],
+			[
+				"webm",
+				Buffer.concat([
+					Buffer.from([0x1a, 0x45, 0xdf, 0xa3]),
+					Buffer.alloc(40, 1),
+				]),
+				".webm",
+			],
+			[
+				"m4a",
+				Buffer.concat([
+					Buffer.from([0, 0, 0, 0x18]),
+					Buffer.from("ftypM4A "),
+					Buffer.alloc(40),
+				]),
+				".m4a",
+			],
+		];
+
+		it.each(cases)(
+			"akceptuje %s i normalizuje rozszerzenie",
+			async (name, content, ext) => {
+				const filePath = await createTempFile(
+					`a-${name.replace(" ", "_")}.bin`,
+					content,
+				);
+				const res = await validateMediaFile(filePath, "nagranie.xyz", "audio");
+				expect(res.valid).toBe(true);
+				expect(res.safeExt).toBe(ext);
+			},
+		);
+
+		it("odrzuca obraz podszywający się pod audio", async () => {
+			const jpeg = Buffer.concat([
+				Buffer.from([
+					0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00,
+					0x01,
+				]),
+				Buffer.alloc(32),
+			]);
+			const filePath = await createTempFile("fake-audio.mp3", jpeg);
+			const res = await validateMediaFile(filePath, "fake-audio.mp3", "audio");
+			expect(res.valid).toBe(false);
+			expect(res.error).toContain("formatowi audio");
+		});
+
+		it("odrzuca HTML podszywający się pod audio (Stored XSS)", async () => {
+			const filePath = await createTempFile(
+				"x.mp3",
+				"<html><script>1</script></html>",
+			);
+			const res = await validateMediaFile(filePath, "x.mp3", "audio");
+			expect(res.valid).toBe(false);
+		});
+	});
 });
