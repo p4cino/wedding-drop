@@ -560,7 +560,7 @@ Goście mogą nagrać krótką wiadomość audio lub wideo (domyślnie do 60 s) 
 
 ### 15.1. Frontend
 
-- `components/upload/AudioVideoRecorder.tsx` — nagrywanie przez `MediaRecorder` z podglądem na żywo (wideo), odsłuchem/odtworzeniem przed dodaniem do wysyłki, limitem czasu (`maxDurationSeconds`, domyślnie 60 s, wymuszanym timerem po stronie klienta) oraz wyborem kamery przód/tył. Gotowy plik trafia do `useUploadQueue` jak każdy inny.
+- `components/upload/AudioVideoRecorder.tsx` — nagrywanie przez `MediaRecorder` z podglądem na żywo (wideo, zawsze z kamery przedniej `facingMode: "user"`), odsłuchem/odtworzeniem przed dodaniem do wysyłki (z opcją anulowania, ponownego nagrania lub dodania do wysyłki), limitem czasu (`maxDurationSeconds`, domyślnie 60 s, wymuszanym timerem po stronie klienta). Gotowy plik trafia do `useUploadQueue` jak każdy inny.
 - `lib/recorder-formats.ts` — wybór formatu wspieranego przez przeglądarkę (`pickRecorderMimeType`) oraz nazwa i typ MIME pliku wyprowadzane z faktycznego formatu nagrania, nie z założeń o przeglądarce.
 - **Fallback**: gdy brak `MediaRecorder`/`getUserMedia` (np. starsze iOS, kontekst niezabezpieczony), komponent pokazuje dwa przyciski otwierające natywny wybór/nagranie (`<input accept="audio/*|video/*" capture>`).
 - Wszystkie teksty pochodzą z `messages/{pl,en,de}.json` (przestrzeń `GuestGallery`, klucze `recorder*` i `audioAria`).

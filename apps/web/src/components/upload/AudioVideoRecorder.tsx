@@ -1,6 +1,6 @@
 "use client";
 
-import { Mic, SwitchCamera, Video } from "lucide-react";
+import { Mic, Video } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { css } from "styled-system/css";
@@ -62,7 +62,6 @@ export default function AudioVideoRecorder({
 	const [supported, setSupported] = useState<boolean | null>(null);
 	const [phase, setPhase] = useState<Phase>("idle");
 	const [kind, setKind] = useState<RecordingKind>("audio");
-	const [facing, setFacing] = useState<"user" | "environment">("user");
 	const [elapsed, setElapsed] = useState(0);
 	const [error, setError] = useState<string | null>(null);
 	const [recorded, setRecorded] = useState<{ file: File; url: string } | null>(
@@ -122,7 +121,7 @@ export default function AudioVideoRecorder({
 					? { audio: true }
 					: {
 							audio: true,
-							video: { facingMode: facing, width: { ideal: 1280 } },
+							video: { facingMode: "user", width: { ideal: 1280 } },
 						},
 			);
 			streamRef.current = stream;
@@ -291,31 +290,6 @@ export default function AudioVideoRecorder({
 							<Video className={css({ w: "5", h: "5" })} aria-hidden="true" />
 							{t("recorderRecordVideo")}
 						</button>
-						<button
-							type="button"
-							disabled={disabled}
-							onClick={() =>
-								setFacing((f) => (f === "user" ? "environment" : "user"))
-							}
-							aria-label={t("cameraSwitchCamera")}
-							title={t("cameraSwitchCamera")}
-							className={css({
-								alignSelf: "stretch",
-								px: "3",
-								borderRadius: "xl",
-								borderWidth: "1px",
-								borderColor: "slate.200",
-								color: "slate.600",
-								cursor: "pointer",
-								_hover: { backgroundColor: "slate.100" },
-								_disabled: { opacity: 0.5, cursor: "not-allowed" },
-							})}
-						>
-							<SwitchCamera
-								className={css({ w: "5", h: "5" })}
-								aria-hidden="true"
-							/>
-						</button>
 					</div>
 				</>
 			)}
@@ -438,15 +412,30 @@ export default function AudioVideoRecorder({
 							})}
 						/>
 					)}
-					<div className={css({ display: "flex", gap: "2" })}>
-						<button type="button" onClick={reset} className={actionButton}>
-							{t("recorderRetake")}
-						</button>
+					<div
+						className={css({
+							display: "flex",
+							flexDirection: "column",
+							gap: "2",
+						})}
+					>
+						<div className={css({ display: "flex", gap: "2" })}>
+							<button type="button" onClick={reset} className={actionButton}>
+								{t("recorderCancel")}
+							</button>
+							<button
+								type="button"
+								onClick={() => start(kind)}
+								className={actionButton}
+							>
+								{t("recorderRetake")}
+							</button>
+						</div>
 						<button
 							type="button"
 							onClick={send}
 							className={css({
-								flex: "1",
+								w: "full",
 								p: "2.5",
 								borderRadius: "lg",
 								backgroundColor: "amber.600",

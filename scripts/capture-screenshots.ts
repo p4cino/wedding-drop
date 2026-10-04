@@ -489,8 +489,9 @@ async function main() {
 		// ==========================================
 		console.log("6. Przechwytywanie panelu Pary Młodej...");
 		const ownerPage = await desktopContext.newPage();
-		// Zwiększamy nieco wysokość viewportu, by elegancko objąć nagłówek, statystyki, panel fotografa i moderację
-		await ownerPage.setViewportSize({ width: 1440, height: 1020 });
+		// Zwiększamy wysokość viewportu, by objąć nagłówek, statystyki, import fotografa
+		// oraz przełączniki zaawansowanej moderacji (hasło dostępu, kolejka akceptacji, zamrożenie galerii)
+		await ownerPage.setViewportSize({ width: 1440, height: 1900 });
 		await ownerPage.route(
 			"**/api/owner/kasia-i-tomek/session",
 			async (route) => {
