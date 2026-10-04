@@ -6,6 +6,7 @@ import sand from "@park-ui/panda-preset/colors/sand";
 export default defineConfig({
 	preflight: true,
 	presets: [
+		"@pandacss/preset-panda",
 		createPreset({
 			accentColor: amber,
 			grayColor: sand,
