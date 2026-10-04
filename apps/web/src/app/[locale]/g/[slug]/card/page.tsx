@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import QRCode from "qrcode";
 import { useCallback, useEffect, useState } from "react";
+import { css, cx } from "styled-system/css";
 import CardPreview from "@/components/CardPreview";
 import GalleryStatusScreen from "@/components/GalleryStatusScreen";
 import { Link } from "@/i18n/routing";
@@ -101,10 +102,42 @@ export default function CardCustomizerPage() {
 	}
 	if (status === "loading") {
 		return (
-			<div className="min-h-screen flex items-center justify-center bg-[#FAF8F5]">
-				<div className="text-center space-y-3">
-					<div className="w-8 h-8 border-2 border-amber-600 border-t-transparent rounded-full animate-spin mx-auto" />
-					<p className="text-sm font-medium text-slate-600">
+			<div
+				className={css({
+					minH: "100vh",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					backgroundColor: "#FAF8F5",
+				})}
+			>
+				<div
+					className={css({
+						textAlign: "center",
+						display: "flex",
+						flexDirection: "column",
+						gap: "3",
+					})}
+				>
+					<div
+						className={css({
+							w: "8",
+							h: "8",
+							borderWidth: "2px",
+							borderColor: "amber.600",
+							borderTopColor: "transparent",
+							borderRadius: "full",
+							animation: "spin 1s linear infinite",
+							mx: "auto",
+						})}
+					/>
+					<p
+						className={css({
+							fontSize: "sm",
+							fontWeight: "medium",
+							color: "slate.600",
+						})}
+					>
 						{t("loadingCard")}
 					</p>
 				</div>
@@ -120,64 +153,207 @@ export default function CardCustomizerPage() {
 	});
 
 	return (
-		<div className="min-h-screen bg-[#FAF8F5] pb-16">
+		<div
+			className={css({
+				minH: "100vh",
+				backgroundColor: "#FAF8F5",
+				pb: "16",
+			})}
+		>
 			{/* Pasek nawigacyjny */}
-			<nav className="no-print bg-white border-b border-slate-200/80 px-4 py-3 sticky top-0 z-30 flex items-center justify-between">
+			<nav
+				className={cx(
+					"no-print",
+					css({
+						backgroundColor: "white",
+						borderBottomWidth: "1px",
+						borderBottomColor: "slate.200", // slate-200/80 approx
+						px: "4",
+						py: "3",
+						position: "sticky",
+						top: "0",
+						zIndex: 30,
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "space-between",
+					}),
+				)}
+			>
 				<Link
 					href={`/g/${slug}`}
-					className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none rounded-lg p-1"
+					className={css({
+						display: "inline-flex",
+						alignItems: "center",
+						gap: "2",
+						fontSize: "sm",
+						fontWeight: "medium",
+						color: "slate.600",
+						_hover: { color: "slate.900" },
+						transition: "all 0.15s ease",
+						_focusVisible: {
+							outline: "2px solid",
+							outlineColor: "amber.500",
+						},
+						borderRadius: "lg",
+						p: "1",
+					})}
 				>
-					<ArrowLeft className="w-4 h-4" aria-hidden="true" />
+					<ArrowLeft className={css({ w: "4", h: "4" })} aria-hidden="true" />
 					<span>{t("backToGallery")}</span>
 				</Link>
-				<div className="flex items-center gap-2">
+				<div
+					className={css({ display: "flex", alignItems: "center", gap: "2" })}
+				>
 					<button
 						type="button"
 						onClick={handlePrint}
 						aria-label={t("printAria")}
-						className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
+						className={css({
+							display: "inline-flex",
+							alignItems: "center",
+							gap: "1.5",
+							px: "3.5",
+							py: "2",
+							fontSize: "xs",
+							fontWeight: "semibold",
+							borderRadius: "xl",
+							backgroundColor: "slate.100",
+							_hover: { backgroundColor: "slate.200" },
+							color: "slate.700",
+							transition: "all 0.15s ease",
+							_focusVisible: {
+								outline: "2px solid",
+								outlineColor: "amber.500",
+							},
+							cursor: "pointer",
+						})}
 					>
-						<Printer className="w-4 h-4" aria-hidden="true" />
-						<span className="hidden sm:inline">{t("printBtn")}</span>
+						<Printer className={css({ w: "4", h: "4" })} aria-hidden="true" />
+						<span className={css({ display: { base: "none", sm: "inline" } })}>
+							{t("printBtn")}
+						</span>
 					</button>
 					<a
 						href={`/api/gallery/${slug}/card/pdf?${pdfParams}`}
 						download
 						aria-label={t("downloadAria")}
-						className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-amber-600 hover:bg-amber-700 text-white shadow-sm transition focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
+						className={css({
+							display: "inline-flex",
+							alignItems: "center",
+							gap: "1.5",
+							px: "4",
+							py: "2",
+							fontSize: "xs",
+							fontWeight: "semibold",
+							borderRadius: "xl",
+							backgroundColor: "amber.600",
+							_hover: { backgroundColor: "amber.700" },
+							color: "white",
+							boxShadow: "sm",
+							transition: "all 0.15s ease",
+							_focusVisible: {
+								outline: "2px solid",
+								outlineColor: "amber.500",
+							},
+						})}
 					>
-						<Download className="w-4 h-4" aria-hidden="true" />
+						<Download className={css({ w: "4", h: "4" })} aria-hidden="true" />
 						<span>{t("downloadBtn")}</span>
 					</a>
 				</div>
 			</nav>
 
-			<main className="max-w-5xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+			<main
+				className={css({
+					maxW: "5xl",
+					mx: "auto",
+					px: "4",
+					py: "8",
+					display: "grid",
+					gridTemplateColumns: { base: "1fr", lg: "repeat(12, 1fr)" },
+					gap: "8",
+					alignItems: "start",
+				})}
+			>
 				{/* Lewa kolumna: Formularz edycji (ukryty podczas druku) */}
-				<div className="no-print lg:col-span-5 space-y-6 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
+				<div
+					className={cx(
+						"no-print",
+						css({
+							gridColumn: { lg: "span 5" },
+							display: "flex",
+							flexDirection: "column",
+							gap: "6",
+							backgroundColor: "white",
+							p: "6",
+							borderRadius: "3xl",
+							borderWidth: "1px",
+							borderColor: "slate.200",
+							boxShadow: "xs",
+						}),
+					)}
+				>
 					<div>
-						<div className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">
-							<Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+						<div
+							className={css({
+								display: "inline-flex",
+								alignItems: "center",
+								gap: "1.5",
+								fontSize: "xs",
+								fontWeight: "semibold",
+								color: "amber.700",
+								textTransform: "uppercase",
+								letterSpacing: "wider",
+								mb: "1",
+							})}
+						>
+							<Sparkles
+								className={css({ w: "3.5", h: "3.5" })}
+								aria-hidden="true"
+							/>
 							{t("designerTitle")}
 						</div>
-						<h2 className="font-serif-luxury text-2xl font-bold text-slate-900">
+						<h2
+							className={cx(
+								"font-serif-luxury",
+								css({
+									fontSize: "2xl",
+									fontWeight: "bold",
+									color: "slate.900",
+								}),
+							)}
+						>
 							{t("designerSubtitle")}
 						</h2>
-						<p className="text-xs text-slate-500 mt-1">{t("designerDesc")}</p>
+						<p className={css({ fontSize: "xs", color: "slate.500", mt: "1" })}>
+							{t("designerDesc")}
+						</p>
 					</div>
 
 					{/* Palety kolorów */}
 					<div>
 						<div
 							id="color-palette-label"
-							className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2"
+							className={css({
+								display: "block",
+								fontSize: "xs",
+								fontWeight: "semibold",
+								color: "slate.700",
+								textTransform: "uppercase",
+								letterSpacing: "wider",
+								mb: "2",
+							})}
 						>
 							{t("colorTheme")}
 						</div>
 						<div
 							role="group"
 							aria-labelledby="color-palette-label"
-							className="grid grid-cols-2 gap-2"
+							className={css({
+								display: "grid",
+								gridTemplateColumns: "2",
+								gap: "2",
+							})}
 						>
 							{PRESET_PALETTES.map((palette) => {
 								const isActive =
@@ -193,28 +369,68 @@ export default function CardCustomizerPage() {
 											setPrimaryColor(palette.primary);
 											setAccentColor(palette.accent);
 										}}
-										className={`flex items-center gap-2 p-2 rounded-xl border text-xs font-medium transition text-left focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none ${
-											isActive
-												? "border-amber-600 bg-amber-50/50"
-												: "border-slate-200 hover:border-slate-300"
-										}`}
+										className={css({
+											display: "flex",
+											alignItems: "center",
+											gap: "2",
+											p: "2",
+											borderRadius: "xl",
+											borderWidth: "1px",
+											fontSize: "xs",
+											fontWeight: "medium",
+											transition: "all 0.15s ease",
+											textAlign: "left",
+											_focusVisible: {
+												outline: "2px solid",
+												outlineColor: "amber.500",
+											},
+											cursor: "pointer",
+											borderColor: isActive ? "amber.600" : "slate.200",
+											backgroundColor: isActive ? "amber.50" : "transparent",
+											_hover: {
+												borderColor: isActive ? "amber.600" : "slate.300",
+											},
+										})}
 									>
-										<div className="flex -space-x-1 shrink-0">
-											<span
-												className="w-4 h-4 rounded-full border border-white"
-												style={{ background: palette.primary }}
-											/>
-											<span
-												className="w-4 h-4 rounded-full border border-white"
-												style={{ background: palette.accent }}
-											/>
+										<div
+											className={css({
+												display: "flex",
+												alignItems: "center",
+												flexShrink: 0,
+												"& > span": {
+													w: "4",
+													h: "4",
+													borderRadius: "full",
+													borderWidth: "1px",
+													borderColor: "white",
+												},
+												"& > span:not(:first-child)": {
+													marginLeft: "-1",
+												},
+											})}
+										>
+											<span style={{ background: palette.primary }} />
+											<span style={{ background: palette.accent }} />
 										</div>
-										<span className="truncate text-slate-800">
+										<span
+											className={css({
+												overflow: "hidden",
+												textOverflow: "ellipsis",
+												whiteSpace: "nowrap",
+												color: "slate.800",
+											})}
+										>
 											{t(palette.nameKey)}
 										</span>
 										{isActive && (
 											<Check
-												className="w-3.5 h-3.5 text-amber-600 ml-auto shrink-0"
+												className={css({
+													w: "3.5",
+													h: "3.5",
+													color: "amber.600",
+													ml: "auto",
+													flexShrink: 0,
+												})}
 												aria-hidden="true"
 											/>
 										)}
@@ -225,21 +441,52 @@ export default function CardCustomizerPage() {
 					</div>
 
 					{/* Własne kolory HEX */}
-					<div className="grid grid-cols-2 gap-3 pt-1">
+					<div
+						className={css({
+							display: "grid",
+							gridTemplateColumns: "2",
+							gap: "3",
+							pt: "1",
+						})}
+					>
 						<div>
 							<label
 								htmlFor="primary-color-text"
-								className="block text-[11px] font-medium text-slate-600 mb-1"
+								className={css({
+									display: "block",
+									fontSize: "11px",
+									fontWeight: "medium",
+									color: "slate.600",
+									mb: "1",
+								})}
 							>
 								{t("textColor")}
 							</label>
-							<div className="flex items-center gap-2">
+							<div
+								className={css({
+									display: "flex",
+									alignItems: "center",
+									gap: "2",
+								})}
+							>
 								<input
 									type="color"
 									aria-label={t("textColorPickerAria")}
 									value={primaryColor}
 									onChange={(e) => setPrimaryColor(e.target.value)}
-									className="w-8 h-8 rounded-lg cursor-pointer border border-slate-200 p-0.5 focus-visible:ring-2 focus-visible:ring-amber-500"
+									className={css({
+										w: "8",
+										h: "8",
+										borderRadius: "lg",
+										cursor: "pointer",
+										borderWidth: "1px",
+										borderColor: "slate.200",
+										p: "0.5",
+										_focusVisible: {
+											outline: "2px solid",
+											outlineColor: "amber.500",
+										},
+									})}
 								/>
 								<input
 									id="primary-color-text"
@@ -247,24 +494,60 @@ export default function CardCustomizerPage() {
 									aria-label={t("textColorHexAria")}
 									value={primaryColor}
 									onChange={(e) => setPrimaryColor(e.target.value)}
-									className="w-full px-2 py-1 text-xs border rounded-lg uppercase focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
+									className={css({
+										w: "full",
+										px: "2",
+										py: "1",
+										fontSize: "xs",
+										borderWidth: "1px",
+										borderRadius: "lg",
+										textTransform: "uppercase",
+										_focusVisible: {
+											outline: "2px solid",
+											outlineColor: "amber.500",
+										},
+									})}
 								/>
 							</div>
 						</div>
 						<div>
 							<label
 								htmlFor="accent-color-text"
-								className="block text-[11px] font-medium text-slate-600 mb-1"
+								className={css({
+									display: "block",
+									fontSize: "11px",
+									fontWeight: "medium",
+									color: "slate.600",
+									mb: "1",
+								})}
 							>
 								{t("frameColor")}
 							</label>
-							<div className="flex items-center gap-2">
+							<div
+								className={css({
+									display: "flex",
+									alignItems: "center",
+									gap: "2",
+								})}
+							>
 								<input
 									type="color"
 									aria-label={t("accentColorPickerAria")}
 									value={accentColor}
 									onChange={(e) => setAccentColor(e.target.value)}
-									className="w-8 h-8 rounded-lg cursor-pointer border border-slate-200 p-0.5 focus-visible:ring-2 focus-visible:ring-amber-500"
+									className={css({
+										w: "8",
+										h: "8",
+										borderRadius: "lg",
+										cursor: "pointer",
+										borderWidth: "1px",
+										borderColor: "slate.200",
+										p: "0.5",
+										_focusVisible: {
+											outline: "2px solid",
+											outlineColor: "amber.500",
+										},
+									})}
 								/>
 								<input
 									id="accent-color-text"
@@ -272,18 +555,45 @@ export default function CardCustomizerPage() {
 									aria-label={t("accentColorHexAria")}
 									value={accentColor}
 									onChange={(e) => setAccentColor(e.target.value)}
-									className="w-full px-2 py-1 text-xs border rounded-lg uppercase focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
+									className={css({
+										w: "full",
+										px: "2",
+										py: "1",
+										fontSize: "xs",
+										borderWidth: "1px",
+										borderRadius: "lg",
+										textTransform: "uppercase",
+										_focusVisible: {
+											outline: "2px solid",
+											outlineColor: "amber.500",
+										},
+									})}
 								/>
 							</div>
 						</div>
 					</div>
 
 					{/* Teksty */}
-					<div className="space-y-3 pt-2">
+					<div
+						className={css({
+							display: "flex",
+							flexDirection: "column",
+							gap: "3",
+							pt: "2",
+						})}
+					>
 						<div>
 							<label
 								htmlFor="headline-input"
-								className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1"
+								className={css({
+									display: "block",
+									fontSize: "xs",
+									fontWeight: "semibold",
+									color: "slate.700",
+									textTransform: "uppercase",
+									letterSpacing: "wider",
+									mb: "1",
+								})}
 							>
 								{t("headlineLabel")}
 							</label>
@@ -292,14 +602,35 @@ export default function CardCustomizerPage() {
 								type="text"
 								value={headline}
 								onChange={(e) => setHeadline(e.target.value)}
-								className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500"
+								className={css({
+									w: "full",
+									px: "3",
+									py: "2",
+									fontSize: "sm",
+									borderWidth: "1px",
+									borderColor: "slate.200",
+									borderRadius: "xl",
+									_focus: { outline: "none" },
+									_focusVisible: {
+										outline: "2px solid",
+										outlineColor: "amber.500",
+									},
+								})}
 							/>
 						</div>
 
 						<div>
 							<label
 								htmlFor="instructions-input"
-								className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1"
+								className={css({
+									display: "block",
+									fontSize: "xs",
+									fontWeight: "semibold",
+									color: "slate.700",
+									textTransform: "uppercase",
+									letterSpacing: "wider",
+									mb: "1",
+								})}
 							>
 								{t("instructionsLabel")}
 							</label>
@@ -308,15 +639,46 @@ export default function CardCustomizerPage() {
 								rows={3}
 								value={instructions}
 								onChange={(e) => setInstructions(e.target.value)}
-								className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus-visible:ring-2 focus-visible:ring-amber-500"
+								className={css({
+									w: "full",
+									px: "3",
+									py: "2",
+									fontSize: "xs",
+									borderWidth: "1px",
+									borderColor: "slate.200",
+									borderRadius: "xl",
+									_focus: { outline: "none" },
+									_focusVisible: {
+										outline: "2px solid",
+										outlineColor: "amber.500",
+									},
+								})}
 							/>
 						</div>
 					</div>
 				</div>
 
 				{/* Prawa kolumna: Podgląd Karteczki A6 1:1 */}
-				<div className="lg:col-span-7 flex flex-col items-center justify-center">
-					<div className="no-print text-xs text-slate-400 mb-3 font-medium">
+				<div
+					className={css({
+						gridColumn: { lg: "span 7" },
+						display: "flex",
+						flexDirection: "column",
+						alignItems: "center",
+						justifyContent: "center",
+					})}
+				>
+					<div
+						className={cx(
+							"no-print",
+							css({
+								fontSize: "xs",
+								color: "slate.400",
+								mb: "3",
+								fontWeight: "medium",
+							}),
+						)}
+					>
 						{t("previewFormat")}
 					</div>
 

@@ -35,7 +35,7 @@ describe("CardPreview", () => {
 		const { rerender, container } = render(
 			<CardPreview {...base} qrDataUrl="" lines={[]} />,
 		);
-		expect(container.querySelector(".animate-pulse")).not.toBeNull();
+		expect(container.querySelector("[class*='pulse']")).not.toBeNull();
 		rerender(<CardPreview {...base} qrDataUrl="" qrFailed lines={[]} />);
 		expect(screen.getByRole("alert")).toHaveTextContent("qrError");
 	});

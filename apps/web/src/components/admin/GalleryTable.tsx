@@ -2,7 +2,7 @@
 
 import { Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { css } from "styled-system/css";
+import { css, cx } from "styled-system/css";
 import NewTabLabel from "@/components/NewTabLabel";
 import { Link } from "@/i18n/routing";
 import type { GalleryRow } from "@/lib/admin-types";
@@ -173,11 +173,22 @@ export function GalleryTable({ galleries, onDelete }: GalleryTableProps) {
 											href={link.path(g.slug)}
 											target="_blank"
 											title={t(link.tableLabelKey)}
-											aria-label={`${t(link.tableLabelKey)} (${g.slug})`}
-											className={`inline-block p-1.5 rounded-lg transition focus-visible:ring-2 focus-visible:outline-none ${link.tableTone}`}
+											className={cx(
+												css({
+													display: "inline-block",
+													p: "1.5",
+													borderRadius: "lg",
+													transition: "all 0.15s ease",
+													_focusVisible: { outline: "none" },
+												}),
+												link.tableTone,
+											)}
 										>
 											{link.Icon ? (
-												<link.Icon className="w-4 h-4" aria-hidden="true" />
+												<link.Icon
+													className={css({ w: "4", h: "4" })}
+													aria-hidden="true"
+												/>
 											) : (
 												t("ownerPanelLink")
 											)}

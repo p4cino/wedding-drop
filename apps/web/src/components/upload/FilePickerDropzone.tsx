@@ -3,6 +3,7 @@
 import { Upload } from "lucide-react";
 import type React from "react";
 import { useRef } from "react";
+import { css } from "styled-system/css";
 
 interface FilePickerDropzoneProps {
 	disabled?: boolean;
@@ -35,7 +36,24 @@ export default function FilePickerDropzone({
 			disabled={disabled}
 			onClick={() => inputRef.current?.click()}
 			aria-label={title}
-			className={`w-full border-2 border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/40 rounded-2xl text-center cursor-pointer transition group focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${compact ? "p-5" : "p-6"}`}
+			className={`group ${css({
+				w: "full",
+				borderWidth: "2px",
+				borderStyle: "dashed",
+				borderColor: "amber.300",
+				_hover: { borderColor: "amber.500" },
+				backgroundColor: "rgba(255, 251, 235, 0.4)", // amber-50/40 approx
+				borderRadius: "2xl",
+				textAlign: "center",
+				cursor: "pointer",
+				transition: "all 0.3s ease",
+				_focusVisible: {
+					outline: "none",
+					boxShadow: "0 0 0 2px var(--colors-amber-500)",
+				},
+				_disabled: { opacity: 0.5, cursor: "not-allowed" },
+				p: compact ? "5" : "6",
+			})}`}
 		>
 			<input
 				ref={inputRef}
@@ -43,18 +61,50 @@ export default function FilePickerDropzone({
 				multiple
 				accept="image/*,video/*"
 				onChange={handleChange}
-				className="hidden"
+				className={css({ display: "none" })}
 			/>
 			<div
-				className={`mx-auto rounded-full bg-amber-100 flex items-center justify-center text-amber-700 group-hover:scale-110 transition ${compact ? "w-10 h-10 mb-2" : "w-12 h-12 mb-3"}`}
+				className={css({
+					mx: "auto",
+					borderRadius: "full",
+					backgroundColor: "amber.100",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					color: "amber.700",
+					transition: "transform 0.3s ease",
+					_groupHover: { transform: "scale(1.1)" },
+					w: compact ? "10" : "12",
+					h: compact ? "10" : "12",
+					mb: compact ? "2" : "3",
+				})}
 			>
 				<Upload
-					className={compact ? "w-5 h-5" : "w-6 h-6"}
+					className={css({
+						w: compact ? "5" : "6",
+						h: compact ? "5" : "6",
+					})}
 					aria-hidden="true"
 				/>
 			</div>
-			<p className="text-sm font-semibold text-slate-800">{title}</p>
-			<p className="text-xs text-slate-500 mt-1">{hint}</p>
+			<p
+				className={css({
+					fontSize: "sm",
+					fontWeight: "semibold",
+					color: "slate.800",
+				})}
+			>
+				{title}
+			</p>
+			<p
+				className={css({
+					fontSize: "xs",
+					color: "slate.500",
+					mt: "1",
+				})}
+			>
+				{hint}
+			</p>
 		</button>
 	);
 }
