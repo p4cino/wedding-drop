@@ -605,3 +605,141 @@ describe("tus-server configuration", () => {
 		);
 	});
 });
+
+describe("tus-server - limity i kontrola dostępu (owasp-hardening)", () => {
+	const tempDir = path.join(os.tmpdir(), "wedding-drop-test-tus-hardening");
+	const meta = { gallerySlug: "kasia-i-tomek" };
+	const reqWith = (headers: Record<string, string>) =>
+		({ headers: new Headers(headers) }) as never;
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mockGalleryResult = [{ id: "gal-1", maxStorageBytes: 0 }];
+		mockUsageResult = [{ totalBytes: 0 }];
+	});
+
+	it("ustawia maxSize na 1 GiB", () => {
+		const server = initTusServer(tempDir);
+		expect(server.options.maxSize).toBe(1024 * 1024 * 1024);
+	});
+
+	it("odrzuca upload z odroczonym rozmiarem (400)", async () => {
+		const server = initTusServer(tempDir);
+		await expect(
+			server.options.onUploadCreate?.(
+				{} as never,
+				{ sizeIsDeferred: true, metadata: meta } as never,
+			),
+		).rejects.toMatchObject({ status_code: 400 });
+	});
+
+	it("galeria z hasłem: gość bez sesji dostaje 401, z sesją przechodzi", async () => {
+		mockGalleryResult = [
+			{ id: "gal-1", guestPassword: "hash", maxStorageBytes: 0 },
+		];
+		const verifyGuestAccess = vi.fn(
+			(_slug: string, cookie?: string) =>
+				cookie === "wd_guest_kasia-i-tomek=ok",
+		);
+		const server = initTusServer(tempDir, { verifyGuestAccess });
+		const upload = { size: 10, metadata: meta } as never;
+
+		await expect(
+			server.options.onUploadCreate?.(reqWith({}), upload),
+		).rejects.toMatchObject({ status_code: 401 });
+		await expect(
+			server.options.onUploadCreate?.(
+				reqWith({ cookie: "wd_guest_kasia-i-tomek=ok" }),
+				upload,
+			),
+		).resolves.toBeDefined();
+	});
+
+	it("galeria z hasłem bez wstrzykniętej weryfikacji odrzuca gościa (401)", async () => {
+		mockGalleryResult = [
+			{ id: "gal-1", guestPassword: "hash", maxStorageBytes: 0 },
+		];
+		const server = initTusServer(tempDir);
+		await expect(
+			server.options.onUploadCreate?.(
+				reqWith({ cookie: "wd_guest_kasia-i-tomek=ok" }),
+				{ size: 10, metadata: meta } as never,
+			),
+		).rejects.toMatchObject({ status_code: 401 });
+	});
+
+	it("zwraca 429 z Retry-After, gdy limiter blokuje gościa", async () => {
+		const checkUploadRateLimit = vi.fn().mockReturnValue(30);
+		const server = initTusServer(tempDir, { checkUploadRateLimit });
+		await expect(
+			server.options.onUploadCreate?.(
+				reqWith({ "x-forwarded-for": "203.0.113.5, 10.0.0.1" }),
+				{ size: 10, metadata: meta } as never,
+			),
+		).rejects.toMatchObject({
+			status_code: 429,
+			headers: { "Retry-After": "30" },
+		});
+		expect(checkUploadRateLimit).toHaveBeenCalledWith(
+			"203.0.113.5",
+			"kasia-i-tomek",
+		);
+	});
+
+	it("limiter nie dotyczy importu fotografa", async () => {
+		const checkUploadRateLimit = vi.fn().mockReturnValue(30);
+		const server = initTusServer(tempDir, {
+			checkUploadRateLimit,
+			verifyOwnerCredentials: () => true,
+		});
+		await expect(
+			server.options.onUploadCreate?.(reqWith({}), {
+				size: 10,
+				metadata: { ...meta, source: "photographer", ownerToken: "t" },
+			} as never),
+		).resolves.toBeDefined();
+		expect(checkUploadRateLimit).not.toHaveBeenCalled();
+	});
+
+	it("limit pojemności galerii obowiązuje także gości (413)", async () => {
+		mockGalleryResult = [{ id: "gal-1", maxStorageBytes: 1000 }];
+		mockUsageResult = [{ totalBytes: 900 }];
+		const server = initTusServer(tempDir);
+		await expect(
+			server.options.onUploadCreate?.(reqWith({}), {
+				size: 200,
+				metadata: meta,
+			} as never),
+		).rejects.toMatchObject({ status_code: 413 });
+		await expect(
+			server.options.onUploadCreate?.(reqWith({}), {
+				size: 100,
+				metadata: meta,
+			} as never),
+		).resolves.toBeDefined();
+	});
+});
+
+describe("cleanupOrphanedUploads", () => {
+	it("usuwa pliki starsze niż 24 h, zostawia świeże", async () => {
+		const fsp = await import("node:fs/promises");
+		const dir = await fsp.mkdtemp(path.join(os.tmpdir(), "tus-cleanup-"));
+		const oldFile = path.join(dir, "upload_old");
+		const freshFile = path.join(dir, "upload_fresh");
+		await fsp.writeFile(oldFile, "x");
+		await fsp.writeFile(freshFile, "x");
+		const past = new Date(Date.now() - 25 * 60 * 60 * 1000);
+		await fsp.utimes(oldFile, past, past);
+
+		const { cleanupOrphanedUploads } = await import("../src/tus-server.js");
+		expect(await cleanupOrphanedUploads(dir)).toBe(1);
+		await expect(fsp.stat(oldFile)).rejects.toThrow();
+		expect((await fsp.stat(freshFile)).isFile()).toBe(true);
+		await fsp.rm(dir, { recursive: true, force: true });
+	});
+
+	it("zwraca 0 dla nieistniejącego katalogu", async () => {
+		const { cleanupOrphanedUploads } = await import("../src/tus-server.js");
+		expect(await cleanupOrphanedUploads("/nonexistent/tus-dir")).toBe(0);
+	});
+});

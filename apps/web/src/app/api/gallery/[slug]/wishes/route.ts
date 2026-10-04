@@ -1,9 +1,14 @@
-import { compare } from "@node-rs/bcrypt";
 import { addWishDto, db, galleries, wishes } from "@wedding-drop/db";
 import { sseBus } from "@wedding-drop/media";
 import { and, desc, eq, ne } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
-import { verifyAdminToken, verifyOwnerToken } from "@/lib/auth";
+import { authorizeHiddenAccess, hasGuestAccess } from "@/lib/auth";
+import {
+	ANON_WRITE_LIMIT,
+	getClientIp,
+	recordRateLimitHit,
+	tooManyRequests,
+} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -32,32 +37,24 @@ export async function GET(
 
 		let canViewHidden = false;
 		if (includeHidden) {
-			const ownerToken =
-				req.headers.get("x-owner-token") || searchParams.get("ownerToken");
-			if (ownerToken && verifyOwnerToken(ownerToken, slug)) {
-				canViewHidden = true;
-			}
-			const ownerPassword =
-				req.headers.get("x-owner-password") || searchParams.get("password");
-			if (
-				!canViewHidden &&
-				ownerPassword &&
-				(await compare(ownerPassword, gallery.ownerPasswordHash))
-			) {
-				canViewHidden = true;
-			}
-			const adminToken =
-				req.headers.get("x-admin-token") || searchParams.get("adminToken");
-			if (!canViewHidden && adminToken && verifyAdminToken(adminToken)) {
-				canViewHidden = true;
-			}
-
-			if (!canViewHidden) {
+			const access = await authorizeHiddenAccess(
+				req,
+				slug,
+				gallery.ownerPasswordHash,
+			);
+			if (access.retryAfter) return tooManyRequests(access.retryAfter);
+			if (!access.granted) {
 				return NextResponse.json(
 					{ error: "Brak uprawnień do przeglądania ukrytych życzeń" },
 					{ status: 401 },
 				);
 			}
+			canViewHidden = true;
+		} else if (!hasGuestAccess(req, slug, gallery.guestPassword)) {
+			return NextResponse.json(
+				{ error: "Wymagana autoryzacja gościa" },
+				{ status: 401 },
+			);
 		}
 
 		const condition = canViewHidden
@@ -105,12 +102,31 @@ export async function POST(
 		}
 
 		const gallery = galleryResult[0];
+		if (!hasGuestAccess(req, slug, gallery.guestPassword)) {
+			return NextResponse.json(
+				{ error: "Wymagana autoryzacja gościa" },
+				{ status: 401 },
+			);
+		}
 		if (!gallery.isActive) {
 			return NextResponse.json(
 				{ error: "Galeria nie jest już aktywna" },
 				{ status: 400 },
 			);
 		}
+		if (gallery.allowGuestUploads === false) {
+			return NextResponse.json(
+				{ error: "Dodawanie życzeń przez gości jest wyłączone" },
+				{ status: 403 },
+			);
+		}
+
+		const limit = recordRateLimitHit(
+			"wishes-post",
+			`${getClientIp(req.headers)}:${slug}`,
+			ANON_WRITE_LIMIT,
+		);
+		if (!limit.ok) return tooManyRequests(limit.retryAfter);
 
 		const body = await req.json().catch(() => ({}));
 		const parseResult = addWishDto.safeParse(body);

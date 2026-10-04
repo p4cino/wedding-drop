@@ -5,14 +5,77 @@ import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { authenticateOwner } from "@/lib/auth";
+import { detectImageType } from "@/lib/image-type";
 
-const ALLOWED_MIME_TYPES = [
-	"image/jpeg",
-	"image/png",
-	"image/webp",
-	"image/svg+xml",
-];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+// Rozszerzenia, które mogły zostać zapisane kiedykolwiek (włącznie z dawnym SVG) - do sprzątania
+const KNOWN_EXTS = ["jpg", "png", "webp", "svg"];
+
+type BrandingKind = "logo" | "background";
+
+/**
+ * Waliduje plik po zawartości (magic bytes) i zapisuje go pod nazwą wygenerowaną przez serwer.
+ * Nazwa klienta i deklarowany MIME nie biorą udziału w ścieżce zapisu.
+ */
+async function saveBrandingFile(
+	file: File,
+	kind: BrandingKind,
+	slug: string,
+	brandingDir: string,
+): Promise<{ ok: true; publicPath: string } | { ok: false; error: string }> {
+	if (file.size > MAX_FILE_SIZE) {
+		return {
+			ok: false,
+			error:
+				kind === "logo" ? "Logo file too large" : "Background file too large",
+		};
+	}
+	const buffer = Buffer.from(await file.arrayBuffer());
+	const detected = detectImageType(buffer);
+	if (!detected) {
+		return {
+			ok: false,
+			error:
+				kind === "logo"
+					? "Invalid logo file type"
+					: "Invalid background file type",
+		};
+	}
+
+	const fileName = `${kind}.${detected.ext}`;
+	const resolvedDir = path.resolve(/* turbopackIgnore: true */ brandingDir);
+	const fullPath = path.resolve(resolvedDir, fileName);
+	if (!fullPath.startsWith(resolvedDir + path.sep)) {
+		return { ok: false, error: "Invalid path" };
+	}
+
+	await removeBrandingFiles(resolvedDir, kind);
+	await writeFile(fullPath, buffer);
+	return {
+		ok: true,
+		publicPath: path.posix.join(
+			"/data",
+			"galleries",
+			slug,
+			"branding",
+			fileName,
+		),
+	};
+}
+
+/** Usuwa wszystkie warianty pliku danego rodzaju (stały zestaw nazw, bez wartości z DB). */
+async function removeBrandingFiles(
+	brandingDir: string,
+	kind: BrandingKind,
+): Promise<void> {
+	for (const ext of KNOWN_EXTS) {
+		try {
+			await unlink(path.join(brandingDir, `${kind}.${ext}`));
+		} catch {
+			// plik nie istnieje
+		}
+	}
+}
 
 export async function POST(
 	req: NextRequest,
@@ -41,7 +104,7 @@ export async function POST(
 		const safeBrandingDir = path.resolve(
 			/* turbopackIgnore: true */ brandingDir,
 		);
-		if (!safeBrandingDir.startsWith(safeDataDir)) {
+		if (!safeBrandingDir.startsWith(safeDataDir + path.sep)) {
 			return NextResponse.json({ error: "Invalid path" }, { status: 403 });
 		}
 
@@ -51,59 +114,24 @@ export async function POST(
 		let backgroundPath: string | undefined;
 
 		if (logo) {
-			if (!ALLOWED_MIME_TYPES.includes(logo.type)) {
-				return NextResponse.json(
-					{ error: "Invalid logo file type" },
-					{ status: 400 },
-				);
+			const result = await saveBrandingFile(logo, "logo", slug, brandingDir);
+			if (!result.ok) {
+				return NextResponse.json({ error: result.error }, { status: 400 });
 			}
-			if (logo.size > MAX_FILE_SIZE) {
-				return NextResponse.json(
-					{ error: "Logo file too large" },
-					{ status: 400 },
-				);
-			}
-
-			const ext = logo.name.split(".").pop() || "png";
-			const fileName = `logo.${ext}`;
-			const fullPath = path.join(brandingDir, fileName);
-			const buffer = Buffer.from(await logo.arrayBuffer());
-			await writeFile(fullPath, buffer);
-			logoPath = path.posix.join(
-				"/data",
-				"galleries",
-				slug,
-				"branding",
-				fileName,
-			);
+			logoPath = result.publicPath;
 		}
 
 		if (background) {
-			if (!ALLOWED_MIME_TYPES.includes(background.type)) {
-				return NextResponse.json(
-					{ error: "Invalid background file type" },
-					{ status: 400 },
-				);
-			}
-			if (background.size > MAX_FILE_SIZE) {
-				return NextResponse.json(
-					{ error: "Background file too large" },
-					{ status: 400 },
-				);
-			}
-
-			const ext = background.name.split(".").pop() || "png";
-			const fileName = `background.${ext}`;
-			const fullPath = path.join(brandingDir, fileName);
-			const buffer = Buffer.from(await background.arrayBuffer());
-			await writeFile(fullPath, buffer);
-			backgroundPath = path.posix.join(
-				"/data",
-				"galleries",
+			const result = await saveBrandingFile(
+				background,
+				"background",
 				slug,
-				"branding",
-				fileName,
+				brandingDir,
 			);
+			if (!result.ok) {
+				return NextResponse.json({ error: result.error }, { status: 400 });
+			}
+			backgroundPath = result.publicPath;
 		}
 
 		const existing = await db.query.galleryBranding.findFirst({
@@ -168,14 +196,7 @@ export async function DELETE(
 			const brandingDir = path.join(dataDir, "galleries", slug, "branding");
 
 			if (parsed.data.type === "logo" && existing.logoPath) {
-				const ext = existing.logoPath.split(".").pop();
-				const fileName = `logo.${ext}`;
-				const fullPath = path.join(brandingDir, fileName);
-				try {
-					await unlink(fullPath);
-				} catch (e) {
-					// Zignoruj jeśli plik nie istnieje
-				}
+				await removeBrandingFiles(path.resolve(brandingDir), "logo");
 				await db
 					.update(galleryBranding)
 					.set({
@@ -186,14 +207,7 @@ export async function DELETE(
 			}
 
 			if (parsed.data.type === "background" && existing.backgroundPath) {
-				const ext = existing.backgroundPath.split(".").pop();
-				const fileName = `background.${ext}`;
-				const fullPath = path.join(brandingDir, fileName);
-				try {
-					await unlink(fullPath);
-				} catch (e) {
-					// Zignoruj jeśli plik nie istnieje
-				}
+				await removeBrandingFiles(path.resolve(brandingDir), "background");
 				await db
 					.update(galleryBranding)
 					.set({

@@ -47,7 +47,7 @@ export async function handleBrandingFileRequest(
 		filename,
 	);
 
-	if (!targetPath.startsWith(safeDataDir)) {
+	if (!targetPath.startsWith(safeDataDir + path.sep)) {
 		res.writeHead(403, { "Content-Type": "text/plain" });
 		res.end("Forbidden - Path Traversal Detected");
 		return true;
@@ -67,6 +67,9 @@ export async function handleBrandingFileRequest(
 			"Content-Type": mimeType,
 			"Content-Length": fileStat.size,
 			"Cache-Control": "public, max-age=31536000, immutable",
+			"X-Content-Type-Options": "nosniff",
+			// Dawne pliki SVG nie mogą wykonać skryptu na originie aplikacji
+			"Content-Security-Policy": "default-src 'none'; sandbox",
 		});
 
 		const stream = fs.createReadStream(targetPath);

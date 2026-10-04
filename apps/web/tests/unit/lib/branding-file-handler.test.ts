@@ -63,4 +63,23 @@ describe("Branding File Handler", () => {
 		// slug `..` zostaje zsanityzowany do `""`, co zwraca 400
 		expect(res.writeHead).toHaveBeenCalledWith(400, expect.any(Object));
 	});
+
+	it("serwuje plik z nosniff i restrykcyjnym CSP", async () => {
+		mockStat.mockResolvedValue({ isFile: () => true, size: 3 });
+		const fs = (await import("node:fs")).default as any;
+		fs.createReadStream.mockReturnValue({ pipe: vi.fn() });
+		req.url = "/branding-file/test-slug/logo.svg";
+		await handleBrandingFileRequest(
+			req as IncomingMessage,
+			res as ServerResponse,
+			dataDir,
+		);
+		expect(res.writeHead).toHaveBeenCalledWith(
+			200,
+			expect.objectContaining({
+				"X-Content-Type-Options": "nosniff",
+				"Content-Security-Policy": "default-src 'none'; sandbox",
+			}),
+		);
+	});
 });

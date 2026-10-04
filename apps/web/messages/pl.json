@@ -36,6 +36,7 @@
 		"t5Text": "Administrator zastrzega sobie prawo do wprowadzania zmian w niniejszym regulaminie. Zmiany wchodzą w życie z dniem ich publikacji na stronie."
 	},
 	"AdminPanel": {
+		"logout": "Wyloguj",
 		"placeholderTitle": "Uwaga dla administratora:",
 		"privacyPlaceholder": "To jest przykładowy szablon Polityki Prywatności (placeholder). Pamiętaj, aby przed opublikowaniem usługi uzupełnić brakujące dane ([w nawiasach kwadratowych]) i dostosować treść do obowiązujących przepisów prawa, takich jak RODO, zgodnie ze specyfiką Twojej działalności.",
 		"termsPlaceholder": "To jest przykładowy szablon Warunków Korzystania (Regulaminu). Upewnij się, że uzupełnisz brakujące informacje i zweryfikujesz zgodność z prawem obowiązującym w Twoim kraju, w tym prawami konsumenta.",
@@ -122,6 +123,7 @@
 		"datePrefix": "Dodano:",
 		"defaultUploaderName": "Gość weselny",
 		"uploadError": "Błąd połączenia",
+		"uploadTooLarge": "Plik jest większy niż 1 GB",
 		"drawerTitle": "Dodaj zdjęcia i filmy",
 		"drawerSubtitle": "Bez logowania • Zostaną zapisane w galerii",
 		"drawerCloseTitle": "Zamknij okno przesyłania",

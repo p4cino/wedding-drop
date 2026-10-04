@@ -36,6 +36,7 @@
 		"t5Text": "Der Administrator behält sich das Recht vor, Änderungen an diesen Bestimmungen vorzunehmen. Änderungen treten am Tag ihrer Veröffentlichung auf der Website in Kraft."
 	},
 	"AdminPanel": {
+		"logout": "Abmelden",
 		"placeholderTitle": "Hinweis für den Administrator:",
 		"privacyPlaceholder": "Dies ist ein Muster für eine Datenschutzerklärung (Platzhalter). Denken Sie daran, vor der Veröffentlichung des Dienstes die fehlenden Daten (in [Klammern]) auszufüllen und den Inhalt entsprechend den Besonderheiten Ihres Unternehmens an geltendes Recht wie die DSGVO anzupassen.",
 		"termsPlaceholder": "Dies ist ein Muster für Nutzungsbedingungen (Platzhalter). Stellen Sie sicher, dass Sie die fehlenden Informationen ergänzen und die Einhaltung des in Ihrem Land geltenden Rechts, einschließlich der Verbraucherrechte, überprüfen.",
@@ -122,6 +123,7 @@
 		"datePrefix": "Hinzugefügt:",
 		"defaultUploaderName": "Hochzeitsgast",
 		"uploadError": "Verbindungsfehler",
+		"uploadTooLarge": "Datei ist größer als 1 GB",
 		"drawerTitle": "Fotos und Videos hinzufügen",
 		"drawerSubtitle": "Kein Login • Werden in der Galerie gespeichert",
 		"drawerCloseTitle": "Upload-Fenster schließen",

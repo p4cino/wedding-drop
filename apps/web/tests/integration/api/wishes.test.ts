@@ -7,7 +7,12 @@ import {
 	POST as postWish,
 } from "@/app/api/gallery/[slug]/wishes/route";
 import { PATCH as patchWishStatus } from "@/app/api/owner/[slug]/wishes/[id]/status/route";
-import { generateAdminToken, generateOwnerToken } from "@/lib/auth";
+import {
+	generateAdminToken,
+	generateGuestToken,
+	generateOwnerToken,
+} from "@/lib/auth";
+import { _clearRateLimitsForTests } from "@/lib/rate-limit";
 
 vi.mock("@node-rs/bcrypt", () => ({
 	compare: vi.fn((pwd: string) => Promise.resolve(pwd === "sekret123")),
@@ -80,6 +85,7 @@ describe("Guest Wishes Book API", () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+		_clearRateLimitsForTests();
 		dbShouldThrow = false;
 		insertedWish = null;
 		ownerToken = generateOwnerToken(slug);
@@ -147,7 +153,8 @@ describe("Guest Wishes Book API", () => {
 
 		it("powinien zwrócić wszystkie życzenia poza usuniętymi z poprawnym hasłem właściciela", async () => {
 			const req = new NextRequest(
-				`http://localhost/api/gallery/${slug}/wishes?includeHidden=true&password=sekret123`,
+				`http://localhost/api/gallery/${slug}/wishes?includeHidden=true`,
+				{ headers: { "x-owner-password": "sekret123" } },
 			);
 			const res = await getWishes(req, { params: Promise.resolve({ slug }) });
 
@@ -160,7 +167,8 @@ describe("Guest Wishes Book API", () => {
 			// Mock symuluje warstwę SQL: właściciel widzi tylko to, co zapytanie ne(status,"deleted") zwróciłoby
 			mockWishes = mockWishes.filter((w) => w.status !== "deleted");
 			const req = new NextRequest(
-				`http://localhost/api/gallery/${slug}/wishes?includeHidden=true&password=sekret123`,
+				`http://localhost/api/gallery/${slug}/wishes?includeHidden=true`,
+				{ headers: { "x-owner-password": "sekret123" } },
 			);
 			const res = await getWishes(req, { params: Promise.resolve({ slug }) });
 
@@ -174,13 +182,68 @@ describe("Guest Wishes Book API", () => {
 		it("powinien zwrócić wszystkie życzenia z poprawnym adminToken", async () => {
 			const token = generateAdminToken("admin");
 			const req = new NextRequest(
-				`http://localhost/api/gallery/${slug}/wishes?includeHidden=true&adminToken=${token}`,
+				`http://localhost/api/gallery/${slug}/wishes?includeHidden=true`,
+				{ headers: { "x-admin-token": token } },
 			);
 			const res = await getWishes(req, { params: Promise.resolve({ slug }) });
 
 			expect(res.status).toBe(200);
 			const data = await res.json();
 			expect(data.wishes).toHaveLength(2);
+		});
+
+		it("ignoruje ownerToken, password i adminToken z query (401)", async () => {
+			const adminToken = generateAdminToken("admin");
+			for (const q of [
+				`ownerToken=${ownerToken}`,
+				"password=sekret123",
+				`adminToken=${adminToken}`,
+			]) {
+				const req = new NextRequest(
+					`http://localhost/api/gallery/${slug}/wishes?includeHidden=true&${q}`,
+				);
+				const res = await getWishes(req, { params: Promise.resolve({ slug }) });
+				expect(res.status).toBe(401);
+			}
+		});
+
+		it("galeria z hasłem gościa: GET bez sesji gościa zwraca 401", async () => {
+			mockGalleries[0].guestPassword = "$2b$10$hashhashhashhashhashhu";
+			const req = new NextRequest(
+				`http://localhost/api/gallery/${slug}/wishes`,
+			);
+			const res = await getWishes(req, { params: Promise.resolve({ slug }) });
+			expect(res.status).toBe(401);
+		});
+
+		it("galeria z hasłem gościa: GET z sesją gościa zwraca 200", async () => {
+			mockGalleries[0].guestPassword = "$2b$10$hashhashhashhashhashhu";
+			const req = new NextRequest(
+				`http://localhost/api/gallery/${slug}/wishes`,
+				{
+					headers: { cookie: `wd_guest_${slug}=${generateGuestToken(slug)}` },
+				},
+			);
+			const res = await getWishes(req, { params: Promise.resolve({ slug }) });
+			expect(res.status).toBe(200);
+		});
+
+		it("429 po przekroczeniu limitu błędnych haseł w nagłówku i bez wywołania bcrypt", async () => {
+			const { compare } = await import("@node-rs/bcrypt");
+			const call = () =>
+				getWishes(
+					new NextRequest(
+						`http://localhost/api/gallery/${slug}/wishes?includeHidden=true`,
+						{ headers: { "x-owner-password": "zle" } },
+					),
+					{ params: Promise.resolve({ slug }) },
+				);
+			for (let i = 0; i < 10; i++) expect((await call()).status).toBe(401);
+			vi.mocked(compare).mockClear();
+			const res = await call();
+			expect(res.status).toBe(429);
+			expect(res.headers.get("Retry-After")).toBeTruthy();
+			expect(compare).not.toHaveBeenCalled();
 		});
 
 		it("powinien zwrócić 404, gdy galeria nie istnieje", async () => {
@@ -225,6 +288,49 @@ describe("Guest Wishes Book API", () => {
 			expect(data.wish.message).toBe("Wszystkiego najlepszego!");
 			expect(notifySpy).toHaveBeenCalledWith(slug, expect.any(Object));
 			notifySpy.mockRestore();
+		});
+
+		it("galeria z hasłem gościa: POST bez sesji gościa zwraca 401 i nie tworzy rekordu", async () => {
+			mockGalleries[0].guestPassword = "$2b$10$hashhashhashhashhashhu";
+			const req = new NextRequest(
+				`http://localhost/api/gallery/${slug}/wishes`,
+				{
+					method: "POST",
+					body: JSON.stringify({ message: "Życzenia" }),
+				},
+			);
+			const res = await postWish(req, { params: Promise.resolve({ slug }) });
+			expect(res.status).toBe(401);
+			expect(insertedWish).toBeNull();
+		});
+
+		it("odrzuca POST (403), gdy allowGuestUploads jest wyłączone", async () => {
+			mockGalleries[0].allowGuestUploads = false;
+			const req = new NextRequest(
+				`http://localhost/api/gallery/${slug}/wishes`,
+				{
+					method: "POST",
+					body: JSON.stringify({ message: "Życzenia" }),
+				},
+			);
+			const res = await postWish(req, { params: Promise.resolve({ slug }) });
+			expect(res.status).toBe(403);
+		});
+
+		it("429 po 30 życzeniach na minutę z jednego IP", async () => {
+			const post = () =>
+				postWish(
+					new NextRequest(`http://localhost/api/gallery/${slug}/wishes`, {
+						method: "POST",
+						headers: { "x-forwarded-for": "203.0.113.7" },
+						body: JSON.stringify({ message: "Życzenia" }),
+					}),
+					{ params: Promise.resolve({ slug }) },
+				);
+			for (let i = 0; i < 30; i++) expect((await post()).status).toBe(201);
+			insertedWish = null;
+			expect((await post()).status).toBe(429);
+			expect(insertedWish).toBeNull();
 		});
 
 		it("powinien odrzucić pustą treść życzenia (400)", async () => {

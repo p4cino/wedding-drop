@@ -77,3 +77,19 @@ describe("uploadFileViaTus", () => {
 		expect(onProgress.mock.calls.map((c) => c[0])).toEqual([1, 4, 5, 100]);
 	});
 });
+
+describe("uploadFileViaTus - limit 1 GB", () => {
+	it("plik większy niż 1 GiB kończy się tooLarge bez startu uploadu", async () => {
+		const big = { name: "film.mp4", size: 1024 * 1024 * 1024 + 1 } as File;
+		await expect(uploadFileViaTus(big, {})).resolves.toBe("tooLarge");
+	});
+
+	it("odpowiedź 413 serwera kończy się tooLarge", async () => {
+		const p = uploadFileViaTus(file, {});
+		const err = Object.assign(new Error("413"), {
+			originalResponse: { getStatus: () => 413 },
+		});
+		lastOptions?.onError(err);
+		await expect(p).resolves.toBe("tooLarge");
+	});
+});

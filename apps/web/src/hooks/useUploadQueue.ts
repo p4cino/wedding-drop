@@ -21,6 +21,8 @@ export type UploadPhase = "idle" | "uploading" | "done";
 interface UseUploadQueueOptions {
 	/** Tekst błędu pokazywany przy nieudanym pliku (już przetłumaczony). */
 	errorMessage: string;
+	/** Tekst błędu dla pliku większego niż limit 1 GB (domyślnie `errorMessage`). */
+	tooLargeMessage?: string;
 	/** Wołane raz po zakończeniu wysyłki, tylko gdy co najmniej jeden plik się powiódł. */
 	onFinished?: (result: { completed: number; failed: number }) => void;
 }
@@ -40,6 +42,7 @@ const createItem = (file: File): UploadItem => ({
  */
 export function useUploadQueue({
 	errorMessage,
+	tooLargeMessage,
 	onFinished,
 }: UseUploadQueueOptions) {
 	const [items, setItems] = useState<UploadItem[]>([]);
@@ -47,8 +50,12 @@ export function useUploadQueue({
 	const [completedCount, setCompletedCount] = useState(0);
 	const itemsRef = useRef(items);
 	itemsRef.current = items;
-	const optionsRef = useRef({ errorMessage, onFinished });
-	optionsRef.current = { errorMessage, onFinished };
+	const optionsRef = useRef({
+		errorMessage,
+		tooLargeMessage,
+		onFinished,
+	});
+	optionsRef.current = { errorMessage, tooLargeMessage, onFinished };
 
 	const patch = useCallback((id: string, changes: Partial<UploadItem>) => {
 		setItems((prev) =>
@@ -95,7 +102,11 @@ export function useUploadQueue({
 					failed.add(item.id);
 					patch(item.id, {
 						status: "error",
-						error: optionsRef.current.errorMessage,
+						error:
+							result === "tooLarge"
+								? (optionsRef.current.tooLargeMessage ??
+									optionsRef.current.errorMessage)
+								: optionsRef.current.errorMessage,
 					});
 				}
 			}

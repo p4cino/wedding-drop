@@ -2,6 +2,7 @@ import { db, galleries } from "@wedding-drop/db";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { authenticateOwner } from "@/lib/auth";
+import { hashSecret } from "@/lib/credential";
 
 export const dynamic = "force-dynamic";
 
@@ -47,11 +48,8 @@ export async function PATCH(
 		if (body.guestPassword !== undefined) {
 			if (body.guestPassword === null || body.guestPassword === "") {
 				updates.guestPassword = null;
-			} else {
-				// Haszujemy hasło gościa dla bezpieczeństwa jeśli aplikacja tego wymaga,
-				// Ale schemat DB ma text("guest_password") - to jest przechowywane zwykłym tekstem wg wczesniejszego kodu.
-				// Zaraz sprawdzę jak guestPassword było weryfikowane.
-				updates.guestPassword = body.guestPassword;
+			} else if (typeof body.guestPassword === "string") {
+				updates.guestPassword = await hashSecret(body.guestPassword);
 			}
 		}
 

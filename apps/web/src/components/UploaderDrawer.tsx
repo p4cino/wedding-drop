@@ -36,6 +36,7 @@ export default function UploaderDrawer({
 	const t = useTranslations("GuestGallery");
 	const queue = useUploadQueue({
 		errorMessage: t("uploadError"),
+		tooLargeMessage: t("uploadTooLarge"),
 		onFinished: () => onUploadSuccess?.(),
 	});
 	const { isUploading, clear: clearQueue } = queue;

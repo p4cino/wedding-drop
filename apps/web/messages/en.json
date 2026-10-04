@@ -36,6 +36,7 @@
 		"t5Text": "The administrator reserves the right to make changes to these regulations. Changes take effect on the date of their publication on the website."
 	},
 	"AdminPanel": {
+		"logout": "Log out",
 		"placeholderTitle": "Note for the administrator:",
 		"privacyPlaceholder": "This is a sample Privacy Policy template (placeholder). Remember to fill in the missing data (in [brackets]) and adapt the content to applicable laws, such as GDPR, according to the specifics of your business before publishing the service.",
 		"termsPlaceholder": "This is a sample Terms of Service template (placeholder). Make sure to fill in the missing information and verify compliance with the law applicable in your country, including consumer rights.",
@@ -122,6 +123,7 @@
 		"datePrefix": "Added:",
 		"defaultUploaderName": "Wedding Guest",
 		"uploadError": "Connection error",
+		"uploadTooLarge": "File is larger than 1 GB",
 		"drawerTitle": "Add photos and videos",
 		"drawerSubtitle": "No login • Will be saved to the gallery",
 		"drawerCloseTitle": "Close upload window",

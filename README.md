@@ -215,7 +215,11 @@ Aby aplikacja działała na Twojej publicznej domenie z darmowym certyfikatem Le
 - **Zgodność TUS z HTTPS i Reverse Proxy**: Serwer TUS działa z flagami `relativeLocation: true` oraz `respectForwardedHeaders: true`, a klient przeglądarki dynamicznie odpytuje `window.location.origin`, co całkowicie eliminuje błędy CORS i niepożądane przekierowania preflight HTTP -> HTTPS.
 - **Globalny singleton SSE i odporne odświeżanie**: Magistrala zdarzeń zarejestrowana w `globalThis.__wedding_sse_bus__` oraz mechanizm ponawianego cichego odpytywania w tle (0s, 1s, 2.5s, 5s) gwarantują natychmiastowe pojawienie się zdjęć i filmów na ekranach gości zaraz po zakończeniu obróbki FFmpeg/Sharp.
 - **Autoryzacja zdjęć ukrytych**: Dostęp do materiałów ukrytych (`status: "hidden"`) przez API wymaga poświadczeń właściciela galerii lub administratora (brak wycieków w publicznym JSON).
-- **Haszowanie haseł**: Hasła administratora i par młodych są zabezpieczone funkcją `bcrypt` z solą.
+- **Haszowanie haseł**: Hasła administratora, par młodych, hasła gości oraz PIN-y ZIP są zabezpieczone funkcją `bcrypt` z solą (stare wartości plaintext są automatycznie zamieniane na hash przy pierwszym poprawnym logowaniu).
+- **Rate limiting**: 10 nieudanych prób / 15 min na IP i galerię dla logowań, haseł i PIN-ów (potem `429`, bez kosztownego bcrypt); limity dla życzeń i tworzenia uploadów. Tokeny admina wygasają po 8 h, a wylogowanie unieważnia token.
+- **Limity uploadu**: maksymalnie **1 GB na plik**; limit pojemności galerii (`maxStorageBytes`) obejmuje także gości; porzucone uploady są sprzątane po 24 h.
+- **Hasło gościa**: galeria chroniona hasłem nie ujawnia mediów, życzeń ani uploadu bez sesji gościa.
+- **Branding bez SVG**: logo i tło tylko JPEG/PNG/WebP, weryfikowane po zawartości pliku.
 - **Izolacja**: Pliki każdej pary są przechowywane w odrębnych podkatalogach `/data/galleries/<slug>/`.
 - **Utwardzony kontener Docker i nieuprzywilejowany użytkownik (`USER node`)**: Kontener aplikacji produkcyjnej działa na odświeżonym obrazie `node:24-alpine` z całkowitym usunięciem zbędnych globalnych narzędzi NPM/Yarn oraz prawami użytkownika nie-root (`USER node`, UID/GID 1000). Kontener startuje przez `docker-entrypoint.sh`, który przy każdym starcie naprawia właściciela `/app/data` (stare wolumeny założone przez root powodowały `EACCES` przy przenoszeniu uploadów) i dopiero wtedy zrzuca uprawnienia do `node` (`su-exec`).
 - **Zoptymalizowany rozmiar obrazu**: Dzięki rozdzieleniu zależności deweloperskich (`@serwist/*`), migracji Google SDK na `@googleapis/drive` oraz optymalizacji warstw, obraz produkcyjny został zredukowany o ponad 65% z 0 podatnościami krytycznymi.
@@ -285,6 +289,9 @@ Wszystkie specyfikacje oraz propozycje zmian znajdują się w katalogu `openspec
 Od wersji z utwardzoną sesją właściciela wprowadzono następujące zasady:
 - **Wycofanie poświadczeń z query stringu**: Parametry `?password=`, `?token=`, `?ownerToken=`, `?adminToken=` nie są już akceptowane przez serwer (`/api/gallery/:slug/media`, `/api/gallery/:slug/zip`, `/api/admin/galleries`, `/api/auth/google`). Wszelkie poświadczenia muszą być przekazywane w nagłówkach HTTP (`x-owner-token`, `x-owner-password`, `Authorization: Bearer <token>`, `x-admin-token`) lub za pośrednictwem ciasteczka sesji `wd_owner_{slug}`.
 - **Inicjalizacja Google OAuth**: Endpoint `/api/auth/google` przyjmuje wyłącznie metodę `POST` z ciałem JSON `{ "slug": "..." }` i nagłówkiem autoryzacyjnym, zwracając adres docelowy `{ "authUrl": "..." }`.
+- **PIN ZIP tylko w nagłówku**: `?pin=` jest ignorowany — użyj `x-access-pin`.
+- **Nowy format tokenów**: tokeny admina/właściciela zawierają `jti`; po wdrożeniu starsze tokeny przestają działać (ponowne logowanie). Token admina ważny 8 h. Logowanie ma limit prób (`429` + `Retry-After`).
+- **SVG nie jest już przyjmowany** jako logo/tło.
 - **Migracja skryptów i integracji**: Zewnętrzne skrypty korzystające dotąd z parametrów w adresie URL (np. pobieranie ZIP) muszą przekazywać nagłówek HTTP, np. `curl -H "x-owner-token: <token>" https://.../api/gallery/<slug>/zip` lub `curl -H "x-owner-password: <haslo>" ...`.
 
 ---
