@@ -47,7 +47,7 @@ export async function handleBrandingFileRequest(
 		filename,
 	);
 
-	if (!targetPath.startsWith(safeDataDir)) {
+	if (!targetPath.startsWith(safeDataDir + path.sep)) {
 		res.writeHead(403, { "Content-Type": "text/plain" });
 		res.end("Forbidden - Path Traversal Detected");
 		return true;

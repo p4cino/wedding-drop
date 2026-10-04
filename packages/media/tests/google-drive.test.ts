@@ -122,6 +122,7 @@ describe("Google Drive Helper & Security Tests", () => {
 		});
 
 		it("powinien poprawnie wygenerować URL autoryzacyjny Google z offline refresh_token i stanem state", () => {
+			process.env.ADMIN_PASSWORD = "test-secret-key-456";
 			const slug = "kasia-i-tomek";
 			const url = getGoogleAuthUrl(slug);
 
