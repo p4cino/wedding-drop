@@ -11,12 +11,12 @@
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@googleapis/drive": "^26.0.2",
 		"@tus/file-store": "^2.1.1",
 		"@tus/server": "^2.4.5",
 		"@wedding-drop/db": "workspace:*",
 		"archiver": "^8.0.0",
 		"drizzle-orm": "^0.45.3",
-		"googleapis": "^182.0.0",
 		"p-queue": "^9.3.3",
 		"pdf-lib": "^1.17.1",
 		"qrcode": "^1.5.4",

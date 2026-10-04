@@ -1,3 +1,5 @@
+process.env.SERWIST_SUPPRESS_TURBOPACK_WARNING = "1";
+
 import withSerwistInit from "@serwist/next";
 import createNextIntlPlugin from "next-intl/plugin";
 
@@ -18,7 +20,7 @@ const nextConfig = {
 		"@tus/server",
 		"@tus/file-store",
 		"postgres",
-		"googleapis",
+		"@googleapis/drive",
 		"drizzle-orm",
 		"@node-rs/bcrypt",
 	],
