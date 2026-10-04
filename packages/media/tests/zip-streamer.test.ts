@@ -189,4 +189,49 @@ describe("ZipStreamer Service", () => {
 		consoleErrorSpy.mockRestore();
 		existsSpy.mockRestore();
 	});
+
+	it("umieszcza nagrania w audio/ i video/, a zdjęcia zostawia w korzeniu archiwum", async () => {
+		const existsSpy = vi.spyOn(fs, "existsSync").mockReturnValue(true);
+		const { ZipArchive } = await import("archiver");
+		const fileSpy = vi
+			.spyOn(ZipArchive.prototype, "file")
+			.mockImplementation(function (this: unknown) {
+				return this as never;
+			});
+
+		createGalleryZipStream(
+			[
+				{
+					storagePath: "g/raw/a.jpg",
+					originalFileName: "a.jpg",
+					mediaType: "photo",
+				},
+				{
+					storagePath: "g/raw/b.webm",
+					originalFileName: "b.webm",
+					mediaType: "video",
+				},
+				{
+					storagePath: "g/raw/c.webm",
+					originalFileName: "c.webm",
+					mediaType: "audio",
+				},
+				{ storagePath: "g/raw/d.jpg", originalFileName: "d.jpg" },
+			],
+			"/mock/data",
+		);
+
+		const names = fileSpy.mock.calls.map(
+			([, opts]) => (opts as { name: string }).name,
+		);
+		expect(names).toEqual([
+			"001_a.jpg",
+			"video/002_b.webm",
+			"audio/003_c.webm",
+			"004_d.jpg",
+		]);
+
+		fileSpy.mockRestore();
+		existsSpy.mockRestore();
+	});
 });

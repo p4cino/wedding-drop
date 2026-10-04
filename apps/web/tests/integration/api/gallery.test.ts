@@ -237,6 +237,35 @@ describe("Gallery API Routes", () => {
 			expect(data.media[0].thumbUrl).toContain("/media-file/");
 		});
 
+		it("powinien zwrócić pole mediaType dla zdjęć, wideo i audio", async () => {
+			mockMedia = [
+				{ ...mockMedia[0], id: "m-photo", mediaType: "photo" },
+				{
+					...mockMedia[0],
+					id: "m-video",
+					fileType: "video",
+					mediaType: "video",
+				},
+				{
+					...mockMedia[0],
+					id: "m-audio",
+					fileType: "audio",
+					mediaType: "audio",
+				},
+			];
+			const req = new NextRequest(
+				"http://localhost/api/gallery/kasia-i-tomek/media",
+			);
+			const res = await getMedia(req, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+
+			const data = await res.json();
+			expect(data.media.map((m: { mediaType: string }) => m.mediaType)).toEqual(
+				["photo", "video", "audio"],
+			);
+		});
+
 		it("powinien odrzucić includeHidden=true bez autoryzacji", async () => {
 			const req = new NextRequest(
 				"http://localhost/api/gallery/kasia-i-tomek/media?includeHidden=true",

@@ -1,6 +1,7 @@
 export * from "./file-validator";
 export * from "./gdrive-exporter";
 export * from "./google-drive";
+export * from "./media-kind";
 export * from "./media-processor";
 export * from "./pdf-card";
 export * from "./qr-generator";

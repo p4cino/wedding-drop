@@ -30,7 +30,7 @@ export interface MediaItemData {
 	id: string;
 	uploaderName: string;
 	source?: "guest" | "photographer";
-	fileType: "image" | "video";
+	fileType: "image" | "video" | "audio";
 	mediaType?: "photo" | "video" | "audio";
 	mimeType: string;
 	originalFileName: string;

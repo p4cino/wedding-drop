@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import type React from "react";
 import { useState } from "react";
 import { css } from "styled-system/css";
+import AudioPlaceholder from "@/components/AudioPlaceholder";
 import {
 	countByStatus,
 	filterByStatus,
@@ -18,7 +19,7 @@ export interface OwnerMediaItem {
 	id: string;
 	uploaderName: string;
 	source?: "guest" | "photographer";
-	fileType: "image" | "video";
+	fileType: "image" | "video" | "audio";
 	originalFileName: string;
 	fileSize: number;
 	thumbUrl: string;
@@ -126,15 +127,19 @@ export const MediaGridWithModeration: React.FC<
 									bg: "slate.100",
 								})}
 							>
-								<img
-									src={item.thumbUrl}
-									alt={item.originalFileName}
-									className={css({
-										w: "full",
-										h: "full",
-										objectFit: "cover",
-									})}
-								/>
+								{item.fileType === "audio" ? (
+									<AudioPlaceholder />
+								) : (
+									<img
+										src={item.thumbUrl}
+										alt={item.originalFileName}
+										className={css({
+											w: "full",
+											h: "full",
+											objectFit: "cover",
+										})}
+									/>
+								)}
 								{isHidden && (
 									<div
 										className={css({

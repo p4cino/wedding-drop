@@ -15,11 +15,11 @@
 
 - [x] 3.1 Dodanie komponentu `AudioVideoRecorder` (korzystającego z MediaRecorder API) do modułu wgrywania. Weryfikacja: komponent renderuje się w przeglądarce, pozwala nagrać plik i odtworzyć przed wysłaniem.
 - [x] 3.2 Ograniczenie maksymalnego czasu nagrywania (np. 60 sekund) po stronie klienta oraz zablokowanie wrzucania bardzo długich nagrań. Weryfikacja: timer odcina nagranie po upływie limitu i wymusza zakończenie.
-- [x] 3.3 Dodanie fallbacku `accept="video/*,audio/*" capture="environment"` dla urządzeń nie wspierających MediaRecorder API (Safari iOS). Weryfikacja: w Safari na starym iOS kliknięcie wywołuje natywną kamerę.
+- [ ] 3.3 Dodanie fallbacku `accept="video/*,audio/*" capture="environment"` dla urządzeń nie wspierających MediaRecorder API (Safari iOS). Weryfikacja: w Safari na starym iOS kliknięcie wywołuje natywną kamerę. _(Fallback zaimplementowany i pokryty testem jednostkowym; weryfikacja na fizycznym iOS jeszcze niewykonana.)_
 - [x] 3.4 Połączenie nagranego bloba z klientem TUS (TusClient). Weryfikacja: udany upload wideo odzwierciedlony paskiem postępu aż do 100%.
 
 ## 4. Odtwarzanie w galerii
 
 - [x] 4.1 Zaktualizowanie siatki (Grid) galerii na żywo – dodanie ikonek dla wideo/audio na kafelkach (np. znaczek play/fala dźwiękowa). Weryfikacja: nowe kafelki wyraźnie różnią się wizualnie od zdjęć.
-- [x] 4.2 Zaktualizowanie modala (Lightbox), aby renderował element `<video>` lub `<audio>` zamiast `<img>` w zależności od `mediaType`. Weryfikacja: swipeowanie na telefonie nie aktywuje przypadkowo paska odtwarzacza wideo.
+- [x] 4.2 Zaktualizowanie modala (Lightbox), aby renderował element `<video>` lub `<audio>` zamiast `<img>` w zależności od `mediaType`. Weryfikacja: swipeowanie na telefonie nie aktywuje przypadkowo paska odtwarzacza wideo. _(Sprawdzone testami zdarzeń dotyku; nie na fizycznym telefonie.)_
 - [x] 4.3 Zaktualizowanie dokumentacji końcowej (README.md / DOCUMENTATION.md) dodając informacje o opcjach guestbooka audio/wideo oraz wymaganiach wideo. Weryfikacja: pliki dokumentacji zawierają odpowiedni paragraf o nowych funkcjach (AGENTS.md §7).

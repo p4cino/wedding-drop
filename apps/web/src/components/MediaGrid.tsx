@@ -3,6 +3,7 @@
 import { Camera, Image as ImageIcon, Mic, Play, User } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { css } from "styled-system/css";
+import AudioPlaceholder from "@/components/AudioPlaceholder";
 import EmptyState from "@/components/EmptyState";
 import type { MediaItemData } from "@/lib/gallery-types";
 
@@ -40,13 +41,11 @@ export default function MediaGrid({ items, onItemClick }: MediaGridProps) {
 			})}
 		>
 			{items.map((item, index) => {
-				const mediaType =
-					item.mediaType || (item.fileType === "video" ? "video" : "photo");
-				const isAudio = mediaType === "audio";
-				const isVideo = mediaType === "video";
+				const isAudio = item.fileType === "audio";
+				const isVideo = item.fileType === "video";
 				const isPhotographer = item.source === "photographer";
 				const uploader = item.uploaderName || t("defaultUploaderName");
-				const ariaLabel = `${isAudio ? "Nagranie audio" : isVideo ? t("videoAria") : t("imageAria")}: ${item.originalFileName}, ${t("uploaderLabel")} ${uploader}`;
+				const ariaLabel = `${isAudio ? t("audioAria") : isVideo ? t("videoAria") : t("imageAria")}: ${item.originalFileName}, ${t("uploaderLabel")} ${uploader}`;
 
 				return (
 					<button
@@ -77,18 +76,22 @@ export default function MediaGrid({ items, onItemClick }: MediaGridProps) {
 						})}
 					>
 						{/* Miniatura */}
-						<img
-							src={item.thumbUrl}
-							alt={item.originalFileName}
-							loading="lazy"
-							className={css({
-								w: "full",
-								h: "full",
-								objectFit: "cover",
-								transition: "transform 0.5s ease",
-								_hover: { transform: "scale(1.05)" },
-							})}
-						/>
+						{isAudio ? (
+							<AudioPlaceholder />
+						) : (
+							<img
+								src={item.thumbUrl}
+								alt={item.originalFileName}
+								loading="lazy"
+								className={css({
+									w: "full",
+									h: "full",
+									objectFit: "cover",
+									transition: "transform 0.5s ease",
+									_hover: { transform: "scale(1.05)" },
+								})}
+							/>
+						)}
 
 						{/* Znacznik wideo/audio */}
 						{(isVideo || isAudio) && (
@@ -108,14 +111,13 @@ export default function MediaGrid({ items, onItemClick }: MediaGridProps) {
 									color: "white",
 									boxShadow: "sm",
 								})}
-								aria-label={isAudio ? "Nagranie audio" : "Nagranie wideo"}
+								aria-label={isAudio ? t("audioAria") : t("videoAria")}
 							>
 								{isAudio ? (
 									<Mic
 										className={css({
 											w: "3.5",
 											h: "3.5",
-											fill: "currentColor",
 										})}
 										aria-hidden="true"
 									/>

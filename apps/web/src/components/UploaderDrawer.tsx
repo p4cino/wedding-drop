@@ -29,7 +29,9 @@ export default function UploaderDrawer({
 	isOpen,
 	onClose,
 	onUploadSuccess,
-}: Omit<UploaderDrawerProps, "primaryColor" | "accentColor">) {
+	primaryColor,
+	accentColor,
+}: UploaderDrawerProps) {
 	const [uploaderName, setUploaderName] = useState("");
 	const t = useTranslations("GuestGallery");
 	const queue = useUploadQueue({
@@ -210,16 +212,7 @@ export default function UploaderDrawer({
 					{/* Nagrywanie audio/wideo */}
 					<AudioVideoRecorder
 						disabled={isUploading}
-						onRecordingComplete={(blob, type) => {
-							const file = new File(
-								[blob],
-								`recording_${Date.now()}.${type === "audio" ? "webm" : "webm"}`,
-								{
-									type: type === "audio" ? "audio/webm" : "video/webm",
-								},
-							);
-							queue.addFiles([file]);
-						}}
+						onRecorded={(file) => queue.addFiles([file])}
 					/>
 
 					<Button
@@ -248,7 +241,7 @@ export default function UploaderDrawer({
 					<input
 						id="native-camera-input"
 						type="file"
-						accept="image/*,video/*,audio/*"
+						accept="image/*,video/*"
 						capture="environment"
 						onChange={(e) => {
 							if (e.target.files?.length) {

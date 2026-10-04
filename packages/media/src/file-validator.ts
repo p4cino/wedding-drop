@@ -19,6 +19,19 @@ export const ALLOWED_VIDEO_EXTS = new Set([
 	".mkv",
 ]);
 
+export const ALLOWED_AUDIO_EXTS = new Set([
+	".mp3",
+	".wav",
+	".aac",
+	".m4a",
+	".ogg",
+	".oga",
+	".opus",
+	".flac",
+	".webm",
+	".mp4",
+]);
+
 export interface ValidationResult {
 	valid: boolean;
 	safeExt: string;
@@ -32,7 +45,7 @@ export interface ValidationResult {
 export async function validateMediaFile(
 	filePath: string,
 	originalName: string,
-	expectedType: "image" | "video",
+	expectedType: "image" | "video" | "audio",
 ): Promise<ValidationResult> {
 	if (typeof fs.open !== "function") {
 		const ext = path.extname(originalName).toLowerCase();
@@ -41,9 +54,13 @@ export async function validateMediaFile(
 				? ALLOWED_IMAGE_EXTS.has(ext)
 					? ext
 					: ".jpg"
-				: ALLOWED_VIDEO_EXTS.has(ext)
-					? ext
-					: ".mp4";
+				: expectedType === "audio"
+					? ALLOWED_AUDIO_EXTS.has(ext)
+						? ext
+						: ".webm"
+					: ALLOWED_VIDEO_EXTS.has(ext)
+						? ext
+						: ".mp4";
 		return { valid: true, safeExt };
 	}
 
@@ -121,6 +138,13 @@ export async function validateMediaFile(
 			buffer[2] === 0xdf &&
 			buffer[3] === 0xa3; // WebM / MKV
 
+		const isId3 = buffer.subarray(0, 3).toString("ascii") === "ID3";
+		// Ramka MPEG audio / ADTS AAC: 11 bitów synchronizacji
+		const isMpegFrame = buffer[0] === 0xff && (buffer[1] & 0xe0) === 0xe0;
+		const isWav = isRiff && buffer.subarray(8, 12).toString("ascii") === "WAVE";
+		const isOgg = buffer.subarray(0, 4).toString("ascii") === "OggS";
+		const isFlac = buffer.subarray(0, 4).toString("ascii") === "fLaC";
+
 		const isKnownImage = isJpeg || isPng || isGif || isWebp;
 		const isKnownVideo = isFtypOrMoov || isMatroska || isAvi;
 
@@ -131,6 +155,24 @@ export async function validateMediaFile(
 				safeExt: "",
 				error:
 					"Sygnatura pliku nie odpowiada obsługiwanemu formatowi obrazu (JPG, PNG, GIF, WebP, HEIC).",
+			};
+		}
+
+		const isKnownAudio =
+			isId3 ||
+			isMpegFrame ||
+			isWav ||
+			isOgg ||
+			isFlac ||
+			isFtypOrMoov ||
+			isMatroska;
+
+		if (expectedType === "audio" && !isKnownAudio) {
+			return {
+				valid: false,
+				safeExt: "",
+				error:
+					"Sygnatura pliku nie odpowiada obsługiwanemu formatowi audio (MP3, WAV, AAC/M4A, OGG, FLAC, WebM).",
 			};
 		}
 
@@ -150,6 +192,21 @@ export async function validateMediaFile(
 		if (expectedType === "image") {
 			if (!ALLOWED_IMAGE_EXTS.has(ext)) {
 				safeExt = isPng ? ".png" : isWebp ? ".webp" : isGif ? ".gif" : ".jpg";
+			}
+		} else if (expectedType === "audio") {
+			if (!ALLOWED_AUDIO_EXTS.has(ext)) {
+				safeExt =
+					isId3 || isMpegFrame
+						? ".mp3"
+						: isWav
+							? ".wav"
+							: isOgg
+								? ".ogg"
+								: isFlac
+									? ".flac"
+									: isMatroska
+										? ".webm"
+										: ".m4a";
 			}
 		} else {
 			if (!ALLOWED_VIDEO_EXTS.has(ext)) {

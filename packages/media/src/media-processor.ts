@@ -46,12 +46,10 @@ async function processMediaTask(task: ProcessTask) {
 
 	try {
 		// Weryfikacja sygnatury pliku i magic bytes przed przeniesieniem do galerii (ochrona przed Stored XSS)
-		// Audio jest traktowany jak video dla walidacji
-		const validationFileType = fileType === "audio" ? "video" : fileType;
 		const validation = await validateMediaFile(
 			tempFilePath,
 			originalName,
-			validationFileType,
+			fileType,
 		);
 		if (!validation.valid) {
 			console.warn(
@@ -89,7 +87,7 @@ async function processMediaTask(task: ProcessTask) {
 		const mediaProps =
 			fileType === "image"
 				? await processImage(targetRawPath, targetThumbPath)
-				: mediaType === "audio"
+				: fileType === "audio"
 					? await processAudio()
 					: await processVideo(targetRawPath, targetThumbPath);
 
@@ -99,12 +97,11 @@ async function processMediaTask(task: ProcessTask) {
 			"raw",
 			rawFileName,
 		);
+		// Audio nie ma miniatury; kolumna jest NOT NULL, a UI pokazuje ikonę zamiast obrazka
 		const relativeThumb =
-			mediaType === "audio"
-				? relativeRaw // Audio files use raw file as thumb path
-				: existsSync(targetThumbPath)
-					? path.posix.join("galleries", gallerySlug, "thumbs", thumbFileName)
-					: relativeRaw;
+			fileType !== "audio" && existsSync(targetThumbPath)
+				? path.posix.join("galleries", gallerySlug, "thumbs", thumbFileName)
+				: relativeRaw;
 
 		const [newMedia] = await db
 			.insert(mediaItems)
@@ -112,10 +109,21 @@ async function processMediaTask(task: ProcessTask) {
 				galleryId: gallery.id,
 				uploaderName: uploaderName || "Gość weselny",
 				fileType,
-				mediaType: mediaType || (fileType === "video" ? "video" : "photo"),
+				mediaType:
+					mediaType ||
+					(fileType === "audio"
+						? "audio"
+						: fileType === "video"
+							? "video"
+							: "photo"),
 				source,
 				mimeType:
-					mimeType || (fileType === "video" ? "video/mp4" : "image/jpeg"),
+					mimeType ||
+					(fileType === "video"
+						? "video/mp4"
+						: fileType === "audio"
+							? "audio/mpeg"
+							: "image/jpeg"),
 				originalFileName: originalName,
 				fileSize,
 				storagePath: relativeRaw,
@@ -165,7 +173,6 @@ async function processVideo(rawPath: string, thumbPath: string) {
 }
 
 async function processAudio() {
-	// Audio files don't need thumbnails, just metadata extraction
 	return { width: null, height: null, duration: null };
 }
 

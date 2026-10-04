@@ -9,6 +9,7 @@ import {
 	tusUploadMetadataDto,
 } from "@wedding-drop/db";
 import { eq, sql } from "drizzle-orm";
+import { classifyMedia } from "./media-kind";
 import { scheduleMediaProcessing } from "./media-processor";
 
 /**
@@ -124,14 +125,8 @@ export function initTusServer(dataDir: string, options: TusServerOptions = {}) {
 				};
 			}
 
-			const isVideo =
-				mimeType?.startsWith("video") ||
-				/\.(mp4|mov|avi|webm)$/i.test(originalName || "");
-			const isAudio =
-				mimeType?.startsWith("audio") ||
-				/\.(mp3|wav|aac|m4a|webm)$/i.test(originalName || "");
-
-			if ((isVideo || isAudio) && gallery.allowVideos === false) {
+			const { mediaType: incomingKind } = classifyMedia(mimeType, originalName);
+			if (incomingKind !== "photo" && gallery.allowVideos === false) {
 				throw {
 					status_code: 403,
 					body: "Błąd: Wgrywanie filmów i nagrań jest wyłączone w tej galerii.",
@@ -193,23 +188,7 @@ export function initTusServer(dataDir: string, options: TusServerOptions = {}) {
 			fileType: mimeType,
 			source,
 		} = parseResult.data;
-		const isVideo =
-			mimeType.startsWith("video") ||
-			/\.(mp4|mov|avi|webm)$/i.test(originalName);
-		const isAudio =
-			mimeType.startsWith("audio") ||
-			/\.(mp3|wav|aac|m4a|webm)$/i.test(originalName);
-
-		let fileType: "image" | "video" | "audio" = "image";
-		let mediaType: "photo" | "video" | "audio" = "photo";
-
-		if (isAudio) {
-			fileType = "video"; // audio is stored/processed like video
-			mediaType = "audio";
-		} else if (isVideo) {
-			fileType = "video";
-			mediaType = "video";
-		}
+		const { fileType, mediaType } = classifyMedia(mimeType, originalName);
 
 		const tempFilePath = path.join(uploadDir, upload.id);
 
