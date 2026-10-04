@@ -1,8 +1,8 @@
-import crypto from "node:crypto";
 import { db, galleries } from "@wedding-drop/db";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { generateGuestToken, setGuestSessionCookie } from "@/lib/auth";
+import { hashGuestPassword, verifyGuestPassword } from "@/lib/guest-password";
 
 export async function POST(
 	req: NextRequest,
@@ -42,29 +42,23 @@ export async function POST(
 			);
 		}
 
-		// Bezpieczne porównanie hasła (używamy timingSafeEqual dla bezpieczeństwa)
-		const providedBuf = Buffer.from(password, "utf-8");
-		const expectedBuf = Buffer.from(gallery.guestPassword, "utf-8");
-
-		// Aby zapobiec atakom polegającym na wykrywaniu długości, zawsze haszujemy najpierw
-		// lub dopełniamy do stałej długości. Dla uproszczenia (bo hasło nie jest zahashowane w DB
-		// lub nie wiemy, zrobimy najpierw hash z obu stron by mieć stałą długość przed porównaniem).
-		const providedHash = crypto
-			.createHash("sha256")
-			.update(providedBuf)
-			.digest();
-		const expectedHash = crypto
-			.createHash("sha256")
-			.update(expectedBuf)
-			.digest();
-
-		const isValid = crypto.timingSafeEqual(providedHash, expectedHash);
+		const { valid: isValid, needsRehash } = verifyGuestPassword(
+			String(password),
+			gallery.guestPassword,
+		);
 
 		if (!isValid) {
 			return NextResponse.json(
 				{ error: "Nieprawidłowe hasło" },
 				{ status: 401 },
 			);
+		}
+
+		if (needsRehash) {
+			await db
+				.update(galleries)
+				.set({ guestPassword: hashGuestPassword(String(password)) })
+				.where(eq(galleries.id, gallery.id));
 		}
 
 		const token = generateGuestToken(slug);

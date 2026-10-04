@@ -8,8 +8,11 @@ import { GET as getMedia } from "@/app/api/gallery/[slug]/media/route";
 import { GET as getGallery } from "@/app/api/gallery/[slug]/route";
 import { GET as getZip } from "@/app/api/gallery/[slug]/zip/route";
 import { generateAdminToken, generateOwnerToken } from "@/lib/auth";
+import { hashGuestPassword } from "@/lib/guest-password";
 
 let mockExists = true;
+const mockGuestPasswordUpdates: Record<string, unknown>[] = [];
+
 vi.mock("node:fs", () => ({
 	default: {
 		existsSync: vi.fn(() => mockExists),
@@ -60,6 +63,12 @@ vi.mock("@wedding-drop/db", async (importOriginal) => {
 	return {
 		...actual,
 		db: {
+			update: vi.fn(() => ({
+				set: vi.fn((values: Record<string, unknown>) => {
+					mockGuestPasswordUpdates.push(values);
+					return { where: vi.fn().mockResolvedValue(undefined) };
+				}),
+			})),
 			select: vi.fn(() => ({
 				from: vi.fn((table) => {
 					if (dbShouldThrow) throw new Error("DB Error");
@@ -93,6 +102,7 @@ vi.mock("@wedding-drop/db", async (importOriginal) => {
 describe("Gallery API Routes", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mockGuestPasswordUpdates.length = 0;
 		mockExists = true;
 		dbShouldThrow = false;
 		mockWishesForZip = [];
@@ -685,6 +695,27 @@ describe("Gallery API Routes", () => {
 			expect(res.status).toBe(200);
 			const cookie = res.headers.get("Set-Cookie");
 			expect(cookie).toContain("wd_guest_kasia-i-tomek=");
+			// Hasło zapisane jawnie (legacy) zostaje przehaszowane po udanym logowaniu
+			expect(mockGuestPasswordUpdates).toHaveLength(1);
+			expect(mockGuestPasswordUpdates[0].guestPassword).toMatch(/^scrypt\$/);
+		});
+
+		it("powinien autoryzować gościa dla hasła zapisanego jako scrypt", async () => {
+			mockGalleries[0].guestPassword = hashGuestPassword("haslo_dla_gosci");
+
+			const req = new NextRequest(
+				"http://localhost/api/gallery/kasia-i-tomek/auth",
+				{
+					method: "POST",
+					body: JSON.stringify({ password: "haslo_dla_gosci" }),
+				},
+			);
+			const res = await authGuest(req, {
+				params: Promise.resolve({ slug: "kasia-i-tomek" }),
+			});
+
+			expect(res.status).toBe(200);
+			expect(mockGuestPasswordUpdates).toHaveLength(0);
 		});
 
 		it("powinien zwrócić 401 jeśli hasło jest niepoprawne", async () => {
