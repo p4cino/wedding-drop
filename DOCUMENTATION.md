@@ -533,7 +533,7 @@ Obraz produkcyjny kontenera `wedding_web` (`node:24-alpine`) został zoptymalizo
 4. **Etap 4: `runner`**: Czyste, utwardzone środowisko uruchomieniowe Alpine.
 
 ### 14.2. Utwardzenie Bezpieczeństwa i Eliminacja CVE
-- **Brak uprawnień roota (`USER node`)**: Aplikacja działa z prawami wbudowanego użytkownika `node` (UID/GID 1000). Katalogi montowane `/app/data` (galerie i pliki tymczasowe TUS) posiadają jawnie przypisane uprawnienia `chown -R node:node /app/data`.
+- **Brak uprawnień roota (`USER node`)**: Aplikacja działa z prawami wbudowanego użytkownika `node` (UID/GID 1000). Katalogi montowane `/app/data` (galerie i pliki tymczasowe TUS) są naprawiane przy każdym starcie kontenera przez `docker-entrypoint.sh` (chown na plikach nienależących do `node`, następnie `su-exec node`). Dzięki temu istniejące wolumeny utworzone wcześniej przez roota nie powodują błędu `EACCES` przy `rename` z `tus_temp` do `galleries/{slug}/raw`.
 - **Usunięcie zbędnych środowisk NPM/Yarn**: Ponieważ monorepo korzysta w 100% z PNPM, z obrazu runnera usuwane są fabryczne instalacje `/usr/local/lib/node_modules/npm` oraz `/opt/yarn*`, co eliminuje kilkanaście powszechnych podatności CVE (m.in. `http-cache-semantics`, `undici`, `tar`).
 - **Eliminacja zależności deweloperskich z runtime**: Pakiety `@serwist/next` i `serwist` przeniesiono do `devDependencies`, co zapobiega instalacji kompilatora TypeScript/Go w runnerze i całkowicie usuwa podatność krytyczną `CVE-2026-39821` (`golang/stdlib`).
 - **Lekki SDK Dysku Google**: Zastąpienie monolitu `googleapis` dedykowanym pakietem `@googleapis/drive` zmniejsza magazyn modułów o ponad 200 MB.

@@ -48,7 +48,7 @@ FROM node:24-alpine AS runner
 # zapytania z adresow IP hostowanych runnerow CI (w tym GitHub Actions).
 # Usuwamy zbędne globalne pakiety npm/yarn oraz czyścimy cache apk, aby usunąć podatności.
 RUN apk update && apk upgrade --no-cache && \
-    apk add --no-cache libc6-compat ffmpeg && \
+    apk add --no-cache libc6-compat ffmpeg su-exec && \
     rm -rf /usr/local/lib/node_modules/npm /opt/yarn* /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/yarn* /var/cache/apk/*
 
 WORKDIR /app
@@ -71,14 +71,16 @@ COPY --chown=node:node --from=builder /app/apps/web/.next/static ./apps/web/.nex
 COPY --chown=node:node --from=builder /app/apps/web/public ./apps/web/public
 COPY --chown=node:node --from=builder /app/apps/web/dist ./apps/web/dist
 COPY --chown=node:node --from=builder /app/packages/db/migrations ./packages/db/migrations
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 # Przygotowanie katalogów danych z uprawnieniami dla nieuprzywilejowanego użytkownika node
 RUN mkdir -p /app/data/galleries /app/data/tus_temp && \
     chown -R node:node /app/data
 
-USER node
-
+# Start jako root tylko po to, by entrypoint naprawil wlasciciela wolumenu /app/data
+# (stare wolumeny maja pliki roota) i zrzucil uprawnienia do uzytkownika node (su-exec).
 EXPOSE 3000
 
 WORKDIR /app/apps/web
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "dist/server.js"]
