@@ -520,3 +520,23 @@ Aplikacja `@wedding-drop/web` wykorzystuje nowoczesny system wzornictwa [Park UI
   - `Toast`: Reaktywne centrum powiadomień ze stosem powiadomień i automatycznym znikaniem.
   - `createStyleContext`: Dedykowany helper React kontekstujący receptury wieloczęściowych komponentów (compound components).
 
+---
+
+## 14. Architektura Konteneryzacji i Bezpieczeństwo Obrazu Docker
+
+Obraz produkcyjny kontenera `wedding_web` (`node:24-alpine`) został zoptymalizowany pod kątem minimalnego zużycia zasobów mini-PC (Intel N100) oraz rygorystycznych standardów bezpieczeństwa:
+
+### 14.1. Wielostopniowy proces budowania (Multi-Stage Build)
+1. **Etap 1: `pruner` (`turbo prune`)**: Wyodrębnia z monorepo wyłącznie definicje pakietów i kod niezbędny dla `@wedding-drop/web`, `@wedding-drop/db` oraz `@wedding-drop/media`.
+2. **Etap 2: `builder`**: Instaluje pełne zależności dev i kompiluje kod Next.js 16 (`next build`) z użyciem Turbopacka oraz generuje pliki dystrybucyjne (`tsup server.ts`).
+3. **Etap 3: `prod-deps`**: Instaluje wyłącznie zależności produkcyjne z flagą `--prod --frozen-lockfile --ignore-scripts`.
+4. **Etap 4: `runner`**: Czyste, utwardzone środowisko uruchomieniowe Alpine.
+
+### 14.2. Utwardzenie Bezpieczeństwa i Eliminacja CVE
+- **Brak uprawnień roota (`USER node`)**: Aplikacja działa z prawami wbudowanego użytkownika `node` (UID/GID 1000). Katalogi montowane `/app/data` (galerie i pliki tymczasowe TUS) posiadają jawnie przypisane uprawnienia `chown -R node:node /app/data`.
+- **Usunięcie zbędnych środowisk NPM/Yarn**: Ponieważ monorepo korzysta w 100% z PNPM, z obrazu runnera usuwane są fabryczne instalacje `/usr/local/lib/node_modules/npm` oraz `/opt/yarn*`, co eliminuje kilkanaście powszechnych podatności CVE (m.in. `http-cache-semantics`, `undici`, `tar`).
+- **Eliminacja zależności deweloperskich z runtime**: Pakiety `@serwist/next` i `serwist` przeniesiono do `devDependencies`, co zapobiega instalacji kompilatora TypeScript/Go w runnerze i całkowicie usuwa podatność krytyczną `CVE-2026-39821` (`golang/stdlib`).
+- **Lekki SDK Dysku Google**: Zastąpienie monolitu `googleapis` dedykowanym pakietem `@googleapis/drive` zmniejsza magazyn modułów o ponad 200 MB.
+- **Zgodność z Next.js 16**: Routing brzegowy korzysta z nowej konwencji `src/proxy.ts` (Network Proxy), a ostrzeżenia Turbopacka dla Service Workera są wyciszone flagą `SERWIST_SUPPRESS_TURBOPACK_WARNING=1`.
+
+

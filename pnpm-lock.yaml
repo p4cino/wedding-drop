@@ -199,9 +199,6 @@ importers:
       '@node-rs/bcrypt':
         specifier: ^1.10.9
         version: 1.10.9
-      '@serwist/next':
-        specifier: ^9.5.12
-        version: 9.5.12(next@16.3.8(@playwright/test@1.63.0)(@types/node@26.6.4)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
       '@wedding-drop/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -238,9 +235,6 @@ importers:
       react-dom:
         specifier: ^19.3.0
         version: 19.3.0(react@19.3.0)
-      serwist:
-        specifier: ^9.5.12
-        version: 9.5.12(browserslist@4.29.3)(typescript@7.0.2)
       tus-js-client:
         specifier: ^4.3.1
         version: 4.3.1
@@ -263,6 +257,9 @@ importers:
       '@playwright/test':
         specifier: ^1.63.0
         version: 1.63.0
+      '@serwist/next':
+        specifier: ^9.5.12
+        version: 9.5.12(next@16.3.8(@playwright/test@1.63.0)(@types/node@26.6.4)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
       '@testing-library/jest-dom':
         specifier: ^7.0.1
         version: 7.0.1(@testing-library/dom@10.4.2)(vitest@5.0.3)
@@ -299,6 +296,9 @@ importers:
       postcss:
         specifier: ^8.5.28
         version: 8.5.28
+      serwist:
+        specifier: ^9.5.12
+        version: 9.5.12(browserslist@4.29.3)(typescript@7.0.2)
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(@swc/core@1.16.13(@swc/helpers@0.5.23))(postcss@8.5.28)(tsx@4.23.15)(typescript@7.0.2)(yaml@2.9.1)
@@ -345,6 +345,9 @@ importers:
 
   packages/media:
     dependencies:
+      '@googleapis/drive':
+        specifier: ^26.0.2
+        version: 26.0.2
       '@tus/file-store':
         specifier: ^2.1.1
         version: 2.1.1
@@ -360,9 +363,6 @@ importers:
       drizzle-orm:
         specifier: ^0.45.3
         version: 0.45.3(postgres@3.4.9)
-      googleapis:
-        specifier: ^182.0.0
-        version: 182.0.0
       p-queue:
         specifier: ^9.3.3
         version: 9.3.3
@@ -937,6 +937,10 @@ packages:
 
   '@formatjs/intl-localematcher@0.8.14':
     resolution: {integrity: sha512-8O7V38QmbB11+ryJ3KM/znrzXtiqgpXzqNoqDsndHZZ5/zDKTTL+cf5F0mzXkQEwhx8IlWnqYvEovf2S5EwLTw==}
+
+  '@googleapis/drive@26.0.2':
+    resolution: {integrity: sha512-VeKVZvzgH4ioczJZrZ5sy73RJbHrYLI1XZIZ3ZqGKQhC4U03XsOOOiBHKqvH4F9vbXrxR2LawmktoIJuTJhzYg==}
+    engines: {node: '>=22.0.0'}
 
   '@img/colour@1.1.0':
     resolution: {integrity: sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ==}
@@ -3411,10 +3415,6 @@ packages:
     resolution: {integrity: sha512-UJBElspYPJb0+fI8q0LxARw1hPnwd9yd5NqhKqEUPxjhnB1jdsRP7rlRTBp69JS5Vo10bCiRE9+ISsIG2A+Ttg==}
     engines: {node: '>=22'}
 
-  googleapis@182.0.0:
-    resolution: {integrity: sha512-W8K/yy5kb1j6TiKEtSj4I4DgjeImVfSzYmdmp8Bdn3dHBamBjmpJUteF0R7QQ9Ym++2Yq+ZYXvIFBC7ywBohAA==}
-    engines: {node: '>=22.0.0'}
-
   gopd@1.2.0:
     resolution: {integrity: sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==}
     engines: {node: '>= 0.4'}
@@ -5287,6 +5287,12 @@ snapshots:
     dependencies:
       '@formatjs/fast-memoize': 3.1.7
 
+  '@googleapis/drive@26.0.2':
+    dependencies:
+      googleapis-common: 9.1.0
+    transitivePeerDependencies:
+      - supports-color
+
   '@img/colour@1.1.0': {}
 
   '@img/sharp-darwin-arm64@0.35.5':
@@ -6366,7 +6372,7 @@ snapshots:
     dependencies:
       '@vitest/istanbul-lib-coverage': 1.0.2
 
-  '@vitest/mocker@5.0.3(vite@8.3.2(@types/node@26.6.4))':
+  '@vitest/mocker@5.0.3(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       '@vitest/spy': 5.0.3
@@ -8058,13 +8064,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  googleapis@182.0.0:
-    dependencies:
-      google-auth-library: 11.1.0
-      googleapis-common: 9.1.0
-    transitivePeerDependencies:
-      - supports-color
-
   gopd@1.2.0: {}
 
   graceful-fs@4.2.11: {}
@@ -9295,7 +9294,7 @@ snapshots:
   vitest@5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(jsdom@30.1.1)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)):
     dependencies:
       '@types/chai': 5.2.3
-      '@vitest/mocker': 5.0.3(vite@8.3.2(@types/node@26.6.4))
+      '@vitest/mocker': 5.0.3(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
       chai: 6.3.0
       es-module-lexer: 2.3.2
       expect-type: 1.4.0

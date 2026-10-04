@@ -216,6 +216,8 @@ Aby aplikacja działała na Twojej publicznej domenie z darmowym certyfikatem Le
 - **Autoryzacja zdjęć ukrytych**: Dostęp do materiałów ukrytych (`status: "hidden"`) przez API wymaga poświadczeń właściciela galerii lub administratora (brak wycieków w publicznym JSON).
 - **Haszowanie haseł**: Hasła administratora i par młodych są zabezpieczone funkcją `bcrypt` z solą.
 - **Izolacja**: Pliki każdej pary są przechowywane w odrębnych podkatalogach `/data/galleries/<slug>/`.
+- **Utwardzony kontener Docker i nieuprzywilejowany użytkownik (`USER node`)**: Kontener aplikacji produkcyjnej działa na odświeżonym obrazie `node:24-alpine` z całkowitym usunięciem zbędnych globalnych narzędzi NPM/Yarn oraz prawami użytkownika nie-root (`USER node`, UID/GID 1000). Katalogi magazynu `/app/data` posiadają automatycznie przypisane uprawnienia zapisu dla użytkownika `node`.
+- **Zoptymalizowany rozmiar obrazu**: Dzięki rozdzieleniu zależności deweloperskich (`@serwist/*`), migracji Google SDK na `@googleapis/drive` oraz optymalizacji warstw, obraz produkcyjny został zredukowany o ponad 65% z 0 podatnościami krytycznymi.
 
 ---
 

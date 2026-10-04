@@ -15,13 +15,39 @@ import {
 } from "../src/google-drive";
 import { sseBus } from "../src/sse-bus";
 
-// Mock googleapis
-vi.mock("googleapis", () => {
+// Mock @googleapis/drive
+const { MockOAuth2, mockOAuth2Request, mockDriveInstance } = vi.hoisted(() => {
+	const mockOAuth2Request = vi.fn().mockResolvedValue({
+		data: { email: "wedding.couple@gmail.com" },
+	});
+
+	const mockDriveInstance = {
+		about: {
+			get: vi.fn().mockResolvedValue({
+				data: {
+					storageQuota: {
+						limit: "15000000000",
+						usage: "5000000000",
+					},
+				},
+			}),
+		},
+		files: {
+			list: vi.fn().mockResolvedValue({
+				data: { files: [] },
+			}),
+			create: vi.fn().mockResolvedValue({
+				data: { id: "new-created-folder-or-file-id" },
+			}),
+		},
+	};
+
 	class MockOAuth2 {
 		clientId: string;
 		clientSecret: string;
 		redirectUri: string;
 		credentials: Record<string, unknown> = {};
+		request = mockOAuth2Request;
 
 		constructor(clientId: string, clientSecret: string, redirectUri: string) {
 			this.clientId = clientId;
@@ -51,41 +77,15 @@ vi.mock("googleapis", () => {
 		}
 	}
 
-	return {
-		google: {
-			auth: {
-				OAuth2: MockOAuth2,
-			},
-			oauth2: vi.fn().mockReturnValue({
-				userinfo: {
-					get: vi.fn().mockResolvedValue({
-						data: { email: "wedding.couple@gmail.com" },
-					}),
-				},
-			}),
-			drive: vi.fn().mockReturnValue({
-				about: {
-					get: vi.fn().mockResolvedValue({
-						data: {
-							storageQuota: {
-								limit: "15000000000",
-								usage: "5000000000",
-							},
-						},
-					}),
-				},
-				files: {
-					list: vi.fn().mockResolvedValue({
-						data: { files: [] },
-					}),
-					create: vi.fn().mockResolvedValue({
-						data: { id: "new-created-folder-or-file-id" },
-					}),
-				},
-			}),
-		},
-	};
+	return { MockOAuth2, mockOAuth2Request, mockDriveInstance };
 });
+
+vi.mock("@googleapis/drive", () => ({
+	auth: {
+		OAuth2: MockOAuth2,
+	},
+	drive: vi.fn().mockReturnValue(mockDriveInstance),
+}));
 
 describe("Google Drive Helper & Security Tests", () => {
 	const originalEnv = process.env;
@@ -95,6 +95,9 @@ describe("Google Drive Helper & Security Tests", () => {
 		process.env.GOOGLE_CLIENT_ID = "test-client-id";
 		process.env.GOOGLE_CLIENT_SECRET = "test-client-secret";
 		process.env.APP_DOMAIN = "http://localhost:3000";
+		mockOAuth2Request.mockReset().mockResolvedValue({
+			data: { email: "wedding.couple@gmail.com" },
+		});
 		vi.clearAllMocks();
 	});
 
@@ -134,14 +137,9 @@ describe("Google Drive Helper & Security Tests", () => {
 		});
 
 		it("powinien obsłużyć błąd pobierania emaila z userinfo i zwrócić email: null", async () => {
-			const { google } = await import("googleapis");
-			vi.mocked(google.oauth2).mockReturnValueOnce({
-				userinfo: {
-					get: vi
-						.fn()
-						.mockRejectedValueOnce(new Error("Userinfo fetch failed")),
-				},
-			} as unknown as ReturnType<typeof google.oauth2>);
+			mockOAuth2Request.mockRejectedValueOnce(
+				new Error("Userinfo fetch failed"),
+			);
 
 			const res = await exchangeCodeForTokens("valid-code-no-email");
 			expect(res.tokens).toBeDefined();
@@ -149,16 +147,16 @@ describe("Google Drive Helper & Security Tests", () => {
 		});
 
 		it("powinien zwrócić klienta drive dla galerii za pomocą refresh_token", () => {
-			const drive = getDriveClientForGallery("existing-refresh-token");
-			expect(drive).toBeDefined();
-			expect(drive.files).toBeDefined();
+			const driveClient = getDriveClientForGallery("existing-refresh-token");
+			expect(driveClient).toBeDefined();
+			expect(driveClient.files).toBeDefined();
 		});
 	});
 
 	describe("Pre-flight Quota Check", () => {
 		it("powinien poprawnie obliczyć dostępne bajty na podstawie storageQuota", async () => {
-			const { google } = await import("googleapis");
-			const mockDrive = google.drive({ version: "v3" });
+			const { drive } = await import("@googleapis/drive");
+			const mockDrive = drive({ version: "v3" });
 
 			const quota = await checkStorageQuota(mockDrive);
 			expect(quota.limitBytes).toBe(15000000000);
@@ -167,8 +165,8 @@ describe("Google Drive Helper & Security Tests", () => {
 		});
 
 		it("powinien zwrócić Infinity gdy storageQuota nie posiada limitu (konto nielimitowane/Google Workspace)", async () => {
-			const { google } = await import("googleapis");
-			const mockDrive = google.drive({ version: "v3" });
+			const { drive } = await import("@googleapis/drive");
+			const mockDrive = drive({ version: "v3" });
 			vi.mocked(mockDrive.about.get).mockResolvedValueOnce({
 				data: { storageQuota: {} },
 			} as unknown as Awaited<ReturnType<typeof mockDrive.about.get>>);
@@ -179,8 +177,8 @@ describe("Google Drive Helper & Security Tests", () => {
 		});
 
 		it("powinien bezpiecznie obsłużyć błąd zapytania about.get i zwrócić bezpieczne wartości fallback", async () => {
-			const { google } = await import("googleapis");
-			const mockDrive = google.drive({ version: "v3" });
+			const { drive } = await import("@googleapis/drive");
+			const mockDrive = drive({ version: "v3" });
 			vi.mocked(mockDrive.about.get).mockRejectedValueOnce(
 				new Error("API Quota exceeded"),
 			);
@@ -193,8 +191,8 @@ describe("Google Drive Helper & Security Tests", () => {
 
 	describe("ensureDriveFolder", () => {
 		it("powinien zwrócić istniejący folder ID, gdy folder o podanej nazwie już istnieje", async () => {
-			const { google } = await import("googleapis");
-			const mockDrive = google.drive({ version: "v3" });
+			const { drive } = await import("@googleapis/drive");
+			const mockDrive = drive({ version: "v3" });
 			vi.mocked(mockDrive.files.list).mockResolvedValueOnce({
 				data: { files: [{ id: "existing-folder-id", name: "Zdjęcia" }] },
 			} as unknown as Awaited<ReturnType<typeof mockDrive.files.list>>);
@@ -208,8 +206,8 @@ describe("Google Drive Helper & Security Tests", () => {
 		});
 
 		it("powinien utworzyć nowy folder, gdy nie istnieje", async () => {
-			const { google } = await import("googleapis");
-			const mockDrive = google.drive({ version: "v3" });
+			const { drive } = await import("@googleapis/drive");
+			const mockDrive = drive({ version: "v3" });
 			vi.mocked(mockDrive.files.list).mockResolvedValueOnce({
 				data: { files: [] },
 			} as unknown as Awaited<ReturnType<typeof mockDrive.files.list>>);
@@ -227,8 +225,8 @@ describe("Google Drive Helper & Security Tests", () => {
 		});
 
 		it("powinien rzucić błąd gdy utworzenie folderu nie zwróci ID", async () => {
-			const { google } = await import("googleapis");
-			const mockDrive = google.drive({ version: "v3" });
+			const { drive } = await import("@googleapis/drive");
+			const mockDrive = drive({ version: "v3" });
 			vi.mocked(mockDrive.files.list).mockResolvedValueOnce({
 				data: { files: [] },
 			} as unknown as Awaited<ReturnType<typeof mockDrive.files.list>>);
@@ -245,8 +243,8 @@ describe("Google Drive Helper & Security Tests", () => {
 
 	describe("uploadFileToDrive", () => {
 		it("powinien przesłać plik na Google Drive i zwrócić ID", async () => {
-			const { google } = await import("googleapis");
-			const mockDrive = google.drive({ version: "v3" });
+			const { drive } = await import("@googleapis/drive");
+			const mockDrive = drive({ version: "v3" });
 
 			const createReadStreamSpy = vi
 				.spyOn(fs, "createReadStream")
@@ -270,8 +268,8 @@ describe("Google Drive Helper & Security Tests", () => {
 		});
 
 		it("powinien natychmiast rzucić błąd o braku miejsca przy błędzie storageQuotaExceeded 403", async () => {
-			const { google } = await import("googleapis");
-			const mockDrive = google.drive({ version: "v3" });
+			const { drive } = await import("@googleapis/drive");
+			const mockDrive = drive({ version: "v3" });
 
 			const createReadStreamSpy = vi
 				.spyOn(fs, "createReadStream")

@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
-import { google } from "googleapis";
+import { auth, drive } from "@googleapis/drive";
 
 export const DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 export const USERINFO_EMAIL_SCOPE =
@@ -27,7 +27,7 @@ export function getOAuth2Client(customRedirectUri?: string) {
 		);
 	}
 
-	return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+	return new auth.OAuth2(clientId, clientSecret, redirectUri);
 }
 
 /**
@@ -133,9 +133,10 @@ export async function exchangeCodeForTokens(
 
 	let email: string | null = null;
 	try {
-		const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
-		const userInfo = await oauth2.userinfo.get();
-		email = userInfo.data.email || null;
+		const res = await oauth2Client.request<{ email?: string }>({
+			url: "https://www.googleapis.com/oauth2/v2/userinfo",
+		});
+		email = res.data.email || null;
 	} catch (err) {
 		console.warn("Nie udało się pobrać e-maila konta Google:", err);
 	}
@@ -151,21 +152,21 @@ export function getDriveClientForGallery(refreshToken: string) {
 	oauth2Client.setCredentials({
 		refresh_token: refreshToken,
 	});
-	return google.drive({ version: "v3", auth: oauth2Client });
+	return drive({ version: "v3", auth: oauth2Client });
 }
 
 /**
  * Sprawdza dostępne miejsce na koncie Google (Pre-flight Quota Check)
  */
 export async function checkStorageQuota(
-	drive: ReturnType<typeof google.drive>,
+	driveClient: ReturnType<typeof drive>,
 ): Promise<{
 	limitBytes: number;
 	usageBytes: number;
 	freeBytes: number;
 }> {
 	try {
-		const res = await drive.about.get({ fields: "storageQuota" });
+		const res = await driveClient.about.get({ fields: "storageQuota" });
 		const quota = res.data.storageQuota;
 		if (!quota) {
 			return { limitBytes: Infinity, usageBytes: 0, freeBytes: Infinity };
@@ -187,7 +188,7 @@ export async function checkStorageQuota(
  * Zapobiega tworzeniu duplikatów folderów przy ponownym eksporcie!
  */
 export async function ensureDriveFolder(
-	drive: ReturnType<typeof google.drive>,
+	driveClient: ReturnType<typeof drive>,
 	folderName: string,
 	parentId?: string,
 ): Promise<string> {
@@ -198,7 +199,7 @@ export async function ensureDriveFolder(
 	}
 
 	// Sprawdzamy czy folder już istnieje
-	const listRes = await drive.files.list({
+	const listRes = await driveClient.files.list({
 		q: query,
 		fields: "files(id, name)",
 		spaces: "drive",
@@ -210,7 +211,7 @@ export async function ensureDriveFolder(
 	}
 
 	// Tworzymy nowy folder
-	const createRes = await drive.files.create({
+	const createRes = await driveClient.files.create({
 		requestBody: {
 			name: folderName,
 			mimeType: "application/vnd.google-apps.folder",
@@ -232,7 +233,7 @@ export async function ensureDriveFolder(
  * Przesyła pojedynczy plik z dysku serwera na Dysk Google ze strumieniem i exponential backoff
  */
 export async function uploadFileToDrive(
-	drive: ReturnType<typeof google.drive>,
+	driveClient: ReturnType<typeof drive>,
 	localFilePath: string,
 	fileName: string,
 	mimeType: string,
@@ -246,7 +247,7 @@ export async function uploadFileToDrive(
 		try {
 			const fileStream = fs.createReadStream(localFilePath);
 
-			const res = await drive.files.create({
+			const res = await driveClient.files.create({
 				requestBody: {
 					name: fileName,
 					parents: [targetFolderId],
