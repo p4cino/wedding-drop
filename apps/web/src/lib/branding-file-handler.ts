@@ -71,8 +71,8 @@ export async function handleBrandingFileRequest(
 
 		const stream = fs.createReadStream(targetPath);
 		stream.pipe(res);
-	} catch (err) {
-		if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+	} catch (err: any) {
+		if (err.code === "ENOENT") {
 			res.writeHead(404, { "Content-Type": "text/plain" });
 			res.end("Not Found");
 		} else {
