@@ -108,4 +108,51 @@ describe("GalleryBrandingPanel", () => {
 
 		expect(global.fetch).toHaveBeenCalled();
 	});
+
+	it("handles logo upload success", async () => {
+		(global.fetch as any).mockResolvedValue({ ok: true });
+
+		render(<GalleryBrandingPanel {...defaultProps} />);
+
+		const fileInput = screen.getByLabelText("Wybierz plik z logo");
+		expect(fileInput).not.toBeNull();
+
+		const file = new File(["dummy"], "logo.png", { type: "image/png" });
+
+		await act(async () => {
+			if (fileInput) {
+				fireEvent.change(fileInput, { target: { files: [file] } });
+			}
+		});
+
+		expect(global.fetch).toHaveBeenCalledWith(
+			"/api/owner/test-slug/branding",
+			expect.objectContaining({ method: "POST" }),
+		);
+		expect(defaultProps.onBrandingUpdated).toHaveBeenCalled();
+	});
+
+	it("handles background upload failure", async () => {
+		(global.fetch as any).mockResolvedValue({
+			ok: false,
+			json: async () => ({ error: "Plik jest za duży" }),
+		});
+
+		render(<GalleryBrandingPanel {...defaultProps} />);
+
+		const fileInput = screen.getByLabelText("Wybierz plik z tłem");
+
+		const file = new File(["dummy"], "bg.png", { type: "image/png" });
+
+		await act(async () => {
+			if (fileInput) {
+				fireEvent.change(fileInput, { target: { files: [file] } });
+			}
+		});
+
+		expect(global.fetch).toHaveBeenCalled();
+		// Wait for error to appear
+		const errorEl = await screen.findByText("Plik jest za duży");
+		expect(errorEl).toBeInTheDocument();
+	});
 });
