@@ -32,7 +32,7 @@
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@node-rs/bcrypt": "^1.10.9",
+		"@node-rs/bcrypt": "^2.0.0",
 		"drizzle-orm": "^0.45.3",
 		"drizzle-zod": "^0.8.3",
 		"postgres": "^3.4.9",
