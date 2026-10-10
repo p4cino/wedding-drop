@@ -20,7 +20,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.14",
-		"@fission-ai/openspec": "^1.14.0",
+		"@fission-ai/openspec": "^1.14.1",
 		"husky": "^9.1.7",
 		"lint-staged": "^17.6.0",
 		"turbo": "^2.11.5",
