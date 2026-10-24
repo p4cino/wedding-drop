@@ -32,16 +32,16 @@
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@node-rs/bcrypt": "^1.10.9",
-		"drizzle-orm": "^0.45.3",
+		"@node-rs/bcrypt": "^2.0.0",
+		"drizzle-orm": "^0.45.4",
 		"drizzle-zod": "^0.8.3",
 		"postgres": "^3.4.9",
-		"zod": "^4.6.5"
+		"zod": "^4.6.7"
 	},
 	"devDependencies": {
-		"@types/node": "^26.6.3",
+		"@types/node": "^26.6.5",
 		"drizzle-kit": "^0.31.11",
 		"typescript": "^7.0.2",
-		"vitest": "^5.0.3"
+		"vitest": "^5.0.5"
 	}
 }
