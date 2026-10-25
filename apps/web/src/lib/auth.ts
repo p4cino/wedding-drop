@@ -145,15 +145,7 @@ function getAuthState(): AuthGlobalState {
 function getRuntimeFallbackSecret(): string {
 	const state = getAuthState();
 	if (!state.runtimeFallbackSecret) {
-		const seed = process.env.ADMIN_PASSWORD || process.env.DATABASE_URL || "";
-		if (seed) {
-			state.runtimeFallbackSecret = crypto
-				.createHmac("sha256", "wedding-drop-runtime-fallback-v1")
-				.update(seed)
-				.digest("hex");
-		} else {
-			state.runtimeFallbackSecret = crypto.randomBytes(32).toString("hex");
-		}
+		state.runtimeFallbackSecret = crypto.randomBytes(32).toString("hex");
 	}
 	return state.runtimeFallbackSecret;
 }
@@ -312,21 +304,19 @@ export function _resetRevokedTokensForTests(): void {
 	getAuthState().revokedJtis.clear();
 }
 
-function computeGuestPasswordTag(guestPasswordHash: string): string {
+function deriveGuestSessionBinding(verifierMaterial: string): string {
 	return crypto
-		.createHmac("sha256", getOwnerSecret())
-		.update(`guest-pwd:${guestPasswordHash}`)
-		.digest("hex")
-		.slice(0, 16);
+		.pbkdf2Sync(verifierMaterial, getOwnerSecret(), 1000, 8, "sha256")
+		.toString("hex");
 }
 
 export function generateGuestToken(
 	slug: string,
-	guestPasswordHash?: string | null,
+	verifierMaterial?: string | null,
 ): string {
 	const timestamp = Date.now();
-	const subject = guestPasswordHash
-		? `${slug}\n${computeGuestPasswordTag(guestPasswordHash)}`
+	const subject = verifierMaterial
+		? `${slug}\n${deriveGuestSessionBinding(verifierMaterial)}`
 		: slug;
 	const payload = `guest:${timestamp}.${subject}`;
 	const hmac = crypto
@@ -339,7 +329,7 @@ export function generateGuestToken(
 export function verifyGuestToken(
 	token: string | null | undefined,
 	expectedSlug: string,
-	currentGuestPasswordHash?: string | null,
+	currentVerifier?: string | null,
 ): boolean {
 	if (!token?.startsWith("guest_")) return false;
 	const parts = token.split("_");
@@ -348,7 +338,7 @@ export function verifyGuestToken(
 	const decodedSubject = Buffer.from(parts[2], "base64").toString("utf-8");
 	const providedHmac = parts[3];
 
-	const [slug, tokenPwdTag] = decodedSubject.split("\n");
+	const [slug, tokenBinding] = decodedSubject.split("\n");
 	if (slug !== expectedSlug) return false;
 
 	// Token ważny przez 7 dni
@@ -378,9 +368,9 @@ export function verifyGuestToken(
 		return false;
 	}
 
-	if (tokenPwdTag !== undefined && currentGuestPasswordHash) {
-		const expectedPwdTag = computeGuestPasswordTag(currentGuestPasswordHash);
-		if (tokenPwdTag !== expectedPwdTag) return false;
+	if (tokenBinding !== undefined && currentVerifier) {
+		const expectedBinding = deriveGuestSessionBinding(currentVerifier);
+		if (tokenBinding !== expectedBinding) return false;
 	}
 
 	return true;
@@ -453,10 +443,10 @@ export async function authorizeHiddenAccess(
 export function hasGuestAccess(
 	req: NextRequest | Request,
 	slug: string,
-	guestPassword: string | null | undefined,
+	accessVerifier: string | null | undefined,
 ): boolean {
-	if (!guestPassword) return true;
-	if (verifyGuestToken(readGuestToken(req, slug), slug, guestPassword)) {
+	if (!accessVerifier) return true;
+	if (verifyGuestToken(readGuestToken(req, slug), slug, accessVerifier)) {
 		return true;
 	}
 	return hasPrivilegedToken(req, slug);
@@ -466,7 +456,7 @@ export function hasGuestAccess(
 export function verifyGuestCookieHeader(
 	slug: string,
 	cookieHeader: string | undefined,
-	guestPasswordHash?: string | null,
+	accessVerifier?: string | null,
 ): boolean {
 	if (!cookieHeader) return false;
 	const match = cookieHeader.match(
@@ -476,11 +466,7 @@ export function verifyGuestCookieHeader(
 	);
 	if (!match) return false;
 	try {
-		return verifyGuestToken(
-			decodeURIComponent(match[1]),
-			slug,
-			guestPasswordHash,
-		);
+		return verifyGuestToken(decodeURIComponent(match[1]), slug, accessVerifier);
 	} catch {
 		return false;
 	}
