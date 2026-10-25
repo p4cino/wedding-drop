@@ -58,6 +58,32 @@ describe("PATCH /api/owner/[slug]/settings", () => {
 		expect(data.error).toBe("Brak tokenu");
 	});
 
+	it("używa domyślnego komunikatu i statusu 401 gdy authenticateOwner nie poda szczegółów oraz pomija db.update przy pustym body", async () => {
+		const reqUnauth = {
+			json: vi.fn().mockResolvedValue({}),
+		} as unknown as NextRequest;
+		mockAuthenticateOwner.mockResolvedValueOnce({
+			authorized: false,
+		});
+		const resUnauth = await PATCH(reqUnauth, {
+			params: Promise.resolve({ slug: "test" }),
+		});
+		expect(resUnauth.status).toBe(401);
+
+		const reqNoop = {
+			json: vi.fn().mockResolvedValue({ guestPassword: 123 }),
+		} as unknown as NextRequest;
+		mockAuthenticateOwner.mockResolvedValueOnce({
+			authorized: true,
+			gallery: { id: "gal-123" },
+		});
+		const resNoop = await PATCH(reqNoop, {
+			params: Promise.resolve({ slug: "test" }),
+		});
+		expect(resNoop.status).toBe(200);
+		expect(db.update).not.toHaveBeenCalled();
+	});
+
 	it("aktualizuje wszystkie ustawienia", async () => {
 		const req = {
 			json: vi.fn().mockResolvedValue({
