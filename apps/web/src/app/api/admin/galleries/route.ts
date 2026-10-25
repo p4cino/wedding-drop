@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
 			slug = `${slug}-${Math.random().toString(36).substring(2, 6)}`;
 		}
 
-		const ownerPasswordHash = await hash(ownerPassword, 10);
+		const ownerPasswordHash = await hash(ownerPassword, { cost: 10 });
 		const maxStorageBytes = maxStorageGb
 			? Math.floor(maxStorageGb) * 1024 * 1024 * 1024
 			: 0;

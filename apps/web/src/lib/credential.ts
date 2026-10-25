@@ -11,7 +11,7 @@ export function isBcryptHash(value: string): boolean {
 
 /** Hashuje hasło gościa lub PIN galerii (bcrypt). */
 export function hashSecret(plain: string): Promise<string> {
-	return hash(plain, BCRYPT_ROUNDS);
+	return hash(plain, { cost: BCRYPT_ROUNDS });
 }
 
 const scryptAsync = promisify(crypto.scrypt) as (

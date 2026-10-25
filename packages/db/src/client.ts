@@ -60,7 +60,7 @@ export async function initDatabase() {
 		const existingAdmins = await client`SELECT count(*) FROM admins`;
 		if (parseInt(existingAdmins[0].count, 10) === 0) {
 			const defaultAdminPass = process.env.ADMIN_PASSWORD || "admin123";
-			const passwordHash = await hash(defaultAdminPass, 10);
+			const passwordHash = await hash(defaultAdminPass, { cost: 10 });
 			await client`
 				INSERT INTO admins (username, password_hash)
 				VALUES ('admin', ${passwordHash})
@@ -80,7 +80,7 @@ export async function initDatabase() {
 				existingGalleries?.[0] &&
 				parseInt(existingGalleries[0].count, 10) === 0
 			) {
-				const ownerPassHash = await hash("sekret123", 10);
+				const ownerPassHash = await hash("sekret123", { cost: 10 });
 				const defaultGalId = "a0000000-0000-0000-0000-000000000001";
 				await client`
 					INSERT INTO galleries (

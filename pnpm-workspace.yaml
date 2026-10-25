@@ -3,24 +3,34 @@ packages:
   - "packages/*"
 
 allowBuilds:
-  '@parcel/watcher': true
-  '@swc/core': true
+  "@parcel/watcher": true
+  "@swc/core": true
   esbuild: true
 
 minimumReleaseAgeExclude:
-  - '@next/env@16.3.5'
-  - '@next/swc-darwin-arm64@16.3.5'
-  - '@next/swc-darwin-x64@16.3.5'
-  - '@next/swc-linux-arm64-gnu@16.3.5'
-  - '@next/swc-linux-arm64-musl@16.3.5'
-  - '@next/swc-linux-x64-gnu@16.3.5'
-  - '@next/swc-linux-x64-musl@16.3.5'
-  - '@next/swc-win32-arm64-msvc@16.3.5'
-  - '@next/swc-win32-x64-msvc@16.3.5'
-  - next@16.3.5
+  - "@next/env@16.4.3"
+  - "@next/swc-darwin-arm64@16.4.3"
+  - "@next/swc-darwin-x64@16.4.3"
+  - "@next/swc-linux-arm64-gnu@16.4.3"
+  - "@next/swc-linux-arm64-musl@16.4.3"
+  - "@next/swc-linux-x64-gnu@16.4.3"
+  - "@next/swc-linux-x64-musl@16.4.3"
+  - "@next/swc-win32-arm64-msvc@16.4.3"
+  - "@next/swc-win32-x64-msvc@16.4.3"
+  - next@16.4.3
 
 overrides:
   browserslist@<=4.28.6: ^4.28.7
   esbuild@<=0.24.2: ^0.25.0
   esbuild@>=0.27.3 <0.28.1: ^0.28.1
   brace-expansion@>=4.0.0 <5.0.12: ^5.0.12
+  # Eliminacja podatności bezpieczeństwa (CVE)
+  zod: ">=4.6.7"
+  vite: ">=8.3.3"
+  "@zag-js/core@<0.82.2": "0.82.2"
+  effect: ">=3.20.0 <4.0.0"
+  fast-uri: ">=3.1.9"
+  picomatch@>=4.0.0 <4.0.4: "^4.0.4"
+  postcss: ">=8.5.31"
+  undici: ">=8.12.2"
+  postcss-selector-parser@<7.1.6: ">=7.1.6"

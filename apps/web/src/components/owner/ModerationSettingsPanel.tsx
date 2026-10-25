@@ -19,6 +19,59 @@ interface ModerationSettingsPanelProps {
 	) => Promise<boolean>;
 }
 
+interface SettingToggleProps {
+	icon: React.ElementType;
+	label: string;
+	hint: string;
+	checked: boolean;
+	onChange: (val: boolean) => void;
+}
+
+const SettingToggle: React.FC<SettingToggleProps> = ({
+	icon: Icon,
+	label,
+	hint,
+	checked,
+	onChange,
+}) => (
+	<label
+		className={css({
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "space-between",
+			cursor: "pointer",
+			p: "4",
+			borderWidth: "1px",
+			borderColor: "slate.200",
+			borderRadius: "xl",
+			transition: "border-color 0.2s ease",
+			_hover: { borderColor: "wedding.gold" },
+		})}
+	>
+		<div className={css({ display: "flex", alignItems: "center", gap: "3" })}>
+			<Icon className={css({ w: "4", h: "4", color: "slate.400" })} />
+			<div>
+				<p
+					className={css({
+						fontSize: "sm",
+						fontWeight: "medium",
+						color: "slate.900",
+					})}
+				>
+					{label}
+				</p>
+				<p className={css({ fontSize: "xs", color: "slate.500" })}>{hint}</p>
+			</div>
+		</div>
+		<input
+			type="checkbox"
+			checked={checked}
+			onChange={(e) => onChange(e.target.checked)}
+			className={css({ w: "4", h: "4", accentColor: "wedding.gold" })}
+		/>
+	</label>
+);
+
 export const ModerationSettingsPanel: React.FC<
 	ModerationSettingsPanelProps
 > = ({ settings, onSave }) => {
@@ -30,57 +83,6 @@ export const ModerationSettingsPanel: React.FC<
 	});
 	const [guestPassword, setGuestPassword] = useState("");
 	const [isSaving, setIsSaving] = useState(false);
-
-	const SettingToggle = ({
-		icon: Icon,
-		label,
-		hint,
-		checked,
-		onChange,
-	}: {
-		icon: React.ElementType;
-		label: string;
-		hint: string;
-		checked: boolean;
-		onChange: (val: boolean) => void;
-	}) => (
-		<label
-			className={css({
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "space-between",
-				cursor: "pointer",
-				p: "4",
-				borderWidth: "1px",
-				borderColor: "slate.200",
-				borderRadius: "xl",
-				transition: "border-color 0.2s ease",
-				_hover: { borderColor: "wedding.gold" },
-			})}
-		>
-			<div className={css({ display: "flex", alignItems: "center", gap: "3" })}>
-				<Icon className={css({ w: "4", h: "4", color: "slate.400" })} />
-				<div>
-					<p
-						className={css({
-							fontSize: "sm",
-							fontWeight: "medium",
-							color: "slate.900",
-						})}
-					>
-						{label}
-					</p>
-					<p className={css({ fontSize: "xs", color: "slate.500" })}>{hint}</p>
-				</div>
-			</div>
-			<input
-				type="checkbox"
-				checked={checked}
-				onChange={(e) => onChange(e.target.checked)}
-				className={css({ w: "4", h: "4", accentColor: "wedding.gold" })}
-			/>
-		</label>
-	);
 
 	const handleSave = async (e: React.FormEvent) => {
 		e.preventDefault();
