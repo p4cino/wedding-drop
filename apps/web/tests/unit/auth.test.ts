@@ -5,6 +5,8 @@ import {
 	generateAdminToken,
 	generateGuestToken,
 	generateOwnerToken,
+	getAdminSecret,
+	getOwnerSecret,
 	guestSessionCookieName,
 	ownerSessionCookieName,
 	readGuestToken,
@@ -81,13 +83,21 @@ describe("Auth HMAC Tokens", () => {
 		expect(verifyGuestToken(token, "inna-para")).toBe(false);
 	});
 
-	it("powinien odrzucić sfałszowany token gościa", () => {
+	it("powinien odrzucić sfałszowany lub niepoprawnie sformatowany token gościa", () => {
 		const slug = "kasia-i-tomek";
 		const token = generateGuestToken(slug);
 		const parts = token.split("_");
-		parts[4] =
+		parts[3] =
 			"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
 		expect(verifyGuestToken(parts.join("_"), slug)).toBe(false);
+		expect(verifyGuestToken(null, slug)).toBe(false);
+		expect(verifyGuestToken("guest_only_three", slug)).toBe(false);
+		expect(
+			verifyGuestToken(`guest_notanumber_${parts[2]}_${parts[3]}`, slug),
+		).toBe(false);
+		expect(
+			verifyGuestToken(`guest_${Date.now()}_${parts[2]}_nothex`, slug),
+		).toBe(false);
 	});
 
 	it("powinien powiązać token gościa ze skrótem hasła galerii i unieważnić go po zmianie hasła", () => {
@@ -100,7 +110,7 @@ describe("Auth HMAC Tokens", () => {
 		expect(verifyGuestToken(token, slug, newHash)).toBe(false);
 	});
 
-	it("powinien przechowywać unieważnione tokeny (revokedJtis) w globalThis", () => {
+	it("powinien przechowywać unieważnione tokeny (revokedJtis) w globalThis oraz obsłużyć zmienne sekretów", () => {
 		const slug = "kasia-i-tomek";
 		const token = generateOwnerToken(slug);
 		expect(revokeToken(token)).toBe(true);
@@ -110,6 +120,22 @@ describe("Auth HMAC Tokens", () => {
 		] as { revokedJtis: Map<string, number> };
 		expect(globalState).toBeDefined();
 		expect(globalState.revokedJtis.size).toBeGreaterThan(0);
+
+		const origAdminSecret = process.env.ADMIN_SECRET;
+		const origOwnerSecret = process.env.OWNER_SECRET;
+		try {
+			process.env.ADMIN_SECRET = "custom-admin-secret";
+			process.env.OWNER_SECRET = "custom-owner-secret";
+			expect(getAdminSecret()).toBe("custom-admin-secret");
+			expect(getOwnerSecret()).toBe("custom-owner-secret");
+			delete process.env.OWNER_SECRET;
+			expect(getOwnerSecret()).toBe("custom-admin-secret");
+		} finally {
+			if (origAdminSecret === undefined) delete process.env.ADMIN_SECRET;
+			else process.env.ADMIN_SECRET = origAdminSecret;
+			if (origOwnerSecret === undefined) delete process.env.OWNER_SECRET;
+			else process.env.OWNER_SECRET = origOwnerSecret;
+		}
 	});
 });
 
@@ -253,6 +279,23 @@ describe("readOwnerToken", () => {
 			headers: { authorization: `Bearer ${token}` },
 		});
 		expect(readOwnerToken(req, slug)).toBe(token);
+	});
+
+	it("odczytuje token z body.token oraz z obiektu req.cookies", () => {
+		const req = new Request("http://localhost/api/owner/kasia-i-tomek/media", {
+			method: "POST",
+		});
+		expect(readOwnerToken(req, slug, { token })).toBe(token);
+
+		const fakeNextReq = {
+			method: "GET",
+			headers: new Headers(),
+			cookies: {
+				get: (name: string) =>
+					name === "wd_owner_kasia-i-tomek" ? { value: token } : undefined,
+			},
+		} as unknown as Request;
+		expect(readOwnerToken(fakeNextReq, slug)).toBe(token);
 	});
 
 	it("odczytuje token z ciasteczka sesji dla metod GET i HEAD", () => {
