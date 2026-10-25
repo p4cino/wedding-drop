@@ -10,20 +10,30 @@ import {
 import { sseBus } from "../src/sse-bus.js";
 
 let mockGalleryResult: unknown[] = [{ id: "mock-gal-id" }];
+let mockUsageResult: unknown[] = [{ totalBytes: 0 }];
 
 let lastInsertedValues: Record<string, unknown> | null = null;
 
 vi.mock("@wedding-drop/db", () => ({
 	db: {
-		select: vi.fn(() => ({
-			from: vi.fn(() => ({
-				where: vi.fn(() => ({
-					limit: vi
-						.fn()
-						.mockImplementation(() => Promise.resolve(mockGalleryResult)),
+		select: vi.fn((selection?: unknown) => {
+			if (selection) {
+				return {
+					from: vi.fn(() => ({
+						where: vi.fn(() => Promise.resolve(mockUsageResult)),
+					})),
+				};
+			}
+			return {
+				from: vi.fn(() => ({
+					where: vi.fn(() => ({
+						limit: vi
+							.fn()
+							.mockImplementation(() => Promise.resolve(mockGalleryResult)),
+					})),
 				})),
-			})),
-		})),
+			};
+		}),
 		insert: vi.fn(() => ({
 			values: vi.fn((values: Record<string, unknown>) => {
 				lastInsertedValues = values;
@@ -111,6 +121,7 @@ describe("media-processor service", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mockGalleryResult = [{ id: "mock-gal-id" }];
+		mockUsageResult = [{ totalBytes: 0 }];
 		mockSpawnExitCode = 0;
 		mockSpawnError = null;
 		mockSpawnHangs = false;
@@ -122,7 +133,7 @@ describe("media-processor service", () => {
 		expect(mediaQueue.concurrency).toBe(2);
 	});
 
-	it("powinien pomyślnie przetworzyć zdjęcie, wygenerować miniaturę i powiadomić przez SSE", async () => {
+	it("powinien pomyślnie przetworzyć zdjęcie, wygenerować miniaturę, usunąć plik .json TUS i powiadomić przez SSE", async () => {
 		const task: ProcessTask = {
 			uploadId: "upl-img-1",
 			tempFilePath: "/tmp/fake-file.jpg",
@@ -139,11 +150,51 @@ describe("media-processor service", () => {
 
 		expect(fsPromises.mkdir).toHaveBeenCalled();
 		expect(fsPromises.rename).toHaveBeenCalled();
+		expect(fsPromises.unlink).toHaveBeenCalledWith("/tmp/fake-file.jpg.json");
 		expect(sharp).toHaveBeenCalled();
 		expect(sseBus.notifyNewMedia).toHaveBeenCalledWith(
 			"kasia-i-tomek",
 			expect.objectContaining({ id: "mock-media-id" }),
 		);
+	});
+
+	it("powinien znormalizować podejrzany mimeType klienta do kanonicznego typu zgodnego z walidacją", async () => {
+		await scheduleMediaProcessing({
+			uploadId: "upl-mime-1",
+			tempFilePath: "/tmp/fake-file.jpg",
+			gallerySlug: "kasia-i-tomek",
+			uploaderName: "Gość",
+			originalName: "foto.png",
+			fileType: "image",
+			mimeType: "text/html; <script>alert(1)</script>",
+			fileSize: 5000,
+			dataDir: "/tmp/data",
+		});
+
+		expect(lastInsertedValues).toMatchObject({
+			mimeType: "image/png",
+		});
+	});
+
+	it("powinien odrzucić plik w processMediaTask, jeśli przekroczono maxStorageBytes galerii (ochrona TOCTOU F-08)", async () => {
+		mockGalleryResult = [{ id: "mock-gal-id", maxStorageBytes: 1000 }];
+		mockUsageResult = [{ totalBytes: 800 }];
+
+		await scheduleMediaProcessing({
+			uploadId: "upl-quota-1",
+			tempFilePath: "/tmp/over-quota.jpg",
+			gallerySlug: "kasia-i-tomek",
+			uploaderName: "Gość",
+			originalName: "duzy.jpg",
+			fileType: "image",
+			mimeType: "image/jpeg",
+			fileSize: 500,
+			dataDir: "/tmp/data",
+		});
+
+		expect(fsPromises.unlink).toHaveBeenCalledWith("/tmp/over-quota.jpg");
+		expect(lastInsertedValues).toBeNull();
+		expect(sseBus.notifyNewMedia).not.toHaveBeenCalled();
 	});
 
 	it("powinien zapisać nagranie audio bez FFmpeg/Sharp i bez miniatury (thumbPath = plik źródłowy)", async () => {

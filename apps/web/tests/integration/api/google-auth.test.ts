@@ -163,7 +163,7 @@ describe("Google OAuth API Routes", () => {
 			expect(res.status).toBe(401);
 		});
 
-		it("powinien zwrócić 200 z authUrl zawierającym state przy poprawnym x-owner-token", async () => {
+		it("powinien zwrócić 200 z authUrl zawierającym state oraz ustawić ciasteczko wd_gdrive_oauth_state przy poprawnym x-owner-token", async () => {
 			const token = generateOwnerToken("kasia-i-tomek");
 			const req = new NextRequest("http://localhost:3000/api/auth/google", {
 				method: "POST",
@@ -179,6 +179,7 @@ describe("Google OAuth API Routes", () => {
 			const data = await res.json();
 			expect(data.authUrl).toContain("https://accounts.google.com/oauth");
 			expect(data.authUrl).toContain("state=");
+			expect(res.headers.get("set-cookie")).toContain("wd_gdrive_oauth_state=");
 		});
 
 		it("powinien zwrócić 200 z authUrl przy poprawnym nagłówku Authorization: Bearer", async () => {
@@ -288,6 +289,23 @@ describe("Google OAuth API Routes", () => {
 		it("powinien odrzucić nieprawidłowy lub przeterminowany podpis HMAC parametru state", async () => {
 			const req = new NextRequest(
 				"http://localhost:3000/api/auth/google/callback?code=some-code&state=tampered-state",
+			);
+			const res = await googleCallbackGet(req);
+
+			expect(res.status).toBe(307);
+			expect(res.headers.get("location")).toContain(
+				"gdrive_error=invalid_or_expired_state",
+			);
+		});
+
+		it("powinien odrzucić callback, gdy ciasteczko wd_gdrive_oauth_state nie pasuje do przekazanego state (ochrona CSRF F-07)", async () => {
+			const req = new NextRequest(
+				"http://localhost:3000/api/auth/google/callback?code=valid-code&state=valid-state",
+				{
+					headers: {
+						cookie: `wd_gdrive_oauth_state=${"0".repeat(64)}`,
+					},
+				},
 			);
 			const res = await googleCallbackGet(req);
 

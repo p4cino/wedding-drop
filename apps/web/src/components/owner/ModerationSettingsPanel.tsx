@@ -82,6 +82,7 @@ export const ModerationSettingsPanel: React.FC<
 		isApprovalQueueEnabled: settings.isApprovalQueueEnabled ?? false,
 	});
 	const [guestPassword, setGuestPassword] = useState("");
+	const [clearGuestPassword, setClearGuestPassword] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
 
 	const handleSave = async (e: React.FormEvent) => {
@@ -90,11 +91,16 @@ export const ModerationSettingsPanel: React.FC<
 
 		const payload = {
 			...localSettings,
-			guestPassword: guestPassword !== "" ? guestPassword : undefined,
+			guestPassword: clearGuestPassword
+				? null
+				: guestPassword !== ""
+					? guestPassword
+					: undefined,
 		};
 
 		await onSave(payload);
-		setGuestPassword(""); // clear on save if we don't want to show it, or keep it.
+		setGuestPassword("");
+		setClearGuestPassword(false);
 		setIsSaving(false);
 	};
 
@@ -221,6 +227,7 @@ export const ModerationSettingsPanel: React.FC<
 						<input
 							id="guestPassword"
 							type="text"
+							disabled={clearGuestPassword}
 							value={guestPassword}
 							onChange={(e) => setGuestPassword(e.target.value)}
 							placeholder={t("guestPasswordPlaceholder")}
@@ -240,6 +247,32 @@ export const ModerationSettingsPanel: React.FC<
 								},
 							})}
 						/>
+						<label
+							className={css({
+								display: "flex",
+								alignItems: "center",
+								gap: "2",
+								mt: "2",
+								fontSize: "xs",
+								color: "slate.600",
+								cursor: "pointer",
+							})}
+						>
+							<input
+								type="checkbox"
+								checked={clearGuestPassword}
+								onChange={(e) => {
+									setClearGuestPassword(e.target.checked);
+									if (e.target.checked) setGuestPassword("");
+								}}
+								className={css({
+									w: "3.5",
+									h: "3.5",
+									accentColor: "wedding.gold",
+								})}
+							/>
+							<span>Wyłącz ochronę hasłem gościa (wyczyść obecne hasło)</span>
+						</label>
 					</div>
 				</div>
 

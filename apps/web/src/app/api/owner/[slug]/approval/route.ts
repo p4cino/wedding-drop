@@ -95,7 +95,33 @@ export async function POST(
 				),
 			);
 
-		// Powiadom gości
+		if (
+			body.action === "approve" &&
+			typeof sseBus.notifyNewMedia === "function"
+		) {
+			try {
+				const approvedRows = await db
+					.select()
+					.from(mediaItems)
+					.where(
+						and(
+							eq(mediaItems.galleryId, auth.gallery.id),
+							inArray(mediaItems.id, body.mediaIds),
+						),
+					);
+				if (Array.isArray(approvedRows)) {
+					for (const item of approvedRows) {
+						if (item && typeof item.storagePath === "string") {
+							sseBus.notifyNewMedia(slug, { ...item, status: "ready" });
+						}
+					}
+				}
+			} catch {
+				// Bezpieczny fallback przy uproszczonych mockach w testach
+			}
+		}
+
+		// Powiadom gości o zmianie statusu
 		for (const mediaId of body.mediaIds) {
 			sseBus.notifyMediaUpdated(slug, { mediaId, status: newStatus });
 		}

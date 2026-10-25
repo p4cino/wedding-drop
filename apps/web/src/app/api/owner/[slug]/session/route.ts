@@ -32,6 +32,8 @@ export async function GET(
 			);
 		}
 
+		const previousToken = readOwnerToken(req, slug);
+
 		const gdriveRows = await db
 			.select()
 			.from(galleryGdriveExports)
@@ -40,6 +42,9 @@ export async function GET(
 
 		const payload = await buildOwnerPanelPayload(auth.gallery, gdriveRows[0]);
 		const freshToken = generateOwnerToken(slug);
+		if (previousToken) {
+			revokeToken(previousToken);
+		}
 
 		const res = NextResponse.json({
 			...payload,

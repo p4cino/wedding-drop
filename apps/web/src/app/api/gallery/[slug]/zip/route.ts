@@ -54,7 +54,11 @@ export async function GET(
 					{ status: 401 },
 				);
 			}
-			if (!gallery.allowGuestDownloads) {
+			if (
+				gallery.isActive === false ||
+				gallery.allowGuestViewing === false ||
+				!gallery.allowGuestDownloads
+			) {
 				return NextResponse.json(
 					{ error: "Pobieranie plików zostało wyłączone przez Parę Młodą" },
 					{ status: 403 },

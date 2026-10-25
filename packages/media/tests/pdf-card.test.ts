@@ -9,6 +9,11 @@ describe("pdf-card service", () => {
 			expect(sanitizeForPdf(input)).toBe(expected);
 		});
 
+		it("powinien usuwać znaki spoza kodowania WinAnsi (np. emoji, znaki specjalne Unicode)", () => {
+			const input = "Kasia 💍 Tomek 🎉 Wspomnienia — 2026";
+			expect(sanitizeForPdf(input)).toBe("Kasia  Tomek  Wspomnienia  2026");
+		});
+
 		it("powinien zwracać pusty ciąg dla pustych lub null wartości", () => {
 			expect(sanitizeForPdf("")).toBe("");
 			expect(sanitizeForPdf(null as unknown as string)).toBe("");
@@ -38,6 +43,23 @@ describe("pdf-card service", () => {
 
 			const header = Buffer.from(pdfBytes.slice(0, 5)).toString("utf-8");
 			expect(header).toBe("%PDF-");
+		});
+
+		it("powinien bezpiecznie obsłużyć nieprawidłowe kolory HEX oraz emoji w polach bez rzucania wyjątku", async () => {
+			const pdfBytes = await generateWeddingCardPdf({
+				coupleNames: "Kasia 💍 Tomek",
+				weddingDate: "12.09.2026",
+				targetUrl: "https://example.com/g/kasia-i-tomek",
+				headline: "Dodaj zdjęcia 🎉",
+				instructions: Array.from({ length: 20 }, (_, i) => `Linia ${i}`).join(
+					"\n",
+				),
+				primaryColorHex: "invalid-hex-color",
+				accentColorHex: "#ZZZZZZ",
+			});
+
+			expect(pdfBytes).toBeInstanceOf(Uint8Array);
+			expect(pdfBytes.length).toBeGreaterThan(1000);
 		});
 
 		it("powinien poprawnie obsłużyć domyślne i brakujące wartości oraz 3-znakowe kolory hex", async () => {

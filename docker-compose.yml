@@ -32,6 +32,7 @@ services:
       DATA_DIR: /app/data
       APP_DOMAIN: ${APP_DOMAIN:-http://localhost}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      ADMIN_SECRET: ${ADMIN_SECRET:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}
@@ -44,6 +45,10 @@ services:
       - "no-new-privileges:true"
     cap_drop:
       - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
     deploy:
       resources:
         limits:
@@ -70,7 +75,6 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
-      - app_data:/app/data:ro
     depends_on:
       - web
     networks:

@@ -22,6 +22,8 @@ import { handleMediaFileRequest } from "@/lib/media-file-handler";
 let mockMediaItemStatus: string | null = "ready";
 let mockGallerySlug = "test-slug";
 let mockGuestPassword: null | string = null;
+let mockAllowGuestViewing = true;
+let mockIsActive = true;
 
 vi.mock("@wedding-drop/db", async (importOriginal) => {
 	const actual = await importOriginal<Record<string, unknown>>();
@@ -39,6 +41,8 @@ vi.mock("@wedding-drop/db", async (importOriginal) => {
 										status: mockMediaItemStatus,
 										gallerySlug: mockGallerySlug,
 										guestPassword: mockGuestPassword,
+										allowGuestViewing: mockAllowGuestViewing,
+										isActive: mockIsActive,
 									},
 								];
 							}),
@@ -108,11 +112,18 @@ describe("handleMediaFileRequest", () => {
 		"media-data",
 	);
 	const testGalleriesDir = path.join(testDataDir, "galleries", "test-slug");
+	const testTusTempDir = path.join(testDataDir, "tus_temp");
 	const testFilePath = path.join(testGalleriesDir, "sample.jpg");
+	const testTusJsonPath = path.join(testTusTempDir, "upload_123.json");
 
 	beforeAll(() => {
 		fs.mkdirSync(testGalleriesDir, { recursive: true });
+		fs.mkdirSync(testTusTempDir, { recursive: true });
 		fs.writeFileSync(testFilePath, "FAKE_IMAGE_DATA_1234567890");
+		fs.writeFileSync(
+			testTusJsonPath,
+			JSON.stringify({ metadata: { ownerToken: "secret" } }),
+		);
 	});
 
 	afterAll(async () => {
@@ -129,6 +140,8 @@ describe("handleMediaFileRequest", () => {
 		mockMediaItemStatus = "ready";
 		mockGallerySlug = "test-slug";
 		mockGuestPassword = null;
+		mockAllowGuestViewing = true;
+		mockIsActive = true;
 	});
 
 	it("powinien zignorować zapytania niebędące /media-file/ i zwrócić false", async () => {
@@ -167,6 +180,36 @@ describe("handleMediaFileRequest", () => {
 		expect(res.statusCode).toBe(403);
 	});
 
+	it("powinien odrzucić dostęp do katalogu tus_temp kodem 403 (ochrona przed F-01)", async () => {
+		const req = createMockReq({
+			url: "/media-file/tus_temp/upload_123.json",
+		});
+		const res = new MockResponse();
+		const handled = await handleMediaFileRequest(
+			req,
+			res as unknown as ServerResponse,
+			testDataDir,
+		);
+		expect(handled).toBe(true);
+		expect(res.statusCode).toBe(403);
+		expect(res.body).not.toContain("secret");
+	});
+
+	it("powinien zwrócić 404 (fail-closed) dla pliku na dysku bez rekordu w media_items", async () => {
+		mockMediaItemStatus = null;
+		const req = createMockReq({
+			url: "/media-file/galleries/test-slug/sample.jpg",
+		});
+		const res = new MockResponse();
+		const handled = await handleMediaFileRequest(
+			req,
+			res as unknown as ServerResponse,
+			testDataDir,
+		);
+		expect(handled).toBe(true);
+		expect(res.statusCode).toBe(404);
+	});
+
 	it("powinien zwrócić 404 dla nieistniejącego pliku", async () => {
 		const req = createMockReq({
 			url: "/media-file/galleries/test-slug/non-existent.jpg",
@@ -196,6 +239,9 @@ describe("handleMediaFileRequest", () => {
 		expect(res.statusCode).toBe(200);
 		expect(res.headers["Content-Type"]).toBe("image/jpeg");
 		expect(res.headers["X-Content-Type-Options"]).toBe("nosniff");
+		expect(res.headers["Content-Security-Policy"]).toBe(
+			"default-src 'none'; sandbox",
+		);
 		expect(res.body).toBe("FAKE_IMAGE_DATA_1234567890");
 	});
 
@@ -248,6 +294,35 @@ describe("handleMediaFileRequest", () => {
 		expect(res.statusCode).toBe(403);
 	});
 
+	it("powinien zablokować plik dla gościa, gdy allowGuestViewing jest false (kod 403), ale zezwolić właścicielowi", async () => {
+		mockAllowGuestViewing = false;
+		const guestReq = createMockReq({
+			url: "/media-file/galleries/test-slug/sample.jpg",
+		});
+		const guestRes = new MockResponse();
+		await handleMediaFileRequest(
+			guestReq,
+			guestRes as unknown as ServerResponse,
+			testDataDir,
+		);
+		expect(guestRes.statusCode).toBe(403);
+
+		const ownerToken = generateOwnerToken("test-slug");
+		const ownerReq = createMockReq({
+			url: "/media-file/galleries/test-slug/sample.jpg",
+			headers: { "x-owner-token": ownerToken },
+		});
+		const ownerRes = new MockResponse();
+		await handleMediaFileRequest(
+			ownerReq,
+			ownerRes as unknown as ServerResponse,
+			testDataDir,
+		);
+		await waitForResponse(ownerRes);
+		expect(ownerRes.statusCode).toBe(200);
+		expect(ownerRes.headers["Cache-Control"]).toBe("private, no-store");
+	});
+
 	it("powinien zablokować plik ze statusem pending dla niezalogowanego gościa (kod 403)", async () => {
 		mockMediaItemStatus = "pending";
 		const req = createMockReq({
@@ -279,6 +354,7 @@ describe("handleMediaFileRequest", () => {
 		expect(handled).toBe(true);
 		await waitForResponse(res);
 		expect(res.statusCode).toBe(200);
+		expect(res.headers["Cache-Control"]).toBe("private, no-store");
 	});
 
 	it("powinien zezwolić na dostęp do pliku ze statusem hidden dla administratora z tokenem", async () => {
@@ -349,5 +425,6 @@ describe("handleMediaFileRequest", () => {
 		expect(handled).toBe(true);
 		await waitForResponse(res);
 		expect(res.statusCode).toBe(200);
+		expect(res.headers["Cache-Control"]).toBe("private, no-store");
 	});
 });

@@ -51,6 +51,13 @@ export async function GET(
 			// Nasłuch na nowe pliki dla tego konkretnego wesela
 			const onNewMedia = (mediaItem: MediaItem) => {
 				try {
+					if (
+						!canViewHidden &&
+						mediaItem.status &&
+						mediaItem.status !== "ready"
+					) {
+						return;
+					}
 					const payload = JSON.stringify({
 						type: "new-media",
 						media: {
@@ -61,6 +68,7 @@ export async function GET(
 							mimeType: mediaItem.mimeType,
 							originalFileName: mediaItem.originalFileName,
 							fileSize: mediaItem.fileSize,
+							status: mediaItem.status,
 							thumbUrl: `/media-file/${mediaItem.thumbPath.replace(/\\/g, "/")}`,
 							rawUrl: `/media-file/${mediaItem.storagePath.replace(/\\/g, "/")}`,
 							createdAt: mediaItem.createdAt,

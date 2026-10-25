@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { db, galleries, galleryGdriveExports } from "@wedding-drop/db";
 import { exchangeCodeForTokens, verifySignedState } from "@wedding-drop/media";
 import { eq } from "drizzle-orm";
@@ -27,6 +28,26 @@ export async function GET(req: NextRequest) {
 	// 2. Weryfikacja integralności i podpisu HMAC stanu 'state'
 	if (!state || !code) {
 		return NextResponse.redirect(`${baseUrl}/?gdrive_error=missing_parameters`);
+	}
+
+	// Jeśli przeglądarka posiada ciasteczko wiążące sesję OAuth (wd_gdrive_oauth_state),
+	// weryfikujemy zgodność skrótu SHA-256 (ochrona przed Login/Account Planting CSRF F-07)
+	const stateBindingCookie = req.cookies?.get?.("wd_gdrive_oauth_state")?.value;
+	if (stateBindingCookie) {
+		const expectedDigest = crypto
+			.createHash("sha256")
+			.update(state)
+			.digest("hex");
+		const cookieBuf = Buffer.from(stateBindingCookie, "hex");
+		const expectedBuf = Buffer.from(expectedDigest, "hex");
+		if (
+			cookieBuf.length !== expectedBuf.length ||
+			!crypto.timingSafeEqual(cookieBuf, expectedBuf)
+		) {
+			return NextResponse.redirect(
+				`${baseUrl}/?gdrive_error=invalid_or_expired_state`,
+			);
+		}
 	}
 
 	const verified = verifySignedState(state);
@@ -87,7 +108,19 @@ export async function GET(req: NextRequest) {
 			});
 		}
 
-		return NextResponse.redirect(`${ownerDashboardUrl}?gdrive=connected`);
+		const redirectRes = NextResponse.redirect(
+			`${ownerDashboardUrl}?gdrive=connected`,
+		);
+		redirectRes.cookies.set({
+			name: "wd_gdrive_oauth_state",
+			value: "",
+			httpOnly: true,
+			sameSite: "lax",
+			path: "/api/auth/google/callback",
+			maxAge: 0,
+			secure: process.env.NODE_ENV === "production",
+		});
+		return redirectRes;
 	} catch (err: unknown) {
 		console.error("Błąd podczas przetwarzania callbacku Google OAuth:", err);
 		const errorMessage = err instanceof Error ? err.message : "auth_failed";

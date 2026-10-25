@@ -18,10 +18,11 @@ const serwist = new Serwist({
 	navigationPreload: true,
 	runtimeCaching: [
 		{
-			// Wykluczenie wszystkich tras /api/* z cache PWA, aby zapobiec
-			// wyciekowi danych wrażliwych i tokenów sesji do CacheStorage przeglądarki
+			// Wykluczenie wszystkich tras /api/* oraz /media-file/* z cache PWA, aby zapobiec
+			// wyciekowi danych wrażliwych, ukrytych zdjęć i tokenów sesji do CacheStorage przeglądarki
 			matcher: ({ sameOrigin, url: { pathname } }) =>
-				sameOrigin && pathname.startsWith("/api/"),
+				sameOrigin &&
+				(pathname.startsWith("/api/") || pathname.startsWith("/media-file/")),
 			handler: new NetworkOnly(),
 		},
 		...defaultCache,

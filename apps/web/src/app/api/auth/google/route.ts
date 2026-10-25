@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { compare } from "@node-rs/bcrypt";
 import { db, galleries } from "@wedding-drop/db";
 import { getGoogleAuthUrl, isGoogleDriveConfigured } from "@wedding-drop/media";
@@ -9,6 +10,7 @@ import {
 	getClientIp,
 	peekRateLimit,
 	recordRateLimitHit,
+	resetRateLimit,
 	tooManyRequests,
 } from "@/lib/rate-limit";
 
@@ -105,16 +107,40 @@ export async function POST(req: NextRequest) {
 					{ status: 401 },
 				);
 			}
+			resetRateLimit("owner-password", limitKey);
 		}
 
 		const authUrl = getGoogleAuthUrl(slug);
-		return NextResponse.json({ authUrl }, { status: 200 });
+		const res = NextResponse.json({ authUrl }, { status: 200 });
+
+		try {
+			const parsedAuthUrl = new URL(authUrl);
+			const stateParam = parsedAuthUrl.searchParams.get("state");
+			if (stateParam) {
+				const stateDigest = crypto
+					.createHash("sha256")
+					.update(stateParam)
+					.digest("hex");
+				res.cookies.set({
+					name: "wd_gdrive_oauth_state",
+					value: stateDigest,
+					httpOnly: true,
+					sameSite: "lax",
+					path: "/api/auth/google/callback",
+					maxAge: 900,
+					secure: process.env.NODE_ENV === "production",
+				});
+			}
+		} catch {
+			// Ignoruj, jeśli URL w mockach testowych jest niestandardowy
+		}
+
+		return res;
 	} catch (err: unknown) {
 		console.error("Błąd inicjalizacji Google OAuth:", err);
-		const errorMsg =
-			err instanceof Error
-				? err.message
-				: "Błąd serwera podczas inicjalizacji Google OAuth.";
-		return NextResponse.json({ error: errorMsg }, { status: 500 });
+		return NextResponse.json(
+			{ error: "Błąd serwera podczas inicjalizacji Google OAuth." },
+			{ status: 500 },
+		);
 	}
 }

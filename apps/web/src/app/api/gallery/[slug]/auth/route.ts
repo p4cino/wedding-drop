@@ -67,15 +67,17 @@ export async function POST(
 
 		resetRateLimit("guest-login", key);
 
+		let effectivePasswordHash = gallery.guestPassword;
 		// Lazy-upgrade: stare hasła zapisane plaintextem zamieniamy na hash bcrypt
 		if (result.needsUpgrade) {
+			effectivePasswordHash = await hashSecret(password);
 			await db
 				.update(galleries)
-				.set({ guestPassword: await hashSecret(password) })
+				.set({ guestPassword: effectivePasswordHash })
 				.where(eq(galleries.id, gallery.id));
 		}
 
-		const token = generateGuestToken(slug);
+		const token = generateGuestToken(slug, effectivePasswordHash);
 		const response = NextResponse.json({ success: true });
 		setGuestSessionCookie(response, slug, token);
 

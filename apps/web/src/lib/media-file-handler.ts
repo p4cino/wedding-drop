@@ -20,8 +20,11 @@ const MIME_TYPES: Record<string, string> = {
 	".mp4": "video/mp4",
 	".mov": "video/quicktime",
 	".webm": "video/webm",
-	".svg": "image/svg+xml",
 };
+
+function escapeCookieName(name: string): string {
+	return name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 function checkIsAuthorizedForHidden(
 	req: IncomingMessage,
@@ -44,7 +47,7 @@ function checkIsAuthorizedForHidden(
 
 	const cookieHeader = req.headers.cookie;
 	if (cookieHeader) {
-		const cookieName = ownerSessionCookieName(gallerySlug);
+		const cookieName = escapeCookieName(ownerSessionCookieName(gallerySlug));
 		const match = cookieHeader.match(
 			new RegExp(`(?:^|;\\s*)${cookieName}=([^;]*)`),
 		);
@@ -103,6 +106,17 @@ export async function handleMediaFileRequest(
 		return true;
 	}
 
+	// Konwersja ścieżki do separatorów POSIX (tak jak zapisano w bazie)
+	const relativeToData = path.relative(resolvedDataDir, targetFullPath);
+	const posixRelative = relativeToData.split(path.sep).join("/");
+
+	// Zezwalamy wyłącznie na pliki w podkatalogu galleries/ (blokada tus_temp i innych katalogów roboczych)
+	if (!posixRelative.startsWith("galleries/")) {
+		res.writeHead(403, { "Content-Type": "text/plain" });
+		res.end("Forbidden: Access restricted to gallery media");
+		return true;
+	}
+
 	// 2. Sprawdzenie istnienia pliku na dysku
 	let stat: fs.Stats;
 	try {
@@ -118,17 +132,16 @@ export async function handleMediaFileRequest(
 		return true;
 	}
 
-	// 3. Sprawdzenie statusu w bazie danych
-	// Konwersja ścieżki do separatorów POSIX (tak jak zapisano w bazie)
-	const relativeToData = path.relative(resolvedDataDir, targetFullPath);
-	const posixRelative = relativeToData.split(path.sep).join("/");
-
+	// 3. Sprawdzenie statusu w bazie danych (polityka Fail-Closed)
+	let isRestrictedCache = false;
 	try {
 		const matchingItems = await db
 			.select({
 				status: mediaItems.status,
 				gallerySlug: galleries.slug,
 				guestPassword: galleries.guestPassword,
+				allowGuestViewing: galleries.allowGuestViewing,
+				isActive: galleries.isActive,
 			})
 			.from(mediaItems)
 			.innerJoin(galleries, eq(mediaItems.galleryId, galleries.id))
@@ -140,52 +153,65 @@ export async function handleMediaFileRequest(
 			)
 			.limit(1);
 
-		if (matchingItems.length > 0) {
-			const item = matchingItems[0];
-			if (item.status === "deleted") {
-				res.writeHead(404, { "Content-Type": "text/plain" });
-				res.end("Not Found");
+		if (matchingItems.length === 0) {
+			res.writeHead(404, { "Content-Type": "text/plain" });
+			res.end("Not Found");
+			return true;
+		}
+
+		const item = matchingItems[0];
+		if (item.status === "deleted") {
+			res.writeHead(404, { "Content-Type": "text/plain" });
+			res.end("Not Found");
+			return true;
+		}
+
+		const requiresPrivilegedAccess =
+			item.status === "hidden" ||
+			item.status === "pending" ||
+			item.allowGuestViewing === false ||
+			item.isActive === false;
+
+		isRestrictedCache = requiresPrivilegedAccess || Boolean(item.guestPassword);
+
+		if (requiresPrivilegedAccess) {
+			const isAuthorized = checkIsAuthorizedForHidden(req, item.gallerySlug);
+			if (!isAuthorized) {
+				res.writeHead(403, { "Content-Type": "text/plain" });
+				res.end("Forbidden: Media requires owner or admin authorization");
 				return true;
 			}
-			if (item.status === "hidden" || item.status === "pending") {
-				const isAuthorized = checkIsAuthorizedForHidden(req, item.gallerySlug);
-				if (!isAuthorized) {
-					res.writeHead(403, { "Content-Type": "text/plain" });
-					res.end(
-						`Forbidden: ${item.status === "hidden" ? "Hidden" : "Pending"} media requires authorization`,
+		} else if (item.guestPassword) {
+			const isAuthorizedForHidden = checkIsAuthorizedForHidden(
+				req,
+				item.gallerySlug,
+			);
+			if (!isAuthorizedForHidden) {
+				const cookieHeader = req.headers.cookie;
+				let isGuestAuthorized = false;
+				if (cookieHeader) {
+					const cookieName = escapeCookieName(
+						guestSessionCookieName(item.gallerySlug),
 					);
-					return true;
+					const match = cookieHeader.match(
+						new RegExp(`(?:^|;\\s*)${cookieName}=([^;]*)`),
+					);
+					if (
+						match &&
+						verifyGuestToken(
+							decodeURIComponent(match[1]),
+							item.gallerySlug,
+							item.guestPassword,
+						)
+					) {
+						isGuestAuthorized = true;
+					}
 				}
-			} else if (item.guestPassword) {
-				// Jeśli plik nie jest ukryty (status 'ready' / 'pending'), ale galeria jest chroniona hasłem
-				// Musimy sprawdzić, czy użytkownik ma aktywną sesję gościa (lub jest adminem/ownerem)
-				const isAuthorizedForHidden = checkIsAuthorizedForHidden(
-					req,
-					item.gallerySlug,
-				);
-				if (!isAuthorizedForHidden) {
-					const cookieHeader = req.headers.cookie;
-					let isGuestAuthorized = false;
-					if (cookieHeader) {
-						const cookieName = guestSessionCookieName(item.gallerySlug);
-						const match = cookieHeader.match(
-							new RegExp(`(?:^|;\\s*)${cookieName}=([^;]*)`),
-						);
-						if (
-							match &&
-							verifyGuestToken(decodeURIComponent(match[1]), item.gallerySlug)
-						) {
-							isGuestAuthorized = true;
-						}
-					}
 
-					if (!isGuestAuthorized) {
-						res.writeHead(403, { "Content-Type": "text/plain" });
-						res.end(
-							"Forbidden: Protected gallery requires guest authorization",
-						);
-						return true;
-					}
+				if (!isGuestAuthorized) {
+					res.writeHead(403, { "Content-Type": "text/plain" });
+					res.end("Forbidden: Protected gallery requires guest authorization");
+					return true;
 				}
 			}
 		}
@@ -202,6 +228,10 @@ export async function handleMediaFileRequest(
 	const contentType = MIME_TYPES[ext] || "application/octet-stream";
 	const fileSize = stat.size;
 	const range = req.headers.range;
+	const cacheControl = isRestrictedCache
+		? "private, no-store"
+		: "public, max-age=31536000, immutable";
+	const cspHeader = "default-src 'none'; sandbox";
 
 	if (range) {
 		const parts = range.replace(/bytes=/, "").split("-");
@@ -238,7 +268,8 @@ export async function handleMediaFileRequest(
 			"Accept-Ranges": "bytes",
 			"Content-Length": chunkSize,
 			"Content-Type": contentType,
-			"Cache-Control": "public, max-age=31536000, immutable",
+			"Cache-Control": cacheControl,
+			"Content-Security-Policy": cspHeader,
 			"X-Content-Type-Options": "nosniff",
 		});
 
@@ -250,7 +281,8 @@ export async function handleMediaFileRequest(
 		"Content-Length": fileSize,
 		"Accept-Ranges": "bytes",
 		"Content-Type": contentType,
-		"Cache-Control": "public, max-age=31536000, immutable",
+		"Cache-Control": cacheControl,
+		"Content-Security-Policy": cspHeader,
 		"X-Content-Type-Options": "nosniff",
 	});
 

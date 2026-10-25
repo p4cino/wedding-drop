@@ -3,7 +3,10 @@ import path from "node:path";
 import { EVENTS } from "@tus/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { scheduleMediaProcessing } from "../src/media-processor.js";
-import { initTusServer } from "../src/tus-server.js";
+import {
+	_clearInFlightUploadsForTests,
+	initTusServer,
+} from "../src/tus-server.js";
 
 vi.mock("../src/media-processor.js", () => ({
 	scheduleMediaProcessing: vi.fn(),
@@ -44,11 +47,12 @@ describe("tus-server configuration", () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+		_clearInFlightUploadsForTests();
 		mockGalleryResult = [{ id: "gal-1", maxStorageBytes: 0 }];
 		mockUsageResult = [{ totalBytes: 0 }];
 	});
 
-	it("powinien pomyślnie zainicjalizować instancję serwera TUS i wygenerować unikalną nazwę", () => {
+	it("powinien pomyślnie zainicjalizować instancję serwera TUS i wygenerować unikalną kryptograficzną nazwę", () => {
 		const server = initTusServer(tempDir);
 		expect(server).toBeDefined();
 		expect(server.options.path).toBe("/api/upload/tus");
@@ -59,7 +63,7 @@ describe("tus-server configuration", () => {
 		expect(namingFn).toBeDefined();
 		if (namingFn) {
 			const generatedName = namingFn({} as never);
-			expect(generatedName).toMatch(/^upload_\d+_[a-z0-9]+$/);
+			expect(generatedName).toMatch(/^upload_\d+_[a-f0-9]{24}$/);
 		}
 	});
 
@@ -188,7 +192,7 @@ describe("tus-server configuration", () => {
 			}
 		});
 
-		it("powinien zaakceptować upload fotografa, nawet gdy allowGuestUploads jest fałszywe", async () => {
+		it("powinien zaakceptować upload fotografa, nawet gdy allowGuestUploads jest fałszywe, i usunąć ownerToken z metadanych", async () => {
 			mockGalleryResult = [
 				{ id: "gal-1", allowGuestUploads: false, maxStorageBytes: 0 },
 			];
@@ -212,7 +216,6 @@ describe("tus-server configuration", () => {
 					metadata: {
 						gallerySlug: "kasia-i-tomek",
 						source: "photographer",
-						ownerToken: "valid-token",
 					},
 				});
 			}
@@ -268,7 +271,7 @@ describe("tus-server configuration", () => {
 			}
 		});
 
-		it("powinien zaakceptować upload fotografa, gdy autoryzacja się powiedzie i mieści się w limicie", async () => {
+		it("powinien zaakceptować upload fotografa i wyczyścić ownerToken ze zwracanych metadanych", async () => {
 			mockGalleryResult = [{ id: "gal-1", maxStorageBytes: 0 }];
 			const verifyOwnerCredentials = vi.fn().mockReturnValue(true);
 			const server = initTusServer(tempDir, { verifyOwnerCredentials });
@@ -290,9 +293,9 @@ describe("tus-server configuration", () => {
 					metadata: {
 						gallerySlug: "kasia-i-tomek",
 						source: "photographer",
-						ownerToken: "owner_123_abc_deadbeef",
 					},
 				});
+				expect(res.metadata).not.toHaveProperty("ownerToken");
 			}
 		});
 
@@ -369,8 +372,6 @@ describe("tus-server configuration", () => {
 		});
 
 		it("powinien odrzucić tylko plik przekraczający limit w paczce importu, bez wpływu na pozostałe pliki tej samej sesji", async () => {
-			// tus-js-client traktuje każdy plik importu jako osobny upload (osobne wywołanie onUploadCreate),
-			// więc odrzucenie jednego pliku nie może przerwać przetwarzania pozostałych - patrz design.md.
 			mockGalleryResult = [{ id: "gal-1", maxStorageBytes: 1000 }];
 			const verifyOwnerCredentials = vi.fn().mockReturnValue(true);
 			const server = initTusServer(tempDir, { verifyOwnerCredentials });
@@ -585,7 +586,6 @@ describe("tus-server configuration", () => {
 				originalName: "sesja.jpg",
 				fileType: "image/jpeg",
 				source: "photographer",
-				ownerToken: "owner_123_abc_deadbeef",
 			},
 		};
 
@@ -614,6 +614,7 @@ describe("tus-server - limity i kontrola dostępu (owasp-hardening)", () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+		_clearInFlightUploadsForTests();
 		mockGalleryResult = [{ id: "gal-1", maxStorageBytes: 0 }];
 		mockUsageResult = [{ totalBytes: 0 }];
 	});
@@ -701,22 +702,28 @@ describe("tus-server - limity i kontrola dostępu (owasp-hardening)", () => {
 		expect(checkUploadRateLimit).not.toHaveBeenCalled();
 	});
 
-	it("limit pojemności galerii obowiązuje także gości (413)", async () => {
+	it("limit pojemności galerii obowiązuje także gości (413) i uwzględnia uploady w locie (in-flight)", async () => {
 		mockGalleryResult = [{ id: "gal-1", maxStorageBytes: 1000 }];
-		mockUsageResult = [{ totalBytes: 900 }];
+		mockUsageResult = [{ totalBytes: 600 }];
 		const server = initTusServer(tempDir);
+
+		// Pierwszy upload w locie (300 B) rezerwuje miejsce -> 600 + 300 = 900 <= 1000
 		await expect(
 			server.options.onUploadCreate?.(reqWith({}), {
+				id: "in-flight-1",
+				size: 300,
+				metadata: meta,
+			} as never),
+		).resolves.toBeDefined();
+
+		// Drugi równoległy upload (200 B) widzi rezerwację -> 600 + 300 + 200 = 1100 > 1000 -> 413
+		await expect(
+			server.options.onUploadCreate?.(reqWith({}), {
+				id: "in-flight-2",
 				size: 200,
 				metadata: meta,
 			} as never),
 		).rejects.toMatchObject({ status_code: 413 });
-		await expect(
-			server.options.onUploadCreate?.(reqWith({}), {
-				size: 100,
-				metadata: meta,
-			} as never),
-		).resolves.toBeDefined();
 	});
 });
 

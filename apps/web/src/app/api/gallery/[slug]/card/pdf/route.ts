@@ -5,6 +5,8 @@ import { type NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
+const HEX_COLOR_RE = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
+
 export async function GET(
 	req: NextRequest,
 	{ params }: { params: Promise<{ slug: string }> },
@@ -35,24 +37,47 @@ export async function GET(
 		const card = cardResult[0] || {};
 		const { searchParams } = new URL(req.url);
 
-		const host =
+		const rawHost =
 			req.headers.get("x-forwarded-host") ||
 			req.headers.get("host") ||
 			"localhost:3000";
-		const proto = req.headers.get("x-forwarded-proto") || "http";
-		const appDomain = process.env.APP_DOMAIN || `${proto}://${host}`;
+		const safeHost =
+			rawHost
+				.split(",")[0]
+				?.trim()
+				.replace(/[^a-zA-Z0-9.:-]/g, "") || "localhost:3000";
+		const rawProto = req.headers.get("x-forwarded-proto") || "http";
+		const safeProto = rawProto === "https" ? "https" : "http";
+		const appDomain = (
+			process.env.APP_DOMAIN || `${safeProto}://${safeHost}`
+		).replace(/\/$/, "");
 		const targetUrl = `${appDomain}/g/${gallery.slug}`;
 
+		const rawHeadline = searchParams.get("headline")?.trim();
 		const headline =
-			searchParams.get("headline") ||
+			rawHeadline?.slice(0, 120) ||
 			card.headline ||
 			"Podziel się wspomnieniami!";
+
+		const rawInstructions = searchParams.get("instructions");
 		const instructions =
-			searchParams.get("instructions") || card.customInstructions;
+			rawInstructions?.slice(0, 500) || card.customInstructions;
+
+		const queryPrimary = searchParams.get("primaryColor");
 		const primaryColorHex =
-			searchParams.get("primaryColor") || card.primaryColor || "#1E293B";
+			queryPrimary && HEX_COLOR_RE.test(queryPrimary)
+				? queryPrimary
+				: card.primaryColor && HEX_COLOR_RE.test(card.primaryColor)
+					? card.primaryColor
+					: "#1E293B";
+
+		const queryAccent = searchParams.get("accentColor");
 		const accentColorHex =
-			searchParams.get("accentColor") || card.accentColor || "#D4AF37";
+			queryAccent && HEX_COLOR_RE.test(queryAccent)
+				? queryAccent
+				: card.accentColor && HEX_COLOR_RE.test(card.accentColor)
+					? card.accentColor
+					: "#D4AF37";
 
 		const pdfBytes = await generateWeddingCardPdf({
 			coupleNames: gallery.coupleNames,

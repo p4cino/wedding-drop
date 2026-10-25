@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Dynamic mock variables
 let mockAdminCount = "0";
-const mockGalleryCount = "1";
+let mockGalleryCount = "1";
 
 // Mock postgres module before importing client
 vi.mock("postgres", () => {
@@ -14,6 +14,9 @@ vi.mock("postgres", () => {
 				const rawQuery = strings[0] || "";
 				if (rawQuery.includes("SELECT count(*) FROM admins")) {
 					return Promise.resolve([{ count: mockAdminCount }]);
+				}
+				if (rawQuery.includes("SELECT password_hash FROM admins")) {
+					return Promise.resolve([{ password_hash: "old_stored_hash" }]);
 				}
 				if (rawQuery.includes("SELECT count(*) FROM galleries")) {
 					return Promise.resolve([{ count: mockGalleryCount }]);
@@ -48,22 +51,32 @@ vi.mock("drizzle-orm/postgres-js/migrator", () => ({
 // Mock bcrypt
 vi.mock("@node-rs/bcrypt", () => ({
 	hash: vi.fn().mockResolvedValue("mocked_hash_value"),
+	compare: vi.fn().mockResolvedValue(false),
 }));
 
 describe("Database Client and InitDatabase", () => {
 	let migrateMock: ReturnType<typeof vi.fn>;
-	let bcryptMock: { hash: ReturnType<typeof vi.fn> };
+	let bcryptMock: {
+		hash: ReturnType<typeof vi.fn>;
+		compare: ReturnType<typeof vi.fn>;
+	};
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
 		mockAdminCount = "0";
+		mockGalleryCount = "1";
+		delete process.env.ADMIN_PASSWORD;
 		const migrator = await import("drizzle-orm/postgres-js/migrator");
 		migrateMock = migrator.migrate as unknown as ReturnType<typeof vi.fn>;
 		const bcrypt = await import("@node-rs/bcrypt");
-		bcryptMock = bcrypt as unknown as { hash: ReturnType<typeof vi.fn> };
+		bcryptMock = bcrypt as unknown as {
+			hash: ReturnType<typeof vi.fn>;
+			compare: ReturnType<typeof vi.fn>;
+		};
 	});
 
 	afterEach(() => {
+		delete process.env.ADMIN_PASSWORD;
 		vi.restoreAllMocks();
 	});
 
@@ -82,7 +95,7 @@ describe("Database Client and InitDatabase", () => {
 		consoleLogSpy.mockRestore();
 	});
 
-	it("powinien pominąć tworzenie administratora, gdy admin już istnieje w bazie", async () => {
+	it("powinien pominąć tworzenie administratora, gdy admin już istnieje w bazie i nie ustawiono ADMIN_PASSWORD", async () => {
 		mockAdminCount = "1";
 		const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
@@ -93,6 +106,47 @@ describe("Database Client and InitDatabase", () => {
 		expect(bcryptMock.hash).not.toHaveBeenCalled();
 		expect(consoleLogSpy).toHaveBeenCalledWith(
 			"[DB] Baza danych PostgreSQL zainicjalizowana pomyślnie.",
+		);
+		consoleLogSpy.mockRestore();
+	});
+
+	it("powinien zaktualizować skrót hasła administratora, gdy admin istnieje i podano nowe ADMIN_PASSWORD", async () => {
+		mockAdminCount = "1";
+		process.env.ADMIN_PASSWORD = "nowe_silne_haslo_admina";
+		bcryptMock.compare.mockResolvedValueOnce(false);
+		const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+		const { initDatabase } = await import("../src/client");
+		await initDatabase();
+
+		expect(bcryptMock.compare).toHaveBeenCalledWith(
+			"nowe_silne_haslo_admina",
+			"old_stored_hash",
+		);
+		expect(bcryptMock.hash).toHaveBeenCalledWith("nowe_silne_haslo_admina", {
+			cost: 10,
+		});
+		expect(consoleLogSpy).toHaveBeenCalledWith(
+			"[DB] Zaktualizowano skrót hasła administratora z zmiennej ADMIN_PASSWORD.",
+		);
+		consoleLogSpy.mockRestore();
+	});
+
+	it("powinien obsłużyć błąd compare przy uszkodzonym hashu admina oraz utworzyć galerię demo, gdy tabela galleries jest pusta", async () => {
+		mockAdminCount = "1";
+		mockGalleryCount = "0";
+		process.env.ADMIN_PASSWORD = "nowe_haslo_po_bledzie";
+		bcryptMock.compare.mockRejectedValueOnce(new Error("Invalid bcrypt hash"));
+		const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+		const { initDatabase } = await import("../src/client");
+		await initDatabase();
+
+		expect(bcryptMock.hash).toHaveBeenCalledWith("nowe_haslo_po_bledzie", {
+			cost: 10,
+		});
+		expect(consoleLogSpy).toHaveBeenCalledWith(
+			"[DB] Utworzono domyślną galerię demo: slug='kasia-i-tomek'",
 		);
 		consoleLogSpy.mockRestore();
 	});

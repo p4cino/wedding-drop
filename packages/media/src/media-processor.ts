@@ -3,13 +3,65 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { db, galleries, mediaItems } from "@wedding-drop/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import PQueue from "p-queue";
 import { validateMediaFile } from "./file-validator";
 import { sseBus } from "./sse-bus";
 
 // Ograniczenie współbieżności do 2 procesów naraz - krytyczne dla 4-rdzeniowego Intel N100!
 export const mediaQueue = new PQueue({ concurrency: 2 });
+
+const EXT_TO_MIME: Record<string, string> = {
+	".jpg": "image/jpeg",
+	".jpeg": "image/jpeg",
+	".png": "image/png",
+	".webp": "image/webp",
+	".gif": "image/gif",
+	".heic": "image/heic",
+	".heif": "image/heif",
+	".mp4": "video/mp4",
+	".mov": "video/quicktime",
+	".webm": "video/webm",
+	".avi": "video/x-msvideo",
+	".mkv": "video/x-matroska",
+	".mp3": "audio/mpeg",
+	".wav": "audio/wav",
+	".aac": "audio/aac",
+	".m4a": "audio/mp4",
+	".ogg": "audio/ogg",
+	".oga": "audio/ogg",
+	".opus": "audio/opus",
+	".flac": "audio/flac",
+};
+
+function resolveCanonicalMimeType(
+	clientMime: string,
+	fileType: "image" | "video" | "audio",
+	safeExt: string,
+): string {
+	const cleaned = clientMime.split(";")[0]?.trim().toLowerCase() || "";
+	if (/^(image|video|audio)\/[a-z0-9.+-]+$/.test(cleaned)) {
+		const prefix = cleaned.split("/")[0];
+		if (prefix === fileType) {
+			return cleaned;
+		}
+	}
+	if (fileType === "audio" && safeExt === ".webm") return "audio/webm";
+	if (fileType === "audio" && safeExt === ".mp4") return "audio/mp4";
+	return (
+		EXT_TO_MIME[safeExt] ||
+		(fileType === "video"
+			? "video/mp4"
+			: fileType === "audio"
+				? "audio/mpeg"
+				: "image/jpeg")
+	);
+}
+
+async function cleanupTusSidecarFiles(tempFilePath: string) {
+	await fs.unlink(`${tempFilePath}.json`).catch(() => {});
+	await fs.unlink(`${tempFilePath}.info`).catch(() => {});
+}
 
 export interface ProcessTask {
 	uploadId: string;
@@ -56,6 +108,7 @@ async function processMediaTask(task: ProcessTask) {
 				`[Processor] Odrzucono niebezpieczny plik ${originalName}: ${validation.error}`,
 			);
 			await fs.unlink(tempFilePath).catch(() => {});
+			await cleanupTusSidecarFiles(tempFilePath);
 			return;
 		}
 
@@ -67,9 +120,32 @@ async function processMediaTask(task: ProcessTask) {
 		if (!galleryResult.length) {
 			console.error(`[Processor] Galeria ${gallerySlug} nie istnieje.`);
 			await fs.unlink(tempFilePath).catch(() => {});
+			await cleanupTusSidecarFiles(tempFilePath);
 			return;
 		}
 		const gallery = galleryResult[0];
+
+		// Ponowna weryfikacja limitu pojemności w kolejce p-queue przed zapisem pliku (ochrona przed wyścigiem TOCTOU F-08)
+		if (gallery.maxStorageBytes && gallery.maxStorageBytes > 0) {
+			const usageQuery = db
+				.select({
+					totalBytes: sql<number>`COALESCE(sum(${mediaItems.fileSize}), 0)::bigint`,
+				})
+				.from(mediaItems)
+				.where(eq(mediaItems.galleryId, gallery.id));
+			const usageRows = await Promise.resolve(usageQuery).catch(() => []);
+			const currentUsage = Array.isArray(usageRows)
+				? Number(usageRows[0]?.totalBytes || 0)
+				: 0;
+			if (currentUsage + fileSize > gallery.maxStorageBytes) {
+				console.warn(
+					`[Processor] Odrzucono plik ${originalName} - przekroczono limit pojemności galerii ${gallerySlug}.`,
+				);
+				await fs.unlink(tempFilePath).catch(() => {});
+				await cleanupTusSidecarFiles(tempFilePath);
+				return;
+			}
+		}
 
 		const rawDir = path.join(dataDir, "galleries", gallerySlug, "raw");
 		const thumbsDir = path.join(dataDir, "galleries", gallerySlug, "thumbs");
@@ -83,6 +159,7 @@ async function processMediaTask(task: ProcessTask) {
 		const targetThumbPath = path.join(thumbsDir, thumbFileName);
 
 		await fs.rename(tempFilePath, targetRawPath);
+		await cleanupTusSidecarFiles(tempFilePath);
 
 		const mediaProps =
 			fileType === "image"
@@ -103,6 +180,12 @@ async function processMediaTask(task: ProcessTask) {
 				? path.posix.join("galleries", gallerySlug, "thumbs", thumbFileName)
 				: relativeRaw;
 
+		const canonicalMimeType = resolveCanonicalMimeType(
+			mimeType,
+			fileType,
+			safeExt,
+		);
+
 		const [newMedia] = await db
 			.insert(mediaItems)
 			.values({
@@ -117,13 +200,7 @@ async function processMediaTask(task: ProcessTask) {
 							? "video"
 							: "photo"),
 				source,
-				mimeType:
-					mimeType ||
-					(fileType === "video"
-						? "video/mp4"
-						: fileType === "audio"
-							? "audio/mpeg"
-							: "image/jpeg"),
+				mimeType: canonicalMimeType,
 				originalFileName: originalName,
 				fileSize,
 				storagePath: relativeRaw,
