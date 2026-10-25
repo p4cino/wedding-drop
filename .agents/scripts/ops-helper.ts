@@ -12,16 +12,22 @@
  *   npx tsx .agents/scripts/ops-helper.ts db:push
  */
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-function run(command: string, inherit = true) {
-	console.log(`\x1b[36m➜ Executing:\x1b[0m ${command}`);
+function runFile(
+	binary: string,
+	args: string[],
+	options: { inherit?: boolean; input?: Buffer } = {},
+) {
+	const { inherit = true, input } = options;
+	console.log(`\x1b[36m➜ Executing:\x1b[0m ${binary} ${args.join(" ")}`);
 	try {
-		return execSync(command, {
-			stdio: inherit ? "inherit" : "pipe",
-			encoding: "utf8",
+		return execFileSync(binary, args, {
+			stdio: input ? ["pipe", "pipe", "inherit"] : inherit ? "inherit" : "pipe",
+			encoding: input ? undefined : "utf8",
+			input,
 		});
 	} catch (err: unknown) {
 		const message = err instanceof Error ? err.message : String(err);
@@ -48,7 +54,7 @@ Usage: npx tsx .agents/scripts/ops-helper.ts <command> [options]
 
 function handleStatus() {
 	console.log("\n\x1b[32m=== Docker Compose Services Status ===\x1b[0m");
-	run("docker compose ps");
+	runFile("docker", ["compose", "ps"]);
 }
 
 function handleBackup() {
@@ -63,15 +69,30 @@ function handleBackup() {
 	const tarFile = path.join(backupDir, `media_backup_${timestamp}.tar.gz`);
 
 	console.log(`\n\x1b[32m=== Creating PostgreSQL Backup ===\x1b[0m`);
-	run(
-		`docker exec -t wedding_postgres pg_dump -U wedding wedding_drop > "${sqlFile}"`,
+	const dumpOutput = execFileSync(
+		"docker",
+		["exec", "wedding_postgres", "pg_dump", "-U", "wedding", "wedding_drop"],
+		{ encoding: "utf8" },
 	);
+	fs.writeFileSync(sqlFile, dumpOutput, "utf8");
 	console.log(`✔ PostgreSQL backup saved to: ${sqlFile}`);
 
 	console.log(`\n\x1b[32m=== Archiving Media Volume (app_data) ===\x1b[0m`);
-	run(
-		`docker run --rm -v wedding-drop_app_data:/data -v "${backupDir}:/backup" alpine tar -czf "/backup/media_backup_${timestamp}.tar.gz" -C /data .`,
-	);
+	runFile("docker", [
+		"run",
+		"--rm",
+		"-v",
+		"wedding-drop_app_data:/data",
+		"-v",
+		`${backupDir}:/backup`,
+		"alpine",
+		"tar",
+		"-czf",
+		`/backup/media_backup_${timestamp}.tar.gz`,
+		"-C",
+		"/data",
+		".",
+	]);
 	console.log(`✔ Media volume backup saved to: ${tarFile}`);
 
 	console.log(`\n\x1b[32m✔ Backup completed successfully!\x1b[0m\n`);
@@ -104,16 +125,43 @@ function handleRestore(args: string[]) {
 	}
 
 	console.log(`\n\x1b[33m=== Restoring Database from ${sqlFile} ===\x1b[0m`);
-	run(
-		`docker exec -i wedding_postgres psql -U wedding -d wedding_drop < "${absSql}"`,
+	const sqlContent = fs.readFileSync(absSql);
+	runFile(
+		"docker",
+		[
+			"exec",
+			"-i",
+			"wedding_postgres",
+			"psql",
+			"-U",
+			"wedding",
+			"-d",
+			"wedding_drop",
+		],
+		{ input: sqlContent },
 	);
 
 	console.log(`\n\x1b[33m=== Restoring Media Files from ${tarFile} ===\x1b[0m`);
 	const tarDir = path.dirname(absTar);
 	const tarName = path.basename(absTar);
-	run(
-		`docker run --rm -v wedding-drop_app_data:/data -v "${tarDir}:/backup" alpine tar -xzf "/backup/${tarName}" -C /data`,
-	);
+	if (!/^[a-zA-Z0-9._-]+$/.test(tarName)) {
+		console.error(`\x1b[31mInvalid archive filename: ${tarName}\x1b[0m`);
+		process.exit(1);
+	}
+	runFile("docker", [
+		"run",
+		"--rm",
+		"-v",
+		"wedding-drop_app_data:/data",
+		"-v",
+		`${tarDir}:/backup`,
+		"alpine",
+		"tar",
+		"-xzf",
+		`/backup/${tarName}`,
+		"-C",
+		"/data",
+	]);
 
 	console.log(`\n\x1b[32m✔ Restore completed successfully!\x1b[0m\n`);
 }
@@ -138,14 +186,20 @@ function main() {
 			handleRestore(args.slice(1));
 			break;
 		case "db:push":
-			run("pnpm --filter @wedding-drop/db db:push");
+			runFile("pnpm", ["--filter", "@wedding-drop/db", "db:push"]);
 			break;
 		case "db:generate":
-			run("pnpm --filter @wedding-drop/db db:generate");
+			runFile("pnpm", ["--filter", "@wedding-drop/db", "db:generate"]);
 			break;
 		case "logs": {
 			const service = args[1] || "";
-			run(`docker compose logs -f ${service}`);
+			if (service && !/^[a-z0-9_-]+$/i.test(service)) {
+				console.error(`\x1b[31mInvalid service name: ${service}\x1b[0m`);
+				process.exit(1);
+			}
+			const logArgs = ["compose", "logs", "-f"];
+			if (service) logArgs.push(service);
+			runFile("docker", logArgs);
 			break;
 		}
 		default:

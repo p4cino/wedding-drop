@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+	_clearConsumedOAuthStatesForTests,
 	checkStorageQuota,
 	ensureDriveFolder,
 	exchangeCodeForTokens,
@@ -95,6 +96,7 @@ describe("Google Drive Helper & Security Tests", () => {
 		process.env.GOOGLE_CLIENT_ID = "test-client-id";
 		process.env.GOOGLE_CLIENT_SECRET = "test-client-secret";
 		process.env.APP_DOMAIN = "http://localhost:3000";
+		_clearConsumedOAuthStatesForTests();
 		mockOAuth2Request.mockReset().mockResolvedValue({
 			data: { email: "wedding.couple@gmail.com" },
 		});
@@ -297,7 +299,7 @@ describe("Google Drive Helper & Security Tests", () => {
 	});
 
 	describe("Kryptograficzny stan HMAC (State Security)", () => {
-		it("powinien wygenerować i poprawnie zweryfikować podpisany stan state", () => {
+		it("powinien wygenerować i poprawnie zweryfikować podpisany stan state oraz odrzucić powtórne użycie (replay)", () => {
 			process.env.ADMIN_PASSWORD = "test-secret-key-456";
 			const slug = "ania-i-bartek";
 
@@ -308,6 +310,10 @@ describe("Google Drive Helper & Security Tests", () => {
 			const verified = verifySignedState(state);
 			expect(verified).not.toBeNull();
 			expect(verified?.slug).toBe(slug);
+
+			// Powtórne użycie tego samego state musi zostać odrzucone (jednorazowość nonce)
+			const replayed = verifySignedState(state);
+			expect(replayed).toBeNull();
 		});
 
 		it("powinien odrzucić stan ze zmodyfikowanym payloadem (tampered HMAC)", () => {

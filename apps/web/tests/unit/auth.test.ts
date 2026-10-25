@@ -9,6 +9,7 @@ import {
 	ownerSessionCookieName,
 	readGuestToken,
 	readOwnerToken,
+	revokeToken,
 	setGuestSessionCookie,
 	setOwnerSessionCookie,
 	verifyAdminToken,
@@ -87,6 +88,28 @@ describe("Auth HMAC Tokens", () => {
 		parts[4] =
 			"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
 		expect(verifyGuestToken(parts.join("_"), slug)).toBe(false);
+	});
+
+	it("powinien powiązać token gościa ze skrótem hasła galerii i unieważnić go po zmianie hasła", () => {
+		const slug = "kasia-i-tomek";
+		const oldHash = "$2b$10$oldPasswordHashValue12345";
+		const newHash = "$2b$10$newPasswordHashValue67890";
+		const token = generateGuestToken(slug, oldHash);
+
+		expect(verifyGuestToken(token, slug, oldHash)).toBe(true);
+		expect(verifyGuestToken(token, slug, newHash)).toBe(false);
+	});
+
+	it("powinien przechowywać unieważnione tokeny (revokedJtis) w globalThis", () => {
+		const slug = "kasia-i-tomek";
+		const token = generateOwnerToken(slug);
+		expect(revokeToken(token)).toBe(true);
+		expect(verifyOwnerToken(token, slug)).toBe(false);
+		const globalState = (globalThis as Record<symbol, unknown>)[
+			Symbol.for("wedding-drop.auth-state")
+		] as { revokedJtis: Map<string, number> };
+		expect(globalState).toBeDefined();
+		expect(globalState.revokedJtis.size).toBeGreaterThan(0);
 	});
 });
 
@@ -252,13 +275,14 @@ describe("readOwnerToken", () => {
 		expect(readOwnerToken(reqHead, slug)).toBe(token);
 	});
 
-	it("odrzuca ciasteczko innej galerii", () => {
+	it("odrzuca ciasteczko innej galerii oraz escapuje znaki specjalne regex w nazwie ciasteczka", () => {
 		const otherToken = generateOwnerToken("inna-galeria");
 		const req = new Request("http://localhost/api/owner/kasia-i-tomek/media", {
 			method: "GET",
 			headers: { cookie: `wd_owner_inna-galeria=${otherToken}` },
 		});
 		expect(readOwnerToken(req, slug)).toBeNull();
+		expect(readGuestToken(req, "kasia.*")).toBeNull();
 	});
 
 	it("NIE autoryzuje mutacji (POST, PATCH, DELETE) wyłącznie przez ciasteczko (wymaga nagłówka)", () => {

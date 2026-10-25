@@ -12,8 +12,22 @@ export interface CardPdfParams {
 	accentColorHex?: string | null;
 }
 
+const VALID_HEX_RE = /^#?([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
+
+function normalizeHex(
+	hex: string | null | undefined,
+	fallback: string,
+): string {
+	if (!hex || !VALID_HEX_RE.test(hex.trim())) {
+		return fallback;
+	}
+	const trimmed = hex.trim();
+	return trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
+}
+
 function hexToRgb(hex: string) {
-	let cleaned = hex.replace("#", "");
+	const safeHex = normalizeHex(hex, "#1E293B");
+	let cleaned = safeHex.replace("#", "");
 	if (cleaned.length === 3) {
 		cleaned = cleaned
 			.split("")
@@ -50,7 +64,9 @@ export function sanitizeForPdf(text: string): string {
 		ż: "z",
 		Ż: "Z",
 	};
-	return text.replace(/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/g, (c) => map[c] || c);
+	return text
+		.replace(/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/g, (c) => map[c] || c)
+		.replace(/[^\x20-\x7E\n\r]/g, "");
 }
 
 export async function generateWeddingCardPdf(
@@ -71,8 +87,10 @@ export async function generateWeddingCardPdf(
 	const fontSans = await pdfDoc.embedFont(StandardFonts.Helvetica);
 	const fontSansBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-	const primaryRgb = hexToRgb(params.primaryColorHex || "#1E293B");
-	const accentRgb = hexToRgb(params.accentColorHex || "#D4AF37");
+	const safePrimaryHex = normalizeHex(params.primaryColorHex, "#1E293B");
+	const safeAccentHex = normalizeHex(params.accentColorHex, "#D4AF37");
+	const primaryRgb = hexToRgb(safePrimaryHex);
+	const accentRgb = hexToRgb(safeAccentHex);
 
 	// 1. Zewnętrzna ozdobna ramka (złoty akcent)
 	page.drawRectangle({
@@ -142,7 +160,7 @@ export async function generateWeddingCardPdf(
 
 	// 5. Kod QR (wysoka rozdzielczość, wyśrodkowany)
 	const qrBuffer = await generateQrPngBuffer(params.targetUrl, {
-		darkColor: params.primaryColorHex || "#1E293B",
+		darkColor: safePrimaryHex,
 	});
 	const qrImage = await pdfDoc.embedPng(qrBuffer);
 	const qrSize = 155;
@@ -170,11 +188,13 @@ export async function generateWeddingCardPdf(
 		color: rgb(primaryRgb.r, primaryRgb.g, primaryRgb.b),
 	});
 
-	// 7. Instrukcja dla gości
+	// 7. Instrukcja dla gości (maksymalnie 10 linii, ochrona przed wyjściem poza stronę)
 	const instructionLines = (
 		params.instructions ||
 		"1. Otwórz aparat w telefonie\n2. Skieruj obiektyw na kod QR\n3. Dodawaj zdjęcia bez instalowania aplikacji!"
-	).split("\n");
+	)
+		.split("\n")
+		.slice(0, 10);
 
 	let currentY = qrY - 40;
 	for (const line of instructionLines) {
@@ -192,12 +212,12 @@ export async function generateWeddingCardPdf(
 	}
 
 	// 8. Mała elegancka stopka na dole
-	let footerText = "WeddingDrop • Zeskanuj kod QR i dodaj wspomnienia";
+	let footerText = "WeddingDrop - Zeskanuj kod QR i dodaj wspomnienia";
 	try {
 		if (params.targetUrl) {
 			const parsed = new URL(params.targetUrl);
 			if (parsed.host && !parsed.host.includes("localhost")) {
-				footerText = parsed.host;
+				footerText = sanitizeForPdf(parsed.host) || footerText;
 			}
 		}
 	} catch {}

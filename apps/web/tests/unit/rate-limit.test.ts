@@ -54,6 +54,27 @@ describe("rate-limit", () => {
 		expect(peekRateLimit("b", "k10049", one).ok).toBe(false);
 	});
 
+	it("izoluje kubełki autoryzacji od wyparcia FIFO przez kubełki publiczne (np. tus-create)", () => {
+		const authOpts = { max: 3, windowMs: 60_000 };
+		for (let i = 0; i < 3; i++) {
+			recordRateLimitHit("admin-login", "attacker-ip", authOpts);
+		}
+		expect(peekRateLimit("admin-login", "attacker-ip", authOpts).ok).toBe(
+			false,
+		);
+
+		// Zalewamy kubełek publiczny > 10_000 wpisami
+		const pubOpts = { max: 300, windowMs: 60_000 };
+		for (let i = 0; i < 10_100; i++) {
+			recordRateLimitHit("tus-create", `flood-${i}`, pubOpts);
+		}
+
+		// Blokada brute-force w kubełku admin-login pozostaje nienaruszona
+		expect(peekRateLimit("admin-login", "attacker-ip", authOpts).ok).toBe(
+			false,
+		);
+	});
+
 	it("getClientIp preferuje pierwszy wpis X-Forwarded-For", () => {
 		const h = new Headers({ "x-forwarded-for": "1.2.3.4, 10.0.0.1" });
 		expect(getClientIp(h, "9.9.9.9")).toBe("1.2.3.4");

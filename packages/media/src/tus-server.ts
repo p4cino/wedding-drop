@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { FileStore } from "@tus/file-store";
@@ -29,6 +30,7 @@ export type VerifyOwnerCredentials = (
 export type VerifyGuestAccess = (
 	gallerySlug: string,
 	cookieHeader: string | undefined,
+	guestPasswordHash?: string | null,
 ) => boolean;
 
 /**
@@ -52,6 +54,48 @@ export const MAX_UPLOAD_SIZE_BYTES = 1024 * 1024 * 1024;
 /** Osierocone (niewznowione) uploady starsze niż 24 h są usuwane z `tus_temp`. */
 export const ORPHAN_UPLOAD_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const ORPHAN_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
+const IN_FLIGHT_RESERVATION_TTL_MS = 15 * 60 * 1000;
+
+interface InFlightUpload {
+	gallerySlug: string;
+	size: number;
+	createdAt: number;
+}
+
+const inFlightGlobalKey = Symbol.for("wedding-drop.tus-in-flight");
+
+function getInFlightMap(): Map<string, InFlightUpload> {
+	const g = globalThis as unknown as Record<
+		symbol,
+		Map<string, InFlightUpload> | undefined
+	>;
+	let map = g[inFlightGlobalKey];
+	if (!map) {
+		map = new Map<string, InFlightUpload>();
+		g[inFlightGlobalKey] = map;
+	}
+	return map;
+}
+
+function getReservedBytesForGallery(gallerySlug: string): number {
+	const map = getInFlightMap();
+	const now = Date.now();
+	let total = 0;
+	for (const [id, entry] of map) {
+		if (now - entry.createdAt > IN_FLIGHT_RESERVATION_TTL_MS) {
+			map.delete(id);
+			continue;
+		}
+		if (entry.gallerySlug === gallerySlug) {
+			total += entry.size;
+		}
+	}
+	return total;
+}
+
+export function _clearInFlightUploadsForTests(): void {
+	getInFlightMap().clear();
+}
 
 /** Usuwa z katalogu tymczasowego pliki nieruszane dłużej niż `maxAgeMs`. Zwraca liczbę usuniętych. */
 export async function cleanupOrphanedUploads(
@@ -113,7 +157,11 @@ async function checkStorageLimit(
 		.where(eq(mediaItems.galleryId, gallery.id));
 
 	const currentUsage = Number(usageResult[0]?.totalBytes || 0);
-	if (currentUsage + incomingFileSize > gallery.maxStorageBytes) {
+	const inFlightBytes = getReservedBytesForGallery(gallerySlug);
+	if (
+		currentUsage + inFlightBytes + incomingFileSize >
+		gallery.maxStorageBytes
+	) {
 		return {
 			ok: false,
 			message:
@@ -146,7 +194,7 @@ export function initTusServer(dataDir: string, options: TusServerOptions = {}) {
 		datastore: new FileStore({ directory: uploadDir }),
 		namingFunction: () => {
 			const timestamp = Date.now();
-			const random = Math.random().toString(36).substring(2, 8);
+			const random = crypto.randomBytes(12).toString("hex");
 			return `upload_${timestamp}_${random}`;
 		},
 		onUploadCreate: async (req, upload) => {
@@ -247,7 +295,11 @@ export function initTusServer(dataDir: string, options: TusServerOptions = {}) {
 				if (gallery.guestPassword) {
 					const cookieHeader = req?.headers?.get?.("cookie") ?? undefined;
 					const hasAccess = verifyGuestAccess
-						? verifyGuestAccess(gallerySlug, cookieHeader)
+						? verifyGuestAccess(
+								gallerySlug,
+								cookieHeader,
+								gallery.guestPassword,
+							)
 						: false;
 					if (!hasAccess) {
 						throw {
@@ -259,7 +311,8 @@ export function initTusServer(dataDir: string, options: TusServerOptions = {}) {
 			}
 
 			// Limit pojemności galerii obowiązuje gości i fotografa (0 = bez limitu)
-			const sizeCheck = await checkStorageLimit(gallerySlug, upload.size || 0);
+			const incomingSize = upload.size || 0;
+			const sizeCheck = await checkStorageLimit(gallerySlug, incomingSize);
 			if (!sizeCheck.ok) {
 				throw {
 					status_code: 413,
@@ -267,11 +320,26 @@ export function initTusServer(dataDir: string, options: TusServerOptions = {}) {
 				};
 			}
 
-			return { metadata };
+			if (upload.id && incomingSize > 0) {
+				getInFlightMap().set(upload.id, {
+					gallerySlug,
+					size: incomingSize,
+					createdAt: Date.now(),
+				});
+			}
+
+			// Usuwamy ownerToken przed zapisaniem metadanych przez @tus/file-store do <uploadId>.json
+			// oraz przed ewentualnym zwróceniem ich w nagłówku Upload-Metadata (ochrona F-01 / F-06)
+			const { ownerToken: _strippedOwnerToken, ...safeMetadata } = metadata;
+			return { metadata: safeMetadata };
 		},
 	});
 
 	server.on(EVENTS.POST_FINISH, async (_req, _res, upload) => {
+		if (upload?.id) {
+			getInFlightMap().delete(upload.id);
+		}
+
 		const parseResult = tusUploadMetadataDto.safeParse(upload.metadata || {});
 		if (!parseResult.success) {
 			console.warn(

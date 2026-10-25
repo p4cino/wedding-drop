@@ -108,15 +108,15 @@ export const updateCardSettingsDto = z.object({
 	primaryColor: z
 		.string()
 		.regex(
-			/^#[0-9A-Fa-f]{6}$/,
-			"Kolor główny musi być poprawnym kodem HEX (#RRGGBB)",
+			/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/,
+			"Kolor główny musi być poprawnym kodem HEX (#RGB lub #RRGGBB)",
 		)
 		.optional(),
 	accentColor: z
 		.string()
 		.regex(
-			/^#[0-9A-Fa-f]{6}$/,
-			"Kolor akcentu musi być poprawnym kodem HEX (#RRGGBB)",
+			/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/,
+			"Kolor akcentu musi być poprawnym kodem HEX (#RGB lub #RRGGBB)",
 		)
 		.optional(),
 	customInstructions: z

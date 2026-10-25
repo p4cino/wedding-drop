@@ -2,6 +2,8 @@
  * Prosty limiter w pamięci procesu (stałe okno, bez zależności).
  * Store jest singletonem na `globalThis`, bo TUS (dist/server.js) i route handlery Next.js
  * to osobne moduły - bez tego miałyby osobne liczniki (jak w sse-bus).
+ * Kubełki uwierzytelniania (authStore) są odizolowane od kubełków publicznych (publicStore),
+ * dzięki czemu ruch anonimowy nie może wyprzeć blokad brute-force przez FIFO.
  */
 
 export interface RateLimitOptions {
@@ -46,18 +48,43 @@ export const TUS_CREATE_LIMIT: RateLimitOptions = {
 
 type Store = Map<string, Entry>;
 
-const globalKey = Symbol.for("wedding-drop.rate-limit-store");
+interface RateLimitState {
+	authStore: Store;
+	publicStore: Store;
+}
 
-function getStore(): Store {
-	const g = globalThis as unknown as Record<symbol, Store | undefined>;
-	let store = g[globalKey];
-	if (!store) {
-		store = new Map();
-		g[globalKey] = store;
-		const timer = setInterval(() => prune(store as Store, Date.now()), 60_000);
+const AUTH_BUCKETS = new Set([
+	"admin-login",
+	"owner-login",
+	"owner-password",
+	"guest-login",
+	"zip-pin",
+]);
+
+const globalKey = Symbol.for("wedding-drop.rate-limit-store-v2");
+
+function getState(): RateLimitState {
+	const g = globalThis as unknown as Record<symbol, RateLimitState | undefined>;
+	let state = g[globalKey];
+	if (!state) {
+		state = {
+			authStore: new Map(),
+			publicStore: new Map(),
+		};
+		g[globalKey] = state;
+		const timer = setInterval(() => {
+			const now = Date.now();
+			prune(state?.authStore as Store, now);
+			prune(state?.publicStore as Store, now);
+		}, 60_000);
 		timer.unref?.();
 	}
-	return store;
+	return state;
+}
+
+function getStoreForBucket(bucket: string): Store {
+	const state = getState();
+	return AUTH_BUCKETS.has(bucket) ? state.authStore : state.publicStore;
 }
 
 function prune(store: Store, now: number): void {
@@ -93,7 +120,8 @@ export function peekRateLimit(
 	key: string,
 	opts: RateLimitOptions,
 ): RateLimitResult {
-	return toResult(getStore().get(compose(bucket, key)), opts, Date.now());
+	const store = getStoreForBucket(bucket);
+	return toResult(store.get(compose(bucket, key)), opts, Date.now());
 }
 
 /** Zwiększa licznik (np. po nieudanej próbie) i zwraca stan limitu po zliczeniu. */
@@ -102,7 +130,7 @@ export function recordRateLimitHit(
 	key: string,
 	opts: RateLimitOptions,
 ): RateLimitResult {
-	const store = getStore();
+	const store = getStoreForBucket(bucket);
 	const now = Date.now();
 	const k = compose(bucket, key);
 	let entry = store.get(k);
@@ -119,12 +147,14 @@ export function recordRateLimitHit(
 }
 
 export function resetRateLimit(bucket: string, key: string): void {
-	getStore().delete(compose(bucket, key));
+	getStoreForBucket(bucket).delete(compose(bucket, key));
 }
 
 /** Tylko do testów. */
 export function _clearRateLimitsForTests(): void {
-	getStore().clear();
+	const state = getState();
+	state.authStore.clear();
+	state.publicStore.clear();
 }
 
 type HeaderGetter = { get(name: string): string | null | undefined };

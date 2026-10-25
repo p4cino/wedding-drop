@@ -1,3 +1,4 @@
+import { sseBus } from "@wedding-drop/media";
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST as adminLogout } from "@/app/api/admin/auth/logout/route";
@@ -5,8 +6,12 @@ import { POST as adminLogin } from "@/app/api/admin/auth/route";
 import { GET as getLive } from "@/app/api/gallery/[slug]/live/route";
 import { GET as getMedia } from "@/app/api/gallery/[slug]/media/route";
 import { GET as getGallery } from "@/app/api/gallery/[slug]/route";
+import { GET as getZip } from "@/app/api/gallery/[slug]/zip/route";
 import { POST as ownerLogin } from "@/app/api/owner/[slug]/auth/route";
-import { DELETE as ownerLogout } from "@/app/api/owner/[slug]/session/route";
+import {
+	DELETE as ownerLogout,
+	GET as ownerSessionGet,
+} from "@/app/api/owner/[slug]/session/route";
 import {
 	generateAdminToken,
 	generateGuestToken,
@@ -93,6 +98,7 @@ beforeEach(() => {
 			ownerPasswordHash: "$2b$10$y",
 			isActive: true,
 			allowGuestViewing: true,
+			allowGuestDownloads: true,
 			guestPassword: null,
 		},
 	];
@@ -155,7 +161,7 @@ describe("Logowanie administratora", () => {
 	});
 });
 
-describe("Wylogowanie", () => {
+describe("Wylogowanie i rotacja sesji", () => {
 	it("administrator: token po wylogowaniu jest odrzucany", async () => {
 		const token = generateAdminToken("admin");
 		const res = await adminLogout(
@@ -193,6 +199,21 @@ describe("Wylogowanie", () => {
 		expect(res.status).toBe(200);
 		expect(verifyOwnerToken(headerToken, slug)).toBe(false);
 		expect(verifyOwnerToken(cookieToken, slug)).toBe(false);
+	});
+
+	it("właściciel: rotacja sesji (GET /api/owner/[slug]/session) unieważnia stary token", async () => {
+		const oldToken = generateOwnerToken(slug);
+		const res = await ownerSessionGet(
+			new NextRequest(`http://localhost/api/owner/${slug}/session`, {
+				method: "GET",
+				headers: { "x-owner-token": oldToken },
+			}),
+			ctx,
+		);
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(verifyOwnerToken(body.ownerToken, slug)).toBe(true);
+		expect(verifyOwnerToken(oldToken, slug)).toBe(false);
 	});
 });
 
@@ -276,5 +297,73 @@ describe("Galeria chroniona hasłem gościa", () => {
 			ctx,
 		);
 		expect(res.status).toBe(200);
+	});
+});
+
+describe("Prywatność allowGuestViewing oraz SSE dla plików pending", () => {
+	it("GET /api/gallery/[slug]/zip blokuje gościa (403), gdy allowGuestViewing jest false", async () => {
+		mockGalleries[0].allowGuestViewing = false;
+		mockGalleries[0].allowGuestDownloads = true;
+		const res = await getZip(
+			new NextRequest(`http://localhost/api/gallery/${slug}/zip`),
+			ctx,
+		);
+		expect(res.status).toBe(403);
+	});
+
+	it("SSE /api/gallery/[slug]/live nie emituje zdarzeń new-media o statusie pending do gościa", async () => {
+		const abortController = new AbortController();
+		const req = new NextRequest(`http://localhost/api/gallery/${slug}/live`, {
+			signal: abortController.signal,
+		});
+		const res = await getLive(req, ctx);
+		expect(res.status).toBe(200);
+
+		const reader = res.body?.getReader();
+		expect(reader).toBeDefined();
+		const decoder = new TextDecoder();
+
+		// Pierwsza ramka: connected
+		const first = await reader?.read();
+		expect(decoder.decode(first?.value)).toContain('"type":"connected"');
+
+		// Emitujemy plik ze statusem pending, a potem ze statusem ready
+		sseBus.notifyNewMedia(slug, {
+			id: "pending-id",
+			galleryId: "gal-1",
+			uploaderName: "Gość",
+			fileType: "image",
+			mediaType: "photo",
+			mimeType: "image/jpeg",
+			originalFileName: "tajne.jpg",
+			fileSize: 100,
+			storagePath: "galleries/kasia-i-tomek/raw/tajne.jpg",
+			thumbPath: "galleries/kasia-i-tomek/thumbs/tajne.webp",
+			status: "pending",
+			source: "guest",
+			createdAt: new Date(),
+		});
+		sseBus.notifyNewMedia(slug, {
+			id: "ready-id",
+			galleryId: "gal-1",
+			uploaderName: "Gość",
+			fileType: "image",
+			mediaType: "photo",
+			mimeType: "image/jpeg",
+			originalFileName: "jawne.jpg",
+			fileSize: 100,
+			storagePath: "galleries/kasia-i-tomek/raw/jawne.jpg",
+			thumbPath: "galleries/kasia-i-tomek/thumbs/jawne.webp",
+			status: "ready",
+			source: "guest",
+			createdAt: new Date(),
+		});
+
+		const second = await reader?.read();
+		const secondText = decoder.decode(second?.value);
+		expect(secondText).not.toContain("pending-id");
+		expect(secondText).toContain("ready-id");
+
+		abortController.abort();
 	});
 });

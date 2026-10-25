@@ -76,16 +76,16 @@ graph TD
 2. **Źródło pliku — rolka aparatu albo photobooth w przeglądarce**:
    - **Wybór z dysku/rolki**: standardowy `<input type="file" multiple>`.
    - **Photobooth w przeglądarce** (`CameraCapture.tsx`): opcja "Zrób zdjęcie" w `UploaderDrawer.tsx` uruchamia podgląd na żywo z kamery urządzenia gościa (`navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facingMode }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false })`) z automatyczną aktywacją ciągłego autofokusu (`focusMode: "continuous"`), bez potrzeby otwierania natywnej aplikacji aparatu. Gość może swobodnie przełączać się między głównym (tylnym) aparatem telefonu a aparatem przednim (selfie) za pomocą dedykowanego przycisku na podglądzie (automatycznie ukrywanego na urządzeniach z jedną kamerą, wykrywanych przez `enumerateDevices()`), a preferencja jest zapamiętywana w `localStorage`. Podgląd stosuje naturalne odbicie lustrzane wyłącznie dla kamery przedniej (`scale-x-[-1]`). Po naciśnięciu spustu migawki aparat podejmuje próbę pobrania pełnoklatkowego, natywnego ujęcia sensora za pośrednictwem API `ImageCapture.takePhoto()` (obsługiwanego w Chromium / Androidzie), a w razie braku wsparcia (np. iOS Safari) płynnie przełącza się na zrzut z wysokorozdzielczego elementu `<video>`. Zdjęcie jest komponowane na `<canvas>` (`captureSourceToCanvas`, z zachowaniem proporcji i skalowaniem w dół do maks. 2560px Quad HD po dłuższym boku), na wierzchu dokładana jest dekoracyjna ramka w kolorach motywu wesela (`primaryColor`/`accentColor` z `card_settings`, odczytane przez ten sam publiczny `GET /api/gallery/:slug` co reszta galerii, z domyślnymi kolorami generatora winietek, gdy galeria nie ma zapisanych ustawień), a canvas jest eksportowany przez `canvas.toBlob("image/jpeg", 0.95)` do zwykłego obiektu `File`. Ten plik trafia do **dokładnie tej samej** kolejki `files`/`startUpload`, co plik z wyboru z dysku — zero rozgałęzień w logice TUS poniżej ani w backendzie. Gdy przeglądarka odmówi dostępu do kamery lub jej nie posiada, komponent pokazuje czytelny komunikat błędu, a zwykły wybór pliku pozostaje w pełni funkcjonalny.
-4. **Inicjalizacja Uploadu**: Klient (`UploaderDrawer.tsx`) dynamicznie ustala endpoint w oparciu o `window.location.origin` (`/api/upload/tus`), co zapobiega rozbieżnościom protokołów HTTP/HTTPS. Serwer TUS zwraca relatywny nagłówek `Location` (`relativeLocation: true`), eliminując błędy CORS i niepożądane przekierowania preflight 308 za proxy Caddy.
-5. **Wznawialny Transfer**: Plik przesyłany jest w kawałkach po 5 MB (`chunkSize: 5MB`). Jeśli gość wejdzie w martwą strefę zasięgu sali, transfer zostaje wstrzymany i po ponownym złapaniu sygnału wznawia się automatycznie od ostatniego bajtu (zero powtórek).
-6. **Hook Zakończenia (`POST_FINISH`)**:
+3. **Inicjalizacja Uploadu**: Klient (`UploaderDrawer.tsx`) dynamicznie ustala endpoint w oparciu o `window.location.origin` (`/api/upload/tus`), co zapobiega rozbieżnościom protokołów HTTP/HTTPS. Serwer TUS zwraca relatywny nagłówek `Location` (`relativeLocation: true`), eliminując błędy CORS i niepożądane przekierowania preflight 308 za proxy Caddy.
+4. **Wznawialny Transfer**: Plik przesyłany jest w kawałkach po 5 MB (`chunkSize: 5MB`). Jeśli gość wejdzie w martwą strefę zasięgu sali, transfer zostaje wstrzymany i po ponownym złapaniu sygnału wznawia się automatycznie od ostatniego bajtu (zero powtórek).
+5. **Hook Zakończenia (`POST_FINISH`)**:
    - Plik z tymczasowego katalogu `tus_temp` trafia do `/data/galleries/{slug}/raw/`.
    - Zadanie obróbki trafia do kolejki `p-queue` (max 2 zadania współbieżne dla ochrony 4 rdzeni procesora N100).
-7. **Przetwarzanie**:
+6. **Przetwarzanie**:
    - **Zdjęcia**: `Sharp` odczytuje orientację EXIF (np. zdjęcia pionowe z iPhone'a) i generuje zoptymalizowaną miniaturkę WebP 500x500 z zachowaniem proporcji.
    - **Wideo**: `FFmpeg` wycina klatkę z pierwszej sekundy wideo i konwertuje ją do formatu WebP.
    - **Watchdog FFmpeg**: Proces `ffmpeg` uruchamiany jest z twardym limitem czasu (25 sekund). W razie zawieszenia na uszkodzonym pliku wideo proces zostaje bezwzględnie ubity (`SIGKILL`), uniemożliwiając zablokowanie kolejki zadań (`p-queue starvation`).
-8. **Zapis i Real-Time Notyfikacja**:
+7. **Zapis i Real-Time Notyfikacja**:
    - Ścieżki dyskowe zapisywane są w bazie PostgreSQL z wymuszeniem separatorów uniksowych (`path.posix.join`), gwarantując pełną zgodność niezależnie od systemu operacyjnego.
    - Rekord zostaje utrwalony w tabeli `media_items` PostgreSQL.
    - Magistrala `sseBus` (zarejestrowana w `globalThis.__wedding_sse_bus__` jako globalny singleton procesu Node) emituje zdarzenie `new-media` dla danego sluga galerii.
@@ -95,7 +95,6 @@ graph TD
 ### 3.1. Import materiałów profesjonalnego fotografa/kamerzysty
 
 Para Młoda może w panelu właściciela (`/owner/[slug]`, komponent `PhotographerImportPanel.tsx`) masowo zaimportować materiały otrzymane od profesjonalnego fotografa lub kamerzysty do tej samej galerii i chronologii co uploady gości, korzystając z dokładnie tego samego protokołu TUS 1.0.0 i tego samego endpointu `/api/upload/tus`. Różnice względem zwykłego uploadu gościa:
-
 1. **Autoryzacja właściciela jest obowiązkowa**: metadane TUS niosą dodatkowe pola `source: "photographer"` i `ownerToken`. `onUploadCreate` w `packages/media/src/tus-server.ts` odrzuca (`401 Unauthorized`) każdy upload ze `source: "photographer"`, jeśli `ownerToken` nie zweryfikuje się poprawnie dla danej galerii — zanim jakikolwiek plik trafi na dysk lub do bazy. Weryfikacja odbywa się przez funkcję wstrzykiwaną z `apps/web/server.ts` (`verifyOwnerCredentialsForTus`, reużywającą istniejący `verifyOwnerToken` z `@/lib/auth`), aby `packages/media` nigdy nie importowało kodu z `apps/web` (zachowany kierunek zależności monorepo).
 2. **Egzekwowanie limitu pojemności galerii (`maxStorageBytes`)**: to pierwsze miejsce w całym kodzie, w którym ta istniejąca od dawna kolumna jest faktycznie sprawdzana. Jeśli galeria ma ustawiony niezerowy limit, `onUploadCreate` sumuje dotychczasowe `file_size` z `media_items` i odrzuca (`413 Payload Too Large`) tylko ten pojedynczy plik importu, który przekroczyłby limit — pozostałe pliki tej samej paczki importu (każdy plik to osobne żądanie TUS) przechodzą normalnie. **Uwaga**: ten limit dotyczy wyłącznie ścieżki importu fotografa; zwykłe uploady gości pozostają nieograniczone (`maxStorageBytes` nie jest tam sprawdzane).
 3. **Wspólna, ograniczona kolejka przetwarzania**: zaimportowane pliki trafiają do dokładnie tej samej kolejki `p-queue` (concurrency: 2) i tego samego watchdoga FFmpeg (25s SIGKILL) co uploady gości — brak priorytetu i osobnego limitu współbieżności. Masowy import wielu dużych plików w trakcie trwającej recepcji może chwilowo spowolnić przetwarzanie bieżących zdjęć gości; zalecane jest wykonywanie importu poza szczytem aktywności gości (np. dzień po weselu).
@@ -106,66 +105,71 @@ Para Młoda może w panelu właściciela (`/owner/[slug]`, komponent `Photograph
 ## 4. Model Bazy Danych (PostgreSQL)
 
 ### Tabela `galleries`
-| Kolumna | Typ | Opis |
-|---|---|---|
-| `id` | UUID | Klucz główny (`defaultRandom()`) |
-| `slug` | TEXT UNIQUE | Unikalny identyfikator URL (np. `kasia-i-tomek`), sanityzowany `^[a-z0-9_-]+$` |
-| `couple_names` | TEXT | Imiona Pary Młodej (np. `Katarzyna & Tomasz`) |
-| `wedding_date` | TEXT | Data wesela |
-| `owner_email` | TEXT | Adres e-mail pary |
-| `owner_password_hash` | TEXT | Hasz hasła właściciela (bcrypt) |
-| `access_pin` | TEXT | Opcjonalny 4-cyfrowy PIN dla gości |
-| `is_active` | BOOLEAN | Status aktywności galerii (domyślnie `true`) |
-| `allow_guest_downloads` | BOOLEAN | Zezwolenie gościom na pobieranie zdjęć w pełnej rozdzielczości i ZIP |
-| `allow_videos` | BOOLEAN | Zgoda na wrzucanie plików wideo |
-| `max_storage_bytes` | BIGINT | Limit miejsca (0 = bez limitu) |
-| `created_at` | TIMESTAMPTZ | Znacznik czasu utworzenia |
+
+| Kolumna                 | Typ         | Opis                                                                           |
+| ----------------------- | ----------- | ------------------------------------------------------------------------------ |
+| `id`                    | UUID        | Klucz główny (`defaultRandom()`)                                               |
+| `slug`                  | TEXT UNIQUE | Unikalny identyfikator URL (np. `kasia-i-tomek`), sanityzowany `^[a-z0-9_-]+$` |
+| `couple_names`          | TEXT        | Imiona Pary Młodej (np. `Katarzyna & Tomasz`)                                  |
+| `wedding_date`          | TEXT        | Data wesela                                                                    |
+| `owner_email`           | TEXT        | Adres e-mail pary                                                              |
+| `owner_password_hash`   | TEXT        | Hasz hasła właściciela (bcrypt)                                                |
+| `access_pin`            | TEXT        | Opcjonalny 4-cyfrowy PIN dla gości                                             |
+| `is_active`             | BOOLEAN     | Status aktywności galerii (domyślnie `true`)                                   |
+| `allow_guest_downloads` | BOOLEAN     | Zezwolenie gościom na pobieranie zdjęć w pełnej rozdzielczości i ZIP           |
+| `allow_videos`          | BOOLEAN     | Zgoda na wrzucanie plików wideo                                                |
+| `max_storage_bytes`     | BIGINT      | Limit miejsca (0 = bez limitu)                                                 |
+| `created_at`            | TIMESTAMPTZ | Znacznik czasu utworzenia                                                      |
 
 ### Tabela `gallery_gdrive_exports`
-| Kolumna | Typ | Opis |
-|---|---|---|
-| `id` | UUID | Klucz główny |
-| `gallery_id` | UUID FK | Odwołanie do `galleries.id` (`ON DELETE CASCADE`), relacja 1:1 |
-| `refresh_token` | TEXT | Token odświeżania OAuth 2.0 |
-| `account_email` | TEXT | Zautoryzowany adres e-mail dysku |
-| `root_folder_id` | TEXT | Główne ID folderu wesela na dysku |
-| `photos_folder_id` | TEXT | ID folderu na zdjęcia |
-| `videos_folder_id` | TEXT | ID folderu na filmy |
-| `hidden_folder_id` | TEXT | ID folderu na ukryte pliki |
-| `export_status` | TEXT | Status eksportu (`idle`, `running`, `completed`, `failed`, `interrupted`) |
-| `export_progress` | JSONB | Bieżący postęp (`processedFiles`, `totalFiles`, `processedBytes` itp.) |
-| `exported_at` | TIMESTAMPTZ | Data ostatniego eksportu |
-| `created_at` | TIMESTAMPTZ | Znacznik czasu utworzenia |
+
+| Kolumna            | Typ         | Opis                                                                      |
+| ------------------ | ----------- | ------------------------------------------------------------------------- |
+| `id`               | UUID        | Klucz główny                                                              |
+| `gallery_id`       | UUID FK     | Odwołanie do `galleries.id` (`ON DELETE CASCADE`), relacja 1:1            |
+| `refresh_token`    | TEXT        | Token odświeżania OAuth 2.0                                               |
+| `account_email`    | TEXT        | Zautoryzowany adres e-mail dysku                                          |
+| `root_folder_id`   | TEXT        | Główne ID folderu wesela na dysku                                         |
+| `photos_folder_id` | TEXT        | ID folderu na zdjęcia                                                     |
+| `videos_folder_id` | TEXT        | ID folderu na filmy                                                       |
+| `hidden_folder_id` | TEXT        | ID folderu na ukryte pliki                                                |
+| `export_status`    | TEXT        | Status eksportu (`idle`, `running`, `completed`, `failed`, `interrupted`) |
+| `export_progress`  | JSONB       | Bieżący postęp (`processedFiles`, `totalFiles`, `processedBytes` itp.)    |
+| `exported_at`      | TIMESTAMPTZ | Data ostatniego eksportu                                                  |
+| `created_at`       | TIMESTAMPTZ | Znacznik czasu utworzenia                                                 |
 
 ### Tabela `card_settings`
-| Kolumna | Typ | Opis |
-|---|---|---|
-| `id` | UUID | Klucz główny |
-| `gallery_id` | UUID FK | Odwołanie do `galleries.id` (`ON DELETE CASCADE`) |
-| `headline` | TEXT | Główny nagłówek karteczki |
-| `subheadline` | TEXT | Podtytuł |
-| `primary_color` | TEXT | Kolor główny tekstów i kodu QR (kod HEX) |
-| `accent_color` | TEXT | Kolor ozdobnej ramki (kod HEX, np. złoto `#D4AF37`) |
-| `paper_size` | TEXT | Format papieru (`A6`) |
-| `custom_instructions`| TEXT | Treść instrukcji punktowej dla gości |
+
+| Kolumna               | Typ     | Opis                                                |
+| --------------------- | ------- | --------------------------------------------------- |
+| `id`                  | UUID    | Klucz główny                                        |
+| `gallery_id`          | UUID FK | Odwołanie do `galleries.id` (`ON DELETE CASCADE`)   |
+| `headline`            | TEXT    | Główny nagłówek karteczki                           |
+| `subheadline`         | TEXT    | Podtytuł                                            |
+| `primary_color`       | TEXT    | Kolor główny tekstów i kodu QR (kod HEX)            |
+| `accent_color`        | TEXT    | Kolor ozdobnej ramki (kod HEX, np. złoto `#D4AF37`) |
+| `paper_size`          | TEXT    | Format papieru (`A6`)                               |
+| `custom_instructions` | TEXT    | Treść instrukcji punktowej dla gości                |
 
 ### Tabela `media_items`
-| Kolumna | Typ | Opis |
-|---|---|---|
-| `id` | UUID | Klucz główny |
-| `gallery_id` | UUID FK | Odwołanie do `galleries.id` (`ON DELETE CASCADE`) |
-| `uploader_name` | TEXT | Podpis gościa (np. "Świadek Piotr") |
-| `source` | TEXT | Źródło materiału: `guest` (domyślnie) lub `photographer` (import przez właściciela) |
-| `file_type` | TEXT | `image` lub `video` |
-| `mime_type` | TEXT | Typ MIME (np. `image/jpeg`, `video/mp4`) |
-| `original_file_name` | TEXT | Pierwotna nazwa pliku z telefonu |
-| `file_size` | BIGINT | Rozmiar w bajtach |
-| `storage_path` | TEXT | Znormalizowana ścieżka względna do pliku źródłowego |
-| `thumb_path` | TEXT | Znormalizowana ścieżka względna do miniatury WebP |
-| `status` | TEXT | `ready` (widoczne), `hidden` (ukryte przez parę), `deleted` |
-| `created_at` | TIMESTAMPTZ | Czas dodania |
+
+| Kolumna              | Typ         | Opis                                                                                |
+| -------------------- | ----------- | ----------------------------------------------------------------------------------- |
+| `id`                 | UUID        | Klucz główny                                                                        |
+| `gallery_id`         | UUID FK     | Odwołanie do `galleries.id` (`ON DELETE CASCADE`)                                   |
+| `uploader_name`      | TEXT        | Podpis gościa (np. "Świadek Piotr")                                                 |
+| `source`             | TEXT        | Źródło materiału: `guest` (domyślnie) lub `photographer` (import przez właściciela) |
+| `file_type`          | TEXT        | `image` lub `video`                                                                 |
+| `mime_type`          | TEXT        | Typ MIME (np. `image/jpeg`, `video/mp4`)                                            |
+| `original_file_name` | TEXT        | Pierwotna nazwa pliku z telefonu                                                    |
+| `file_size`          | BIGINT      | Rozmiar w bajtach                                                                   |
+| `storage_path`       | TEXT        | Znormalizowana ścieżka względna do pliku źródłowego                                 |
+| `thumb_path`         | TEXT        | Znormalizowana ścieżka względna do miniatury WebP                                   |
+| `status`             | TEXT        | `ready` (widoczne), `hidden` (ukryte przez parę), `deleted`                         |
+| `created_at`         | TIMESTAMPTZ | Czas dodania                                                                        |
 
 ### Indeksy Wydajnościowe Bazy Danych
+
 Dla zapewnienia błyskawicznego działania zapytań SQL na tysiącach zdjęć utworzono dedykowane indeksy złożone:
 1. `idx_media_items_gallery_status_created` – indeks na kolumnach `(gallery_id, status, created_at DESC)`:
    - Eliminuje pełne przeszukiwanie tabeli (`Seq Scan`) podczas pobierania zdjęć galerii gości i właściciela.
@@ -173,23 +177,25 @@ Dla zapewnienia błyskawicznego działania zapytań SQL na tysiącach zdjęć ut
    - Zapewnia natychmiastowe obliczanie sumy zajętego miejsca (`SUM(file_size)`) dla statystyk w panelu administratora i pary młodej.
 
 ### Tabela `admins`
-| Kolumna | Typ | Opis |
-|---|---|---|
-| `id` | UUID | Klucz główny |
-| `username` | TEXT UNIQUE | Login administratora |
-| `password_hash` | TEXT | Hasz hasła administratora (bcrypt) |
+
+| Kolumna         | Typ         | Opis                               |
+| --------------- | ----------- | ---------------------------------- |
+| `id`            | UUID        | Klucz główny                       |
+| `username`      | TEXT UNIQUE | Login administratora               |
+| `password_hash` | TEXT        | Hasz hasła administratora (bcrypt) |
 
 ### Tabela `wishes`
+
 Oddzielna, równoległa do `media_items` "księga życzeń" — tekstowe życzenia gości niezwiązane z żadnym plikiem, o identycznym kształcie stanu i moderacji.
 
-| Kolumna | Typ | Opis |
-|---|---|---|
-| `id` | UUID | Klucz główny (`defaultRandom()`) |
-| `gallery_id` | UUID FK | Odwołanie do `galleries.id` (`ON DELETE CASCADE`) |
-| `guest_name` | TEXT (nullable) | Opcjonalne imię/nazwisko gościa — `NULL` wyświetlane w UI jako "Anonimowy gość" |
-| `message` | TEXT | Treść życzenia (wymagane, max 500 znaków) |
-| `status` | TEXT | `ready` (widoczne), `hidden` (ukryte przez parę), `deleted` (trwale usunięte — soft-delete, bo brak plików do fizycznego skasowania) |
-| `created_at` | TIMESTAMPTZ | Czas dodania |
+| Kolumna      | Typ             | Opis                                                                                                                                 |
+| ------------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`         | UUID            | Klucz główny (`defaultRandom()`)                                                                                                     |
+| `gallery_id` | UUID FK         | Odwołanie do `galleries.id` (`ON DELETE CASCADE`)                                                                                    |
+| `guest_name` | TEXT (nullable) | Opcjonalne imię/nazwisko gościa — `NULL` wyświetlane w UI jako "Anonimowy gość"                                                      |
+| `message`    | TEXT            | Treść życzenia (wymagane, max 500 znaków)                                                                                            |
+| `status`     | TEXT            | `ready` (widoczne), `hidden` (ukryte przez parę), `deleted` (trwale usunięte — soft-delete, bo brak plików do fizycznego skasowania) |
+| `created_at` | TIMESTAMPTZ     | Czas dodania                                                                                                                         |
 
 Indeks `idx_wishes_gallery_status_created` na `(gallery_id, status, created_at)` — identyczny wzorzec co `idx_media_items_gallery_status_created`, bo zapytania mają dokładnie ten sam kształt (lista życzeń danej galerii, filtrowana po statusie, sortowana chronologicznie).
 
@@ -198,6 +204,7 @@ Indeks `idx_wishes_gallery_status_created` na `(gallery_id, status, created_at)`
 ## 5. Wykaz Endpointów API
 
 ### Publiczne (Gość)
+
 - `GET /api/gallery/:slug` – Metadane galerii, status aktywności i ustawienia winietki, w tym `primaryColor`/`accentColor` motywu wesela (zawsze zwracane, z domyślnymi wartościami generatora winietek, gdy galeria nie ma zapisanych ustawień) — wykorzystywane m.in. przez ramkę photobooth w przeglądarce gościa (`CameraCapture.tsx`).
 - `GET /api/gallery/:slug/media` – Lista aktywnych multimediów (`status: "ready"`):
   - Parametr `?includeHidden=true` wymaga autoryzacji nagłówkiem `Authorization: Bearer <adminToken>` / `x-admin-token`, nagłówkiem `x-owner-token`, ciasteczkiem sesji `wd_owner_{slug}` lub nagłówkiem `x-owner-password: <password>`. Poświadczenia w query stringu są ignorowane, a próba nieautoryzowanego odczytu zwraca `401 Unauthorized`.
@@ -243,6 +250,7 @@ Indeks `idx_wishes_gallery_status_created` na `(gallery_id, status, created_at)`
 - `GET /api/auth/google/callback` – Obsługa zwrotna OAuth 2.0, weryfikacja integralności tokena stanu, wymiana kodu na refresh token i przekierowanie z powrotem do panelu.
 
 ### Panel Administratora (RESTful API)
+
 - `POST /api/admin/auth` – Logowanie administratora, weryfikacja hasła i generowanie podpisanego tokena HMAC-SHA256 o ważności 7 dni.
 - `GET /api/admin/galleries` – Zestawienie wszystkich wesel z dynamicznie agregowanymi statystykami dyskowymi.
 - `POST /api/admin/galleries` – Tworzenie nowego wesela ze ścisłą walidacją sluga (`^[a-z0-9_-]+$`), generowaniem struktury folderów i haszowaniem hasła.
@@ -278,7 +286,6 @@ Indeks `idx_wishes_gallery_status_created` na `(gallery_id, status, created_at)`
 ### 6.1. Architektura klienta: hooki i biblioteki współdzielone
 
 Logika klienta wspólna dla wielu stron jest w `apps/web/src/hooks/` i `apps/web/src/lib/`, a nie kopiowana między stronami:
-
 - **Galeria na żywo** — `useGalleryEvents` (jedyne miejsce tworzące `EventSource` na `/api/gallery/[slug]/live`, flaga `isLive`, `onReconnect`) oraz `useLiveGallery` (metadane, media i życzenia + czysty reducer `lib/live-gallery.ts`). Używane przez galerię gościa i tryb TV. Po zerwaniu i wznowieniu SSE dane są pobierane ponownie; ciche odświeżenie zakończone błędem nie zamienia działającej galerii w błąd. Stany: `loading`, `ready`, `notFound` (404), `error` (sieć/5xx) — ekran `GalleryStatusScreen`. Typy publicznego API: `lib/gallery-types.ts`.
 
 - **Upload plików (TUS)** — `lib/tus-upload.ts` (`uploadFileViaTus`: jedyne miejsce ze stałymi klienta TUS — chunk 5 MB, `retryDelays`, endpoint względny, ograniczanie częstości raportowania postępu), hook `useUploadQueue` (sekwencyjna kolejka; po wysyłce udane pliki znikają, nieudane zostają z komunikatem błędu; callback sukcesu tylko gdy ≥ 1 plik się powiódł) oraz komponenty `components/upload/UploadFileRow` i `FilePickerDropzone`. Współdzielone przez `UploaderDrawer` (gość) i `PhotographerImportPanel` (import fotografa — dodatkowe metadane `source: "photographer"` i `ownerToken`).
@@ -303,6 +310,7 @@ Wszystkie dane aplikacji znajdują się w dwóch dedykowanych wolumenach Dockera
 2. `app_data` – Fizyczne zdjęcia źródłowe, filmy i miniatury.
 
 ### Wykonanie Kopii Zapasowej (Backup):
+
 ```bash
 # 1. Zrzut bazy danych PostgreSQL
 docker exec -t wedding_postgres pg_dump -U wedding wedding_drop > wedding_backup_$(date +%F).sql
@@ -312,6 +320,7 @@ docker run --rm -v wedding-drop_app_data:/data -v $(pwd):/backup alpine tar -czf
 ```
 
 ### Przywrócenie z Kopii Zapasowej (Restore):
+
 ```bash
 # 1. Przywrócenie bazy danych
 cat wedding_backup_YYYY-MM-DD.sql | docker exec -i wedding_postgres psql -U wedding -d wedding_drop
@@ -327,30 +336,30 @@ docker run --rm -v wedding-drop_app_data:/data -v $(pwd):/backup alpine tar -xzf
 1. **Kryptograficzna Autoryzacja i Separacja Domen HMAC**:
    - Tokeny administratora (`admin_<timestamp>_<jti>_<base64User>_<hmac>`) oraz właściciela galerii (`owner_<timestamp>_<jti>_<base64Slug>_<hmac>`) są kryptograficznie odseparowane zarówno w payloadzie podpisu (`admin:` vs `owner:`), jak i w obsłudze kluczy (`ADMIN_SECRET`, `OWNER_SECRET`).
    - Uniemożliwia to eskalację uprawnień poprzez zamianę prefiksów (Token Prefix Swap).
-   - W przypadku braku konfiguracji sekretów w zmiennych środowiskowych, aplikacja generuje bezpieczny losowy klucz w pamięci RAM (`crypto.randomBytes(32)`), eliminując jakiekolwiek znane hasła domyślne.
+   - Sekrety zapasowe oraz rejestr unieważnionych identyfikatorów `revokedJtis` są przechowywane w singletonie `globalThis` (`Symbol.for("wedding-drop.auth-state")`), dzięki czemu `server.ts` (TUS) oraz trasy Next.js App Router współdzielą ten sam stan kryptograficzny i listę unieważnionych tokenów. Przy starcie (`initDatabase`) jawnie podane `ADMIN_PASSWORD` z `.env` jest automatycznie synchronizowane ze skrótem w tabeli `admins`.
    - Weryfikacja podpisu realizowana jest za pomocą `crypto.timingSafeEqual` w celu zapobieżenia atakom czasowym (Timing Attacks). Token administratora jest ważny **8 godzin**, token właściciela **7 dni**.
-   - Każdy token ma losowy identyfikator `jti` objęty podpisem. Wylogowanie (`POST /api/admin/auth/logout`, `DELETE /api/owner/:slug/session`) wpisuje `jti` na listę unieważnionych w pamięci procesu do czasu wygaśnięcia tokenu (restart procesu czyści listę). Tokeny w starym formacie (bez `jti`) są odrzucane.
+   - Każdy token ma losowy identyfikator `jti` objęty podpisem. Wylogowanie (`POST /api/admin/auth/logout`, `DELETE /api/owner/:slug/session`) oraz rotacja sesji właściciela (`GET /api/owner/:slug/session`) wpisuje dotychczasowy `jti` na listę unieważnionych w pamięci procesu do czasu wygaśnięcia tokenu. Tokeny w starym formacie (bez `jti`) są odrzucane.
    - Logowanie administratora zwraca identyczny błąd dla nieistniejącego loginu i błędnego hasła (brak enumeracji kont).
 2. **Bezpieczne Serwowanie Mediów i Ochrona przed Path Traversal**:
    - Endpoint `/media-file/*` jest obsługiwany przez dedykowany handler Node.js z rygorystycznym sprawdzaniem granic katalogu `/data` (`path.resolve`), blokadą sekwencji `..` oraz bajtów zerowych (`\0`).
-   - Każde żądanie weryfikuje status materiału w bazie danych PostgreSQL: pliki `hidden` są blokowane kodem `403 Forbidden` dla nieautoryzowanych gości (dostęp wymaga tokenu właściciela lub administratora), a pliki `deleted` zwracają `404 Not Found`.
+   - Każde żądanie do `/media-file/*` wymusza obecność pliku w `/data/galleries/` (`403` dla `tus_temp/*`), stosuje politykę fail-closed (`404` przy braku rekordu w `media_items`), weryfikuje `allowGuestViewing`, `isActive`, hasło gościa oraz status materiału (`hidden`/`pending` zwracają `403`, a `deleted` zwraca `404`), oraz dołącza `Content-Security-Policy: default-src 'none'; sandbox` i `Cache-Control: private, no-store` dla chronionych mediów. Te same reguły `allowGuestViewing` obowiązują dla `GET /api/gallery/:slug/zip`, a SSE (`GET /api/gallery/:slug/live`) nie wysyła zdarzeń `new-media` dla plików `pending` do nieautoryzowanych gości.
    - Zachowano pełną obsługę streamingu oraz nagłówków Byte-Range (`206 Partial Content`), kluczowych dla płynnego odtwarzania wideo na urządzeniach mobilnych (iOS/Android).
 3. **Ochrona przed Stored XSS i Weryfikacja Magic Bytes**:
-   - W potoku przetwarzania mediów (`packages/media`) wprowadzono inspekcję sygnatury binarnej (Magic Bytes) dla plików JPEG, PNG, WebP, GIF, MP4, MOV, WebM i HEIC.
+   - W potoku przetwarzania mediów (`packages/media`) wprowadzono inspekcję sygnatury binarnej (Magic Bytes) dla plików JPEG, PNG, WebP, GIF, MP4, MOV, WebM i HEIC, a zapisywany w bazie `mimeType` jest wyznaczany kanonicznie na podstawie zweryfikowanego rozszerzenia (ignorując deklarację klienta). Po zakończeniu przetwarzania usuwane są pliki sidecar TUS (`.json` / `.info`).
    - Wszelkie próby przesłania plików tekstowych, skryptów HTML/SVG/PHP czy zmanipulowanych rozszerzeń są natychmiast odrzucane i usuwane z dysku przed zapisaniem w bazie danych lub zaserwowaniem w galerii.
    - **Branding (logo/tło)**: dozwolone tylko JPEG/PNG/WebP rozpoznane po magic bytes; **SVG jest odrzucany**. Nazwa i rozszerzenie pliku są generowane przez serwer (`logo.<ext>`, `background.<ext>`), a nazwa od klienta nie bierze udziału w ścieżce zapisu. `/branding-file/*` zwraca `X-Content-Type-Options: nosniff` i `Content-Security-Policy: default-src 'none'; sandbox`.
 4. **Bezpieczeństwo PWA i Wykluczenie Cache API**:
-   - Konfiguracja Service Worker (`sw.ts`) wymusza strategię `NetworkOnly` dla wszystkich zapytań `/api/*`, uniemożliwiając cachowanie danych wrażliwych, tokenów sesyjnych oraz odpowiedzi API w `CacheStorage` przeglądarki.
+   - Konfiguracja Service Worker (`sw.ts`) wymusza strategię `NetworkOnly` dla wszystkich zapytań `/api/*` oraz `/media-file/*`, uniemożliwiając cachowanie danych wrażliwych, prywatnych mediów, tokenów sesyjnych oraz odpowiedzi API w `CacheStorage` przeglądarki.
 5. **Rate limiting (`apps/web/src/lib/rate-limit.ts`)**:
-   - Limiter w pamięci procesu (stałe okno, współdzielony przez `globalThis` między Next.js a serwerem TUS, ograniczona liczba kluczy). Klucz: IP z `X-Forwarded-For` (ustawianego przez Caddy) + zasób (slug galerii lub `admin`). Aplikacja zakłada, że port 3000 nie jest wystawiony poza reverse proxy.
+   - Limiter w pamięci procesu (stałe okno, współdzielony przez `globalThis` między Next.js a serwerem TUS) utrzymuje dwa odizolowane magazyny: `authStore` dla kubełków uwierzytelniania (`admin-login`, `owner-login`, `owner-password`, `guest-login`, `zip-pin`) oraz `publicStore` dla ruchu publicznego (`tus-create`, `wishes-post`), co zapobiega wyparciu FIFO blokad brute-force przez ruch publiczny. Klucz: IP z `X-Forwarded-For` (nadpisywanego przez Caddy wartością `{remote_host}`) + zasób (slug galerii lub `admin`).
    - **10 nieudanych prób / 15 min** dla: logowania admina, logowania właściciela, hasła gościa, PIN-u ZIP oraz nagłówka `x-owner-password` (poprawne logowanie zeruje licznik). Po przekroczeniu: `429` z `Retry-After`, **bez wywołania bcrypt** (ochrona CPU N100).
    - **30 życzeń / minutę** (`POST /wishes`) oraz **300 utworzeń uploadu TUS / minutę** na IP i galerię (gość; import fotografa jest zwolniony, bo wymaga tokenu). Limit TUS jest luźniejszy, bo goście na weselu dzielą jeden adres IP (Wi-Fi sali).
    - Limiter resetuje się po restarcie i działa tylko dla jednej instancji.
 6. **Hasło gościa i PIN**:
    - Hasło gościa i PIN ZIP są zapisywane jako hash bcrypt (hasła zapisane wcześniej w formacie `scrypt$…` z #62 nadal są akceptowane). Stare wartości plaintext działają nadal i są zamieniane na hash przy pierwszej poprawnej weryfikacji (lazy-upgrade, bez migracji SQL). API zwraca tylko flagi `hasPassword`/`hasPin`.
    - PIN przyjmowany wyłącznie w nagłówku `x-access-pin` (parametr `?pin=` jest ignorowany).
-   - Gdy galeria ma hasło gościa, sesja gościa (ciasteczko `wd_guest_<slug>`) jest wymagana także dla `GET /media`, `GET`/`POST /wishes`, `GET /live`, `GET /zip` oraz utworzenia uploadu TUS (poza tym publiczne `GET /api/gallery/:slug` zwraca wtedy tylko dane ekranu logowania).
-7. **Limity uploadu**: TUS ma `maxSize` = **1 GiB na plik** (413 powyżej; `Upload-Length` jest wymagany), `maxStorageBytes` galerii obowiązuje gości i fotografa, a niedokończone uploady w `tus_temp` starsze niż 24 h są sprzątane co godzinę.
+   - Gdy galeria ma hasło gościa, sesja gościa (ciasteczko `wd_guest_<slug>` powiązane kryptograficznie ze skrótem `guestPassword`) jest wymagana także dla `GET /media`, `GET`/`POST /wishes`, `GET /live`, `GET /zip`, `/media-file/*` oraz utworzenia uploadu TUS (zmiana lub dodanie hasła gościa unieważnia wcześniejsze ciasteczka).
+7. **Limity uploadu, TUS CSPRNG i OAuth `state`**: TUS generuje identyfikatory przez `crypto.randomBytes(12)`, usuwa `ownerToken` ze zwracanych metadanych `onUploadCreate`, ma `maxSize` = **1 GiB na plik** (413 powyżej; `Upload-Length` jest wymagany), rezerwuje bajty uploadów w locie (`inFlightBytes`) oraz ponownie weryfikuje `maxStorageBytes` w `processMediaTask`, a niedokończone uploady w `tus_temp` starsze niż 24 h są sprzątane co godzinę. Przepływ Google Drive OAuth 2.0 weryfikuje jednorazowy `nonce` w parametrze `state` oraz ciasteczko wiążące `wd_gdrive_oauth_state`.
 8. **Brak Indeksowania przez Wyszukiwarki (SEO / RODO)**:
    - Caddy wysyła nagłówek brzegowy: `X-Robots-Tag: noindex, nofollow, noarchive, nosnippet`.
    - Każda strona HTML posiada meta tag `<meta name="robots" content="noindex, nofollow, noarchive" />`.
@@ -359,10 +368,13 @@ docker run --rm -v wedding-drop_app_data:/data -v $(pwd):/backup alpine tar -xzf
    - Kolejka obróbki `p-queue` jest ograniczona do `concurrency: 2`.
    - Watchdog `ffmpeg` (25s timeout) chroni przed zawieszeniem wątków procesora na uszkodzonych plikach wideo.
 10. **Fizyczna Izolacja Danych**:
-   - Każde wesele posiada unikalny slug oraz odizolowany folder dyskowy.
-   - Skasowanie wesela z poziomu panelu administratora fizycznie usuwa pliki z dysku za pomocą `fs.rm`.
+
+- Każde wesele posiada unikalny slug oraz odizolowany folder dyskowy.
+- Skasowanie wesela z poziomu panelu administratora fizycznie usuwa pliki z dysku za pomocą `fs.rm`.
+
 11. **Bezpieczeństwo CORS i Zgodność z HTTPS**:
-   - Serwer TUS zwraca relatywne adresy zasobów (`relativeLocation: true`), co uniemożliwia niezgodność protokołów za reverse proxy Caddy (brak blokad CORS preflight).
+
+- Serwer TUS zwraca relatywne adresy zasobów (`relativeLocation: true`), co uniemożliwia niezgodność protokołów za reverse proxy Caddy (brak blokad CORS preflight).
 
 ---
 
@@ -371,7 +383,6 @@ docker run --rm -v wedding-drop_app_data:/data -v $(pwd):/backup alpine tar -xzf
 ### 9.0. OpenSpec (spec-driven development)
 
 Zmiany funkcjonalne i architektoniczne mogą być prowadzone przez [OpenSpec](https://github.com/Fission-AI/OpenSpec):
-
 - Katalog `openspec/` — `config.yaml` (kontekst WeddingDrop + reguły artefaktów), `specs/` (specyfikacje główne), `changes/` (aktywne propozycje).
 - Skill/komendy Antigravity & Cursor: `.agents/skills/openspec-*`, `.agents/workflows/opsx-*.md`, `.cursor/skills/openspec-*`, `.cursor/commands/opsx-*.md` (`/opsx-explore`, `/opsx-propose`, `/opsx-apply`, …).
 - Skill/komendy Claude Code & Gemini CLI: `.claude/skills/openspec-*`, `.claude/commands/opsx/`, `.gemini/commands/opsx/` (`/opsx:explore`, `/opsx:propose`, …).
@@ -379,7 +390,6 @@ Zmiany funkcjonalne i architektoniczne mogą być prowadzone przez [OpenSpec](ht
 - Konstytucja techniczna (`AGENTS.md`) ma pierwszeństwo przed propozycjami OpenSpec — change nie może poluzować limitów N100 ani reguł bezpieczeństwa.
 
 Projekt objęty jest dwupoziomową piramidą testów automatycznych oraz standardami Biome:
-
 1. **Jakość Kodu i Formatowanie (Biome)**:
    - Zastąpiono ESLint i Prettier nowoczesnym linterem/formatterem **Biome**.
    - Weryfikacja: `pnpm biome check apps/ packages/`.
@@ -403,7 +413,6 @@ Projekt objęty jest dwupoziomową piramidą testów automatycznych oraz standar
 ## 10. Konfiguracja Integracji z Google Drive (Google Cloud Console)
 
 Aby Para Młoda mogła podłączyć swój Dysk Google i wykonać eksport:
-
 1. **Utworzenie projektu**:
    - Przejdź do [Google Cloud Console](https://console.cloud.google.com/) i utwórz nowy projekt (np. `WeddingDrop`).
 2. **Włączenie API**:
@@ -420,6 +429,7 @@ Aby Para Młoda mogła podłączyć swój Dysk Google i wykonać eksport:
      - `http://localhost:3000/api/auth/google/callback` (środowisko deweloperskie)
 5. **Zmienne środowiskowe (`.env`)**:
    - Skopiuj wygenerowane poświadczenia do pliku `.env`:
+
      ```env
      GOOGLE_CLIENT_ID=twoj_klient_id.apps.googleusercontent.com
      GOOGLE_CLIENT_SECRET=twoj_klient_secret
@@ -430,6 +440,7 @@ Aby Para Młoda mogła podłączyć swój Dysk Google i wykonać eksport:
 ## 11. Publikacja Obrazu Docker (GHCR) i Instalacja na ZimaOS/CasaOS
 
 ### Workflow CI/CD (`.github/workflows/docker-publish.yml`)
+
 Przy każdym pushu na `main` oraz przy tagu `v*.*.*` GitHub Actions buduje obraz `web` (`Dockerfile` w katalogu głównym, wyłącznie `linux/amd64` — celowo bez multi-arch, ponieważ docelowy sprzęt N100/ZimaBoard jest x86-64-only, a `Dockerfile` i tak zawiera statycznie skompilowany FFmpeg tylko dla amd64) i publikuje go do GitHub Container Registry:
 - `ghcr.io/p4cino/wedding-drop:latest` — najnowszy build z `main`.
 - `ghcr.io/p4cino/wedding-drop:vX.Y.Z` — build z tagu wydania (semver).
@@ -442,6 +453,7 @@ Serwisy `postgres` (`postgres:16-alpine`) i `caddy` (`caddy:2-alpine`) korzystaj
 - Po pierwszym udanym uruchomieniu workflow: profil GitHub → Packages → `wedding-drop` → Package settings → Change visibility → **Public** (żeby `docker pull` na ZimaOS działał bez logowania do rejestru).
 
 ### Plik `docker-compose.prod.yml`
+
 W odróżnieniu od `docker-compose.yml` (który buduje `web` lokalnie z Dockerfile), ten plik tylko pobiera gotowe obrazy i nie ma żadnych bind mountów do plików z repo — jest w pełni samodzielny, dzięki czemu da się go wkleić jako czysty tekst w importerze compose ZimaOS/CasaOS (zweryfikowano w oficjalnym repo manifestów `IceWhaleTech/CasaOS-AppStore` oraz docs.zimaspace.com, że ten import jest tekstowy i nie obsługuje dołączania osobnych plików konfiguracyjnych).
 
 **Mechanizm zdalnego Caddyfile**: serwis `caddy` używa standardowego obrazu `caddy:2-alpine`, ale nadpisuje `command`, żeby najpierw ściągnąć `Caddyfile` z `raw.githubusercontent.com`, a potem odpalić Caddy na tej lokalnej kopii:
@@ -456,6 +468,7 @@ command:
 **Ważne**: `caddy run --config <url>` **nie** ściąga configu zdalnie samodzielnie — potwierdzone w praktyce jako crash-loop kontenera z błędem `open https://...: no such file or directory` (Caddy próbuje `os.Open()` na URL-u jak na lokalnej ścieżce). Stąd wrapper `wget` przed uruchomieniem `caddy run`. To zastępuje bind mount `./Caddyfile:/etc/caddy/Caddyfile` z `docker-compose.yml`, którego import ZimaOS (tekst-only, patrz niżej) nie obsługuje. URL jest przypięty do konkretnego tagu wydania (nie do `main`), żeby konfiguracja nie zmieniała się nieoczekiwanie przy restarcie; kontener wymaga dostępu do internetu przy każdym starcie/restarcie.
 
 ### Instalacja na ZimaOS
+
 Zweryfikowana ścieżka w interfejsie ZimaOS (App Center → **"Install a Customized App"** → Import → zakładka **Docker Compose** → wklejenie YAML → Submit → Install) nie wymaga bloku `x-casaos` — jest to standardowy Docker Compose v2 pod maską; blok `x-casaos` jest potrzebny tylko przy zgłaszaniu aplikacji do publicznego App Store (poza zakresem tego projektu). Plik `docker-compose.prod.yml` unika też składni właściwej tylko dla Docker Swarm (np. blok `deploy.resources.limits`), która potwierdzono jako powodującą błędy importu w CasaOS/ZimaOS — ewentualne limity CPU/RAM dla kontenerów N100 można ustawić już po instalacji z poziomu UI ZimaOS.
 
 **Primary Service musi być `caddy`, nie `web`**: `web` nie publikuje żadnego portu (dostępny tylko wewnątrz `wedding_net`) — to `caddy` jest jedynym zamierzonym punktem wejścia (serwuje `/media-file/*`, dodaje nagłówki bezpieczeństwa/`noindex`, patrz architektura wyżej). Ustawienie `web` jako Primary Service prowadzi ZimaOS do próby wystawienia portu 3000 wprost na hosta, co całkowicie omija Caddy.
@@ -465,6 +478,7 @@ Zweryfikowana ścieżka w interfejsie ZimaOS (App Center → **"Install a Custom
 **Dopasowanie Host header w Caddyfile (potwierdzone empirycznie)**: samo przemapowanie portu hosta nie wystarcza. Caddyfile `{$APP_DOMAIN:localhost} { ... }` tworzy site block dopasowywany **po nagłówku `Host`** requestu. Gdy dostęp idzie przez zmapowany port (np. `http://192.168.1.107:2137`), przeglądarka wysyła `Host: 192.168.1.107:2137` — to nie jest `localhost`, więc site block się nie dopasowuje, a Caddy zwraca domyślną, puste odpowiedź `200 OK` / `Content-Length: 0` (bez żadnych naszych nagłówków) — objawia się jako biała strona. Ustawienie `APP_DOMAIN` samego serwisu `caddy` na `":80"` (tylko port, bez hosta) naprawia to: taki adres dopasowuje **każdy** Host header na porcie 80 wewnątrz kontenera, niezależnie od tego, na jaki port hosta go zmapowano, i jednocześnie wyłącza automatyczne HTTPS (nie ma domeny, dla której Caddy mógłby próbować zdobyć certyfikat). Kto ma realną domenę i wolne 80/443, może ustawić `APP_DOMAIN` na tę domenę (np. `mojawesele.pl`) dla automatycznego Let's Encrypt.
 
 ### Rozwiązywanie problemów (SSH)
+
 Diagnostyka krok po kroku, gdy appka nie odpowiada poprawnie po instalacji:
 ```bash
 # 1. Status wszystkich kontenerow - szukaj Restarting/Exited
@@ -490,11 +504,13 @@ sudo ss -tlnp
 Projekt wdraża metodologię **Spec-Driven Development (SDD)** z użyciem narzędzia [OpenSpec](https://github.com/Fission-AI/openspec). Pozwala ona na iteracyjne planowanie architektoniczne, specyfikowanie wymagań, zarządzanie zmianami oraz zachowanie spójności kodu z intencją projektową przed przystąpieniem do implementacji z asystentami AI (Antigravity, Cursor, Claude Code).
 
 ### Struktura OpenSpec:
+
 - `openspec/config.yaml`: Konfiguracja projektu zawierająca reguły architektoniczne (wariant sprzętowy Intel N100, zasady przetwarzania mediów, p-queue, limity watchdog, streaming ZIP, normalizacja ścieżek POSIX).
 - `openspec/specs/`: Formalne specyfikacje modułów i domen systemu jako źródło prawdy.
 - `openspec/changes/`: Propozycje zmian (`proposal`, `spec`, `design`, `tasks`).
 
 ### Polecenia CLI:
+
 ```bash
 # Diagnostyka konfiguracji i ścieżek
 pnpm openspec doctor
@@ -507,6 +523,7 @@ pnpm openspec view
 ```
 
 ### Integracja z Asystentami AI:
+
 - Asystenci korzystają ze zintegrowanych umiejętności (skills) i przepływów pracy w `.agents/skills/openspec-*`, `.agents/workflows/`, `.cursor/`, `.claude/` oraz `.gemini/`.
 - Dostępne komendy przepływu pracy:
   - `/opsx-propose`: Inicjalizacja nowej propozycji funkcjonalności lub zmiany architektonicznej.
@@ -522,11 +539,13 @@ pnpm openspec view
 Aplikacja `@wedding-drop/web` wykorzystuje nowoczesny system wzornictwa [Park UI](https://park-ui.com) oparty na maszynach stanów [Ark UI](https://ark-ui.com) oraz silniku stylów [Panda CSS](https://panda-css.com), zastępując dawny Tailwind CSS.
 
 ### 13.1. Architektura Stylów i Optymalizacja N100 (Zero-Runtime)
+
 - **Ekstrakcja w czasie budowy**: Panda CSS analizuje kod źródłowy w fazie kompilacji (`panda codegen`), generując statyczne arkusze stylów w warstwach CSS `@layer reset, base, tokens, recipes, utilities;`. Brak narzutu wykonawczego (zero runtime CSS-in-JS overhead) gwarantuje, że procesor Intel N100 nie marnuje cykli CPU na kalkulację stylów w pamięci RAM.
 - **Silnie typowane tokeny i receptury**: Wszystkie style i warianty komponentów (`button`, `input`, `badge`, `card`, `dialog`, `drawer`, `toast`) są generowane jako bezpieczne typowo funkcje TypeScript w `apps/web/styled-system/`.
 - **Własne tokeny ślubne**: Paleta barw (`wedding.champagne`, `wedding.gold`, `wedding.goldLight`, `wedding.rose`, `wedding.slate`, `wedding.dark`, `wedding.emerald`) oraz czcionki serif/sans skonfigurowane w `apps/web/panda.config.ts`.
 
 ### 13.2. Dostępność i Maszyny Stanów (Ark UI)
+
 - Komponenty interaktywne Park UI korzystają pod spodem ze sprawdzonych automatów stanowych Zag.js / Ark UI, gwarantując pełną zgodność ze standardami **WAI-ARIA**:
   - `Dialog` (Modal): Automatyczne blokowanie przewijania tła (`preventScroll`), pułapka fokusu wewnątrz modala i obsługa klawisza Escape.
   - `Drawer`: Płynne wysuwanie z dołu ekranu z obsługą gestów dotykowych na urządzeniach mobilnych.
@@ -540,12 +559,14 @@ Aplikacja `@wedding-drop/web` wykorzystuje nowoczesny system wzornictwa [Park UI
 Obraz produkcyjny kontenera `wedding_web` (`node:24-alpine`) został zoptymalizowany pod kątem minimalnego zużycia zasobów mini-PC (Intel N100) oraz rygorystycznych standardów bezpieczeństwa:
 
 ### 14.1. Wielostopniowy proces budowania (Multi-Stage Build)
+
 1. **Etap 1: `pruner` (`turbo prune`)**: Wyodrębnia z monorepo wyłącznie definicje pakietów i kod niezbędny dla `@wedding-drop/web`, `@wedding-drop/db` oraz `@wedding-drop/media`.
 2. **Etap 2: `builder`**: Instaluje pełne zależności dev i kompiluje kod Next.js 16 (`next build`) z użyciem Turbopacka oraz generuje pliki dystrybucyjne (`tsup server.ts`).
 3. **Etap 3: `prod-deps`**: Instaluje wyłącznie zależności produkcyjne z flagą `--prod --frozen-lockfile --ignore-scripts`.
 4. **Etap 4: `runner`**: Czyste, utwardzone środowisko uruchomieniowe Alpine.
 
 ### 14.2. Utwardzenie Bezpieczeństwa i Eliminacja CVE
+
 - **Brak uprawnień roota (`USER node`)**: Aplikacja działa z prawami wbudowanego użytkownika `node` (UID/GID 1000). Katalogi montowane `/app/data` (galerie i pliki tymczasowe TUS) są naprawiane przy każdym starcie kontenera przez `docker-entrypoint.sh` (chown na plikach nienależących do `node`, następnie `su-exec node`). Dzięki temu istniejące wolumeny utworzone wcześniej przez roota nie powodują błędu `EACCES` przy `rename` z `tus_temp` do `galleries/{slug}/raw`.
 - **Usunięcie zbędnych środowisk NPM/Yarn**: Ponieważ monorepo korzysta w 100% z PNPM, z obrazu runnera usuwane są fabryczne instalacje `/usr/local/lib/node_modules/npm` oraz `/opt/yarn*`, co eliminuje kilkanaście powszechnych podatności CVE (m.in. `http-cache-semantics`, `undici`, `tar`).
 - **Eliminacja zależności deweloperskich z runtime**: Pakiety `@serwist/next` i `serwist` przeniesiono do `devDependencies`, co zapobiega instalacji kompilatora TypeScript/Go w runnerze i całkowicie usuwa podatność krytyczną `CVE-2026-39821` (`golang/stdlib`).

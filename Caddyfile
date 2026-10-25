@@ -1,16 +1,20 @@
 {$APP_DOMAIN:localhost} {
-    # Blokada indeksowania przez wyszukiwarki (Google, Bing, itp.)
+    # Blokada indeksowania przez wyszukiwarki (Google, Bing, itp.) oraz nagłówki bezpieczeństwa
     header {
         X-Robots-Tag "noindex, nofollow, noarchive, nosnippet"
         X-Content-Type-Options "nosniff"
         X-Frame-Options "SAMEORIGIN"
         Referrer-Policy "strict-origin-when-cross-origin"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        Permissions-Policy "camera=(self), microphone=(self), geolocation=()"
     }
-
 
     # Domyślny fallback do aplikacji Next.js
     handle {
         reverse_proxy web:3000 {
+            # Nadpisanie X-Forwarded-For rzeczywistym adresem klienta (ochrona przed spoofingiem IP w limiterze)
+            header_up X-Forwarded-For {remote_host}
+
             # Wyłączenie buforowania dla Server-Sent Events (SSE) i płynnego streamingu
             flush_interval -1
 

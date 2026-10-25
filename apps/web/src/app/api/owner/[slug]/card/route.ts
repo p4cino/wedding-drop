@@ -1,4 +1,4 @@
-import { cardSettings, db } from "@wedding-drop/db";
+import { cardSettings, db, updateCardSettingsDto } from "@wedding-drop/db";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { authenticateOwner } from "@/lib/auth";
@@ -21,13 +21,25 @@ export async function PUT(
 			);
 		}
 
+		const parsed = updateCardSettingsDto.safeParse(body);
+		if (!parsed.success) {
+			return NextResponse.json(
+				{
+					error:
+						parsed.error.issues[0]?.message ||
+						"Nieprawidłowe dane konfiguracji winietki",
+				},
+				{ status: 400 },
+			);
+		}
+
 		const {
 			headline,
 			subheadline,
 			primaryColor,
 			accentColor,
 			customInstructions,
-		} = body;
+		} = parsed.data;
 
 		const existing = await db
 			.select()

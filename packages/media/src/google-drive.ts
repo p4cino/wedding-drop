@@ -6,6 +6,27 @@ export const DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 export const USERINFO_EMAIL_SCOPE =
 	"https://www.googleapis.com/auth/userinfo.email";
 
+const STATE_TTL_MS = 15 * 60 * 1000;
+const MAX_CONSUMED_STATES = 10_000;
+const consumedStatesKey = Symbol.for("wedding-drop.consumed-oauth-states");
+
+function getConsumedStatesMap(): Map<string, number> {
+	const g = globalThis as unknown as Record<
+		symbol,
+		Map<string, number> | undefined
+	>;
+	let map = g[consumedStatesKey];
+	if (!map) {
+		map = new Map<string, number>();
+		g[consumedStatesKey] = map;
+	}
+	return map;
+}
+
+export function _clearConsumedOAuthStatesForTests(): void {
+	getConsumedStatesMap().clear();
+}
+
 /**
  * Zwraca klienta OAuth2 na podstawie zmiennych środowiskowych
  */
@@ -40,7 +61,10 @@ export function isGoogleDriveConfigured(): boolean {
 }
 
 function getSignedStateSecret(): string {
-	const secret = process.env.ADMIN_SECRET || process.env.ADMIN_PASSWORD;
+	const secret =
+		process.env.ADMIN_SECRET ||
+		process.env.OWNER_SECRET ||
+		process.env.ADMIN_PASSWORD;
 	if (!secret) {
 		throw new Error(
 			"Brak ADMIN_SECRET/ADMIN_PASSWORD – nie można podpisać stanu OAuth",
@@ -55,7 +79,7 @@ function getSignedStateSecret(): string {
 export function generateSignedState(gallerySlug: string): string {
 	const secret = getSignedStateSecret();
 	const timestamp = Date.now();
-	const nonce = crypto.randomBytes(8).toString("hex");
+	const nonce = crypto.randomBytes(12).toString("hex");
 	const payload = JSON.stringify({ slug: gallerySlug, ts: timestamp, nonce });
 	const hmac = crypto
 		.createHmac("sha256", secret)
@@ -69,7 +93,7 @@ export function generateSignedState(gallerySlug: string): string {
 }
 
 /**
- * Weryfikuje podpisany stan state z callbacku Google OAuth (max 15 minut ważności)
+ * Weryfikuje podpisany stan state z callbacku Google OAuth (max 15 minut ważności, jednorazowy nonce)
  */
 export function verifySignedState(stateStr: string): { slug: string } | null {
 	try {
@@ -91,10 +115,29 @@ export function verifySignedState(stateStr: string): { slug: string } | null {
 		}
 
 		const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-		const age = Date.now() - data.ts;
+		const now = Date.now();
+		const age = now - data.ts;
 		// Ważność: 15 minut (900 000 ms)
-		if (age < 0 || age > 15 * 60 * 1000) {
+		if (age < 0 || age > STATE_TTL_MS) {
 			return null;
+		}
+
+		if (typeof data.nonce === "string" && data.nonce.length > 0) {
+			const consumed = getConsumedStatesMap();
+			for (const [key, exp] of consumed) {
+				if (exp <= now) consumed.delete(key);
+			}
+			while (consumed.size >= MAX_CONSUMED_STATES) {
+				const oldest = consumed.keys().next().value;
+				if (oldest === undefined) break;
+				consumed.delete(oldest);
+			}
+
+			const nonceKey = `${data.slug}:${data.nonce}`;
+			if (consumed.has(nonceKey)) {
+				return null;
+			}
+			consumed.set(nonceKey, data.ts + STATE_TTL_MS);
 		}
 
 		return { slug: data.slug };

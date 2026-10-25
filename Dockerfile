@@ -76,7 +76,7 @@ COPY --chown=node:node --from=builder /app/packages/db/migrations ./packages/db/
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 # Przygotowanie katalogów danych z uprawnieniami dla nieuprzywilejowanego użytkownika node
-RUN mkdir -p /app/data/galleries /app/data/tus_temp && \
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/bin/docker-entrypoint.sh && mkdir -p /app/data/galleries /app/data/tus_temp && \
     chown -R node:node /app/data
 
 # Start jako root tylko po to, by entrypoint naprawil wlasciciela wolumenu /app/data

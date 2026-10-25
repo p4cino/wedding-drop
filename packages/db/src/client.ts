@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { hash } from "@node-rs/bcrypt";
+import { compare, hash } from "@node-rs/bcrypt";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
@@ -56,7 +56,7 @@ export async function initDatabase() {
 		await migrate(db, { migrationsFolder });
 		console.log("[DB] Migracje Drizzle zakończone sukcesem.");
 
-		// Utworzenie domyślnego admina, jeśli tabela jest pusta
+		// Utworzenie domyślnego admina, jeśli tabela jest pusta, lub synchronizacja jawnie podanego ADMIN_PASSWORD
 		const existingAdmins = await client`SELECT count(*) FROM admins`;
 		if (parseInt(existingAdmins[0].count, 10) === 0) {
 			const defaultAdminPass = process.env.ADMIN_PASSWORD || "admin123";
@@ -66,6 +66,25 @@ export async function initDatabase() {
 				VALUES ('admin', ${passwordHash})
 			`;
 			console.log("[DB] Utworzono domyślnego administratora: login='admin'");
+		} else if (process.env.ADMIN_PASSWORD) {
+			const adminRows =
+				await client`SELECT password_hash FROM admins WHERE username = 'admin' LIMIT 1`;
+			const currentHash = adminRows?.[0]?.password_hash;
+			const isSame =
+				typeof currentHash === "string" && typeof compare === "function"
+					? await compare(process.env.ADMIN_PASSWORD, currentHash).catch(
+							() => false,
+						)
+					: false;
+			if (!isSame) {
+				const newHash = await hash(process.env.ADMIN_PASSWORD, { cost: 10 });
+				await client`
+					UPDATE admins SET password_hash = ${newHash} WHERE username = 'admin'
+				`;
+				console.log(
+					"[DB] Zaktualizowano skrót hasła administratora z zmiennej ADMIN_PASSWORD.",
+				);
+			}
 		}
 
 		// Utworzenie domyślnej galerii tylko w środowisku deweloperskim / testowym lub przy jawnym SEED_DEMO=true

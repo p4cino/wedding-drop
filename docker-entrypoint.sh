@@ -8,9 +8,10 @@ set -e
 DATA_DIR="${DATA_DIR:-/app/data}"
 
 if [ "$(id -u)" = "0" ]; then
-	mkdir -p "$DATA_DIR/galleries" "$DATA_DIR/tus_temp"
 	find "$DATA_DIR" -xdev \( ! -user node -o ! -group node \) -exec chown node:node {} +
+	su-exec node mkdir -p "$DATA_DIR/galleries" "$DATA_DIR/tus_temp"
 	exec su-exec node "$@"
 fi
 
+mkdir -p "$DATA_DIR/galleries" "$DATA_DIR/tus_temp"
 exec "$@"

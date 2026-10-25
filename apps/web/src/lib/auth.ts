@@ -8,9 +8,14 @@ import {
 	getClientIp,
 	peekRateLimit,
 	recordRateLimitHit,
+	resetRateLimit,
 } from "./rate-limit";
 
 export const OWNER_SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 604800s (7 dni)
+
+function escapeCookieName(name: string): string {
+	return name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 export function ownerSessionCookieName(slug: string): string {
 	return `wd_owner_${slug}`;
@@ -73,7 +78,9 @@ function getCookieValue(
 	}
 	const cookieHeader = req.headers.get("cookie");
 	if (!cookieHeader) return undefined;
-	const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+	const match = cookieHeader.match(
+		new RegExp(`(?:^|;\\s*)${escapeCookieName(name)}=([^;]*)`),
+	);
 	return match ? decodeURIComponent(match[1]) : undefined;
 }
 
@@ -112,13 +119,43 @@ export function readGuestToken(
 	return null;
 }
 
-let runtimeFallbackSecret: string | null = null;
+interface AuthGlobalState {
+	runtimeFallbackSecret: string | null;
+	revokedJtis: Map<string, number>;
+}
+
+const authGlobalKey = Symbol.for("wedding-drop.auth-state");
+
+function getAuthState(): AuthGlobalState {
+	const g = globalThis as unknown as Record<
+		symbol,
+		AuthGlobalState | undefined
+	>;
+	let state = g[authGlobalKey];
+	if (!state) {
+		state = {
+			runtimeFallbackSecret: null,
+			revokedJtis: new Map<string, number>(),
+		};
+		g[authGlobalKey] = state;
+	}
+	return state;
+}
 
 function getRuntimeFallbackSecret(): string {
-	if (!runtimeFallbackSecret) {
-		runtimeFallbackSecret = crypto.randomBytes(32).toString("hex");
+	const state = getAuthState();
+	if (!state.runtimeFallbackSecret) {
+		const seed = process.env.ADMIN_PASSWORD || process.env.DATABASE_URL || "";
+		if (seed) {
+			state.runtimeFallbackSecret = crypto
+				.createHmac("sha256", "wedding-drop-runtime-fallback-v1")
+				.update(seed)
+				.digest("hex");
+		} else {
+			state.runtimeFallbackSecret = crypto.randomBytes(32).toString("hex");
+		}
 	}
-	return runtimeFallbackSecret;
+	return state.runtimeFallbackSecret;
 }
 
 export function getAdminSecret(): string {
@@ -137,10 +174,8 @@ const ADMIN_TOKEN_MAX_AGE_MS = 8 * 60 * 60 * 1000; // 8 godzin
 const OWNER_TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 dni
 const MAX_REVOKED_TOKENS = 10_000;
 
-/** Lista unieważnionych `jti` (in-memory) wraz z czasem wygaśnięcia tokenu. */
-const revokedJtis = new Map<string, number>();
-
 function pruneRevoked(now: number): void {
+	const { revokedJtis } = getAuthState();
 	for (const [jti, expiresAt] of revokedJtis) {
 		if (expiresAt <= now) revokedJtis.delete(jti);
 	}
@@ -218,7 +253,7 @@ function parseRoleToken(
 		return null;
 	}
 
-	if (revokedJtis.has(jti)) return null;
+	if (getAuthState().revokedJtis.has(jti)) return null;
 	return { timestamp, jti, subject };
 }
 
@@ -268,36 +303,52 @@ export function revokeToken(token: string | null | undefined): boolean {
 	if (!parsed) return false;
 	const maxAge = admin ? ADMIN_TOKEN_MAX_AGE_MS : OWNER_TOKEN_MAX_AGE_MS;
 	pruneRevoked(Date.now());
-	revokedJtis.set(parsed.jti, parsed.timestamp + maxAge);
+	getAuthState().revokedJtis.set(parsed.jti, parsed.timestamp + maxAge);
 	return true;
 }
 
 /** Tylko do testów. */
 export function _resetRevokedTokensForTests(): void {
-	revokedJtis.clear();
+	getAuthState().revokedJtis.clear();
 }
 
-export function generateGuestToken(slug: string): string {
+function computeGuestPasswordTag(guestPasswordHash: string): string {
+	return crypto
+		.createHmac("sha256", getOwnerSecret())
+		.update(`guest-pwd:${guestPasswordHash}`)
+		.digest("hex")
+		.slice(0, 16);
+}
+
+export function generateGuestToken(
+	slug: string,
+	guestPasswordHash?: string | null,
+): string {
 	const timestamp = Date.now();
-	const payload = `guest:${timestamp}.${slug}`;
+	const subject = guestPasswordHash
+		? `${slug}\n${computeGuestPasswordTag(guestPasswordHash)}`
+		: slug;
+	const payload = `guest:${timestamp}.${subject}`;
 	const hmac = crypto
 		.createHmac("sha256", getOwnerSecret())
 		.update(payload)
 		.digest("hex");
-	return `guest_${timestamp}_${Buffer.from(slug).toString("base64")}_${hmac}`;
+	return `guest_${timestamp}_${Buffer.from(subject).toString("base64")}_${hmac}`;
 }
 
 export function verifyGuestToken(
 	token: string | null | undefined,
 	expectedSlug: string,
+	currentGuestPasswordHash?: string | null,
 ): boolean {
 	if (!token?.startsWith("guest_")) return false;
 	const parts = token.split("_");
 	if (parts.length !== 4) return false;
 	const timestamp = parseInt(parts[1], 10);
-	const slug = Buffer.from(parts[2], "base64").toString("utf-8");
+	const decodedSubject = Buffer.from(parts[2], "base64").toString("utf-8");
 	const providedHmac = parts[3];
 
+	const [slug, tokenPwdTag] = decodedSubject.split("\n");
 	if (slug !== expectedSlug) return false;
 
 	// Token ważny przez 7 dni
@@ -312,7 +363,7 @@ export function verifyGuestToken(
 
 	if (!/^[0-9a-f]{64}$/.test(providedHmac)) return false;
 
-	const payload = `guest:${timestamp}.${slug}`;
+	const payload = `guest:${timestamp}.${decodedSubject}`;
 	const expectedHmac = crypto
 		.createHmac("sha256", getOwnerSecret())
 		.update(payload)
@@ -322,10 +373,17 @@ export function verifyGuestToken(
 		const providedBuf = Buffer.from(providedHmac, "hex");
 		const expectedBuf = Buffer.from(expectedHmac, "hex");
 		if (providedBuf.length !== expectedBuf.length) return false;
-		return crypto.timingSafeEqual(providedBuf, expectedBuf);
+		if (!crypto.timingSafeEqual(providedBuf, expectedBuf)) return false;
 	} catch {
 		return false;
 	}
+
+	if (tokenPwdTag !== undefined && currentGuestPasswordHash) {
+		const expectedPwdTag = computeGuestPasswordTag(currentGuestPasswordHash);
+		if (tokenPwdTag !== expectedPwdTag) return false;
+	}
+
+	return true;
 }
 
 function readAdminTokenFromRequest(req: NextRequest | Request): string | null {
@@ -377,7 +435,10 @@ export async function authorizeHiddenAccess(
 	} catch {
 		valid = false;
 	}
-	if (valid) return { granted: true };
+	if (valid) {
+		resetRateLimit("owner-password", key);
+		return { granted: true };
+	}
 
 	const after = recordRateLimitHit("owner-password", key, AUTH_FAILURE_LIMIT);
 	return after.ok
@@ -395,7 +456,9 @@ export function hasGuestAccess(
 	guestPassword: string | null | undefined,
 ): boolean {
 	if (!guestPassword) return true;
-	if (verifyGuestToken(readGuestToken(req, slug), slug)) return true;
+	if (verifyGuestToken(readGuestToken(req, slug), slug, guestPassword)) {
+		return true;
+	}
 	return hasPrivilegedToken(req, slug);
 }
 
@@ -403,14 +466,21 @@ export function hasGuestAccess(
 export function verifyGuestCookieHeader(
 	slug: string,
 	cookieHeader: string | undefined,
+	guestPasswordHash?: string | null,
 ): boolean {
 	if (!cookieHeader) return false;
 	const match = cookieHeader.match(
-		new RegExp(`(?:^|;\\s*)${guestSessionCookieName(slug)}=([^;]*)`),
+		new RegExp(
+			`(?:^|;\\s*)${escapeCookieName(guestSessionCookieName(slug))}=([^;]*)`,
+		),
 	);
 	if (!match) return false;
 	try {
-		return verifyGuestToken(decodeURIComponent(match[1]), slug);
+		return verifyGuestToken(
+			decodeURIComponent(match[1]),
+			slug,
+			guestPasswordHash,
+		);
 	} catch {
 		return false;
 	}
