@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Dynamic mock variables
 let mockAdminCount = "0";
-const mockGalleryCount = "1";
+let mockGalleryCount = "1";
 
 // Mock postgres module before importing client
 vi.mock("postgres", () => {
@@ -64,6 +64,7 @@ describe("Database Client and InitDatabase", () => {
 	beforeEach(async () => {
 		vi.clearAllMocks();
 		mockAdminCount = "0";
+		mockGalleryCount = "1";
 		delete process.env.ADMIN_PASSWORD;
 		const migrator = await import("drizzle-orm/postgres-js/migrator");
 		migrateMock = migrator.migrate as unknown as ReturnType<typeof vi.fn>;
@@ -127,6 +128,25 @@ describe("Database Client and InitDatabase", () => {
 		});
 		expect(consoleLogSpy).toHaveBeenCalledWith(
 			"[DB] Zaktualizowano skrót hasła administratora z zmiennej ADMIN_PASSWORD.",
+		);
+		consoleLogSpy.mockRestore();
+	});
+
+	it("powinien obsłużyć błąd compare przy uszkodzonym hashu admina oraz utworzyć galerię demo, gdy tabela galleries jest pusta", async () => {
+		mockAdminCount = "1";
+		mockGalleryCount = "0";
+		process.env.ADMIN_PASSWORD = "nowe_haslo_po_bledzie";
+		bcryptMock.compare.mockRejectedValueOnce(new Error("Invalid bcrypt hash"));
+		const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+		const { initDatabase } = await import("../src/client");
+		await initDatabase();
+
+		expect(bcryptMock.hash).toHaveBeenCalledWith("nowe_haslo_po_bledzie", {
+			cost: 10,
+		});
+		expect(consoleLogSpy).toHaveBeenCalledWith(
+			"[DB] Utworzono domyślną galerię demo: slug='kasia-i-tomek'",
 		);
 		consoleLogSpy.mockRestore();
 	});
