@@ -562,8 +562,8 @@ Obraz produkcyjny kontenera `wedding_web` (`node:24-alpine`) został zoptymalizo
 
 1. **Etap 1: `pruner` (`turbo prune`)**: Wyodrębnia z monorepo wyłącznie definicje pakietów i kod niezbędny dla `@wedding-drop/web`, `@wedding-drop/db` oraz `@wedding-drop/media`.
 2. **Etap 2: `builder`**: Instaluje pełne zależności dev i kompiluje kod Next.js 16 (`next build`) z użyciem Turbopacka oraz generuje pliki dystrybucyjne (`tsup server.ts`).
-3. **Etap 3: `prod-deps`**: Instaluje wyłącznie zależności produkcyjne z flagą `--prod --frozen-lockfile --ignore-scripts`.
-4. **Etap 4: `runner`**: Czyste, utwardzone środowisko uruchomieniowe Alpine.
+3. **Etap 3: `prod-deps`**: Instaluje wyłącznie zależności produkcyjne z flagą `--prod --frozen-lockfile --ignore-scripts` oraz usuwa artefakty kompilatorów czasu budowy (`@next/swc-*`, `@swc/core-*`, `next-intl-swc-plugin-*`, `playwright*`, `lucide-react`, `@ark-ui*`, pliki `.map`, `.d.ts` i `*.runtime.dev.js`), redukując warstwę `node_modules` z 569 MB do 161 MB.
+4. **Etap 4: `runner`**: Czyste, utwardzone środowisko uruchomieniowe Alpine (`musl >= 1.2.6-r6`) ze statyczną binarką `/usr/local/bin/ffmpeg` kopiowaną z obrazu `mwader/static-ffmpeg:latest` (zamiast `apk add ffmpeg`), co zapewnia **0 podatności (`0C 0H 0M 0L`)** w skanerze Docker Scout przy rozmiarze obrazu **155 MB**.
 
 ### 14.2. Utwardzenie Bezpieczeństwa i Eliminacja CVE
 

@@ -73,3 +73,12 @@ Podpisany parametr `state` w przepływie Google OAuth MUST być jednorazowy (och
 
 - **WHEN** ten sam podpisany parametr `state` zostanie użyty ponownie w `GET /api/auth/google/callback`
 - **THEN** drugie żądanie zostaje odrzucone jako `invalid_or_expired_state`
+
+### Requirement: Zero podatności CVE w produkcyjnym obrazie Docker (Docker Scout)
+
+Etap produkcyjny (`runner`) w `Dockerfile` SHALL dostarczać statyczną binarkę `ffmpeg` (bez `apk add ffmpeg`), aktualizować `musl` do wersji `>= 1.2.6-r6` oraz usuwać z warstwy `node_modules` kompilatory czasu budowy (`@next/swc-*`, `@swc/core-*`, `playwright*`, `lucide-react`), osiągając `0C 0H 0M 0L` w `docker scout cves`.
+
+#### Scenario: Skanowanie obrazu produkcyjnego przez Docker Scout
+
+- **WHEN** wykonywane jest polecenie `docker scout cves wedding-drop-web:latest` na zbudowanym obrazie produkcyjnym
+- **THEN** raport wykazuje `0` podatności (`0C 0H 0M 0L`) oraz działającą binarkę `/usr/local/bin/ffmpeg`

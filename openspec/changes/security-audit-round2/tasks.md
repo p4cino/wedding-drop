@@ -35,3 +35,9 @@
 
 - [x] 6.1 W `Caddyfile` dodać `header_up X-Forwarded-For {remote_host}`, `Strict-Transport-Security` i `Permissions-Policy`; w `apps/web/next.config.mjs` dodać nagłówki bezpieczeństwa; w `docker-compose.yml`, `docker-compose.prod.yml` i `.env.example` uzupełnić `ADMIN_SECRET`, `cap_add: [CHOWN, SETUID, SETGID]` i usunąć zbędny wolumen `app_data` z `caddy`; w `.agents/scripts/ops-helper.ts` walidować nazwę serwisu i użyć `execFileSync`
 - [x] 6.2 Zaktualizować `README.md` oraz `DOCUMENTATION.md` o opis mechanizmów bezpieczeństwa i zmiennej `ADMIN_SECRET`, a następnie zweryfikować całość przez `pnpm biome check apps/ packages/`, `pnpm check-types`, `pnpm test` oraz `pnpm openspec validate security-audit-round2`
+
+## 7. Eliminacja podatności CVE w Docker Scout i optymalizacja warstw obrazu (F-17)
+
+- [x] 7.1 W `Dockerfile` zastąpić `apk add ffmpeg` w etapie `runner` statyczną binarką `/ffmpeg` z `mwader/static-ffmpeg:latest`, zaktualizować `musl` i `musl-utils` do `>= 1.2.6-r6` z `alpine/edge/main` oraz oczyścić etap `prod-deps` z kompilatorów czasu budowy (`@next/swc-*`, `@swc/core-*`, `next-intl-swc-plugin-*`, `playwright*`, `lucide-react`, `@ark-ui*`, plików `.map`/`.d.ts`/`*.runtime.dev.js`)
+- [x] 7.2 Przebudować obraz produkcyjny (`docker compose up -d --build`) i zweryfikować przez `docker scout cves wedding-drop-web:latest` brak podatności (`0C 0H 0M 0L 0?`), redukcję rozmiaru warstw oraz poprawne działanie `/usr/local/bin/ffmpeg` i kontenera `wedding_web`
+- [x] 7.3 Zaktualizować `README.md` i `DOCUMENTATION.md` o informację o wieloetapowym obrazie ze statycznym `ffmpeg` (`mwader/static-ffmpeg`) i `0` podatnościach w Docker Scout, zatwierdzić zmiany i zaktualizować PR #69
