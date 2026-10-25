@@ -19,6 +19,7 @@ Kompletna, samoobsługowa aplikacja internetowa do zbierania zdjęć i filmów z
 ## 📸 Zrzuty Ekranu
 
 ### 📱 Doświadczenie Gościa Weselnego (100% Mobile First & PWA)
+
 Bez instalacji aplikacji ze sklepów i bez rejestracji – gość skanuje kod QR ze stolika, natychmiast przegląda zdjęcia na żywo, rywalizuje w rankingu TOP 3, wysyła ciepłe słowa w Księdze Życzeń oraz robi zdjęcia w wirtualnym Photobooth:
 
 <p align="center">
@@ -30,6 +31,7 @@ Bez instalacji aplikacji ze sklepów i bez rejestracji – gość skanuje kod QR
 </p>
 
 ### 📺 Tryb TV na Sali Weselnej (Pokaz Slajdów na Żywo)
+
 Dedykowany, publiczny tryb tylko-do-odczytu na telewizor lub rzutnik w sali weselnej – automatyczna rotacja nowych materiałów w pełnej rozdzielczości z dynamicznym kodem QR w rogu dla dołączających gości:
 
 <p align="center">
@@ -37,6 +39,7 @@ Dedykowany, publiczny tryb tylko-do-odczytu na telewizor lub rzutnik w sali wese
 </p>
 
 ### 💌 Generator Winietek na Stoliki Weselne (Format A6 / 300 DPI)
+
 Wbudowany wektorowy generator wizytówek na stoły z dynamicznym kodem QR, wyborem eleganckich motywów kolorystycznych i opcją natychmiastowego druku:
 
 <p align="center">
@@ -44,6 +47,7 @@ Wbudowany wektorowy generator wizytówek na stoły z dynamicznym kodem QR, wybor
 </p>
 
 ### 💍 Panel Pary Młodej (Moderacja Treści, Import Fotografa, Księga Życzeń i Google Drive)
+
 Dedykowany panel właściciela galerii chroniony utwardzoną sesją – statystyki w czasie rzeczywistym, moderacja widoczności zdjęć i życzeń jednym kliknięciem, masowy import materiałów fotografa z odznaką, pobieranie strumieniowego archiwum ZIP oraz automatyczny backup do chmury Google Drive:
 
 <p align="center">
@@ -51,6 +55,7 @@ Dedykowany panel właściciela galerii chroniony utwardzoną sesją – statysty
 </p>
 
 ### ⚙️ Panel Główny Administratora Systemu
+
 Szybki podgląd wszystkich ślubów, zarządzanie przestrzenią dyskową oraz błyskawiczne tworzenie nowych wesel:
 
 <p align="center">
@@ -102,7 +107,7 @@ Szybki podgląd wszystkich ślubów, zarządzanie przestrzenią dyskową oraz b�
 
 4. **Generator Karteczek na Stoły (Format A6 / 300 DPI)**:
    - Wektorowy generator dokumentu **PDF do druku** ze złotą ramką, imionami, datą, dynamicznym kodem QR i instrukcją.
-   - Wizualny edytor z wyborem motywu barwnego (*Złoto & Granat*, *Butelkowa Zieleń*, *Pudrowy Róż*, *Klasyczna Czerń* lub własne kolory HEX).
+   - Wizualny edytor z wyborem motywu barwnego (_Złoto & Granat_, _Butelkowa Zieleń_, _Pudrowy Róż_, _Klasyczna Czerń_ lub własne kolory HEX).
    - Generowanie PDF na żywo z aktualnymi parametrami z formularza.
    - Opcja bezpośredniego druku (Ctrl+P) zoptymalizowana pod format A6.
 
@@ -133,17 +138,20 @@ Docker pobierze obrazy, zbuduje aplikację i uruchomi 3 kontenery:
 - `wedding_caddy` – Reverse proxy z automatycznym HTTPS i blokadą noindex
 
 ### Architektura Monorepo (pnpm + Turborepo + Biome):
+
 - `apps/web`: Aplikacja Next.js 16, App Router, SSR, serwer HTTP (`server.ts`), komponenty Park UI oparte na maszynach stanów Ark UI i kompilowane w czasie budowy przez silnik Panda CSS (zero-runtime CSS-in-JS).
 - `packages/db`: Drizzle ORM, schemat PostgreSQL, migracje i connection pool singleton.
 - `packages/media`: Potok przetwarzania mediów (Sharp, FFmpeg, TUS, SSE, PDF A6, QR, ZIP, Google Drive).
 
 ### System Wzornictwa (Park UI & Panda CSS):
+
 Warstwa wizualna aplikacji opiera się na [Park UI](https://park-ui.com) oraz silniku **Panda CSS**:
 - **Zero-runtime CSS**: Style są w całości ekstrahowane statycznie w trakcie kompilacji (`panda codegen`), co eliminuje narzut obliczeniowy w runtime i chroni procesor Intel N100.
 - **Dostępność WAI-ARIA z pudełka**: Modale, szuflady (drawer), toasty i elementy formularzy oparte są na maszynach stanów Ark UI z wbudowaną obsługą pułapki fokusu (`useFocusTrap`) i zamykania klawiszem Escape.
-- **Spójna paleta ślubna**: Silnie typowane tokeny barw (`wedding.champagne`, `wedding.gold`, `wedding.rose`, `wedding.slate`, `wedding.emerald`) oraz luksusowa typografia serif (*Playfair Display*, *Cinzel*).
+- **Spójna paleta ślubna**: Silnie typowane tokeny barw (`wedding.champagne`, `wedding.gold`, `wedding.rose`, `wedding.slate`, `wedding.emerald`) oraz luksusowa typografia serif (_Playfair Display_, _Cinzel_).
 
 ### Adresy URL w przeglądarce:
+
 - **Strona główna**: [http://localhost](http://localhost)
 - **Panel Administratora**: [http://localhost/admin](http://localhost/admin)
   - Domyślny login: `admin`
@@ -156,6 +164,7 @@ Warstwa wizualna aplikacji opiera się na [Park UI](https://park-ui.com) oraz si
 Jeśli nie chcesz budować obrazu lokalnie (np. na NAS-ie ZimaOS/CasaOS), aplikacja `web` jest automatycznie budowana i publikowana przez GitHub Actions do GitHub Container Registry pod adresem `ghcr.io/p4cino/wedding-drop` (obraz `linux/amd64`, zgodny z Intel N100/ZimaBoard). Serwis `postgres` i `caddy` korzystają ze standardowych publicznych obrazów, więc do uruchomienia potrzebny jest tylko ten jeden gotowy obraz.
 
 ### Instalacja na ZimaOS:
+
 1. W panelu ZimaOS przejdź do **App Center** → **"Install a Customized App"** → **Import** → zakładka **Docker Compose**.
 2. Wklej zawartość pliku [`docker-compose.prod.yml`](docker-compose.prod.yml) z tego repozytorium.
 3. **Przed kliknięciem Submit** podmień w wklejonym tekście:
@@ -170,11 +179,13 @@ Ten plik compose nie buduje niczego lokalnie i nie odwołuje się do żadnych pl
 > **Coś nie działa po instalacji?** Zobacz sekcję rozwiązywania problemów w [DOCUMENTATION.md](DOCUMENTATION.md#11-publikacja-obrazu-docker-ghcr-i-instalacja-na-zimaoscasaos) — konkretne komendy do zdiagnozowania konfliktu portów, crashującego Caddy albo białej strony.
 
 ### Uruchomienie tego samego pliku przez SSH / CLI (dowolny host z Dockerem):
+
 ```bash
 docker compose -f docker-compose.prod.yml up -d
 ```
 
 ### Aktualizacje:
+
 - Tag `:latest` śledzi najnowszy commit na `main`.
 - Wersje oznaczone tagiem (np. `v1.0.0`) są stabilne i nie zmieniają się — podmień tag w `docker-compose.prod.yml` (`image: ghcr.io/p4cino/wedding-drop:vX.Y.Z`), jeśli wolisz przypiętą wersję.
 
@@ -183,16 +194,18 @@ docker compose -f docker-compose.prod.yml up -d
 ## ⚙️ Konfiguracja Domeny i Automatycznego Certyfikatu SSL (HTTPS)
 
 Aby aplikacja działała na Twojej publicznej domenie z darmowym certyfikatem Let's Encrypt:
-
 1. W pliku `.env` ustaw swoją domenę:
+
    ```env
    APP_DOMAIN=slub.twojadomena.pl
    ```
 2. Upewnij się, że porty 80 i 443 na Twoim routerze/serwerze są przekierowane na maszynę z Dockerem.
 3. Zrestartuj kontenery:
+
    ```bash
    docker compose up -d
    ```
+
    Caddy automatycznie wygeneruje i odnowi certyfikat HTTPS!
 
 ---
@@ -221,14 +234,16 @@ Aby aplikacja działała na Twojej publicznej domenie z darmowym certyfikatem Le
 - **Hasło gościa**: galeria chroniona hasłem nie ujawnia mediów, życzeń ani uploadu bez sesji gościa.
 - **Branding bez SVG**: logo i tło tylko JPEG/PNG/WebP, weryfikowane po zawartości pliku.
 - **Izolacja**: Pliki każdej pary są przechowywane w odrębnych podkatalogach `/data/galleries/<slug>/`.
-- **Utwardzony kontener Docker i nieuprzywilejowany użytkownik (`USER node`)**: Kontener aplikacji produkcyjnej działa na odświeżonym obrazie `node:24-alpine` z całkowitym usunięciem zbędnych globalnych narzędzi NPM/Yarn oraz prawami użytkownika nie-root (`USER node`, UID/GID 1000). Kontener startuje przez `docker-entrypoint.sh`, który przy każdym starcie naprawia właściciela `/app/data` (stare wolumeny założone przez root powodowały `EACCES` przy przenoszeniu uploadów) i dopiero wtedy zrzuca uprawnienia do `node` (`su-exec`).
+- **Utwardzony kontener Docker i izolacja jądra**: Kontener aplikacji produkcyjnej działa na odświeżonym obrazie `node:24-alpine` (wymóg `Node.js >= 24.22.1` z pełnym załataniem podatności RCE dekodera Brotli **CVE-2026-111497 "Node2Shell"**). Kontener ma włączone `security_opt: ["no-new-privileges:true"]`, zrzucone wszystkie zbędne uprawnienia jądra (`cap_drop: ["ALL"]`) oraz limit sterty V8 (`NODE_OPTIONS="--max-old-space-size=768"`) zapobiegający nagłemu OOM killerowi na serwerach Intel N100.
+- **Bezpieczny łańcuch dostaw (Supply Chain) i 0 podatności CVE**: Wszystkie zależności monorepo przechodzą rygorystyczny audyt (`0 vulnerabilities found` w `pnpm audit`), w tym zaktualizowany `Next.js 16.4.3` (eliminacja krytycznych podatności RCE w Image Optimization SVG i `use cache`) oraz przypięta wersja menedżera pakietów `pnpm@12.4.1` w Corepack.
 - **Zoptymalizowany rozmiar obrazu**: Dzięki rozdzieleniu zależności deweloperskich (`@serwist/*`), migracji Google SDK na `@googleapis/drive` oraz optymalizacji warstw, obraz produkcyjny został zredukowany o ponad 65% z 0 podatnościami krytycznymi.
 
 ---
 
 ## 🧪 Testy Automatyczne
- 
+
 ### 1. Testy Jednostkowe i Integracyjne (Vitest)
+
 ```bash
 # Uruchomienie 464 testów jednostkowych i integracyjnych w monorepo
 pnpm turbo run test
@@ -237,6 +252,7 @@ docker run --rm -v "${PWD}:/app" -w /app node:24-alpine sh -c "corepack enable &
 ```
 
 ### 2. Testy End-to-End (Playwright)
+
 Pakiet **38 unikalnych scenariuszy testowych (łącznie 114 testów)** uruchamianych w profilach Desktop Chromium, Mobile Chrome oraz Mobile Safari (WebKit):
 ```bash
 # Uruchomienie pełnego zestawu Playwright E2E
@@ -301,6 +317,7 @@ Od wersji z utwardzoną sesją właściciela wprowadzono następujące zasady:
 Projekt **WeddingDrop** jest wolnym i otwartym oprogramowaniem (Free & Open Source Software) publikowanym na warunkach licencji **GNU Affero General Public License v3.0 (AGPL-3.0)**.
 
 ### Co to oznacza w praktyce?
+
 - **Wolność użytkowania**: Możesz bezpłatnie uruchamiać i hostować aplikację na własne potrzeby prywatne oraz komercyjne (np. obsługa wesel Twoich klientów).
 - **Wolność modyfikacji**: Możesz w pełni dostosowywać kod do swoich wymagań i dodawać nowe funkcje.
 - **Copyleft (w duchu WordPressa)**: Jeśli zmodyfikujesz kod źródłowy WeddingDrop i udostępnisz go gościom lub klientom — w tym również **przez sieć jako usługę online (SaaS/Cloud)** — masz prawny obowiązek udostępnić pełny kod źródłowy wprowadzonych ulepszeń na tej samej licencji (AGPL-3.0).
@@ -310,4 +327,3 @@ Projekt **WeddingDrop** jest wolnym i otwartym oprogramowaniem (Free & Open Sour
 Pełny, oficjalny tekst licencji znajduje się w pliku [LICENSE](LICENSE).
 
 Copyright (C) 2026 WeddingDrop Contributors
-

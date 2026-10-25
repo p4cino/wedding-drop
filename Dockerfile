@@ -1,6 +1,7 @@
 # 1. Etap przycinania monorepo (Turborepo Pruner)
 FROM node:24-alpine AS pruner
-RUN apk add --no-cache libc6-compat
+RUN apk update && apk upgrade --no-cache && \
+    apk add --no-cache libc6-compat
 WORKDIR /app
 RUN npm install -g turbo
 COPY . .
@@ -8,10 +9,11 @@ RUN turbo prune @wedding-drop/web --docker
 
 # 2. Etap instalacji WSZYSTKICH zależności i budowy aplikacji
 FROM node:24-alpine AS builder
-RUN apk add --no-cache libc6-compat python3 make g++ ffmpeg
+RUN apk update && apk upgrade --no-cache && \
+    apk add --no-cache libc6-compat python3 make g++ ffmpeg
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@12.4.1 --activate
 
 # Kopiowanie wyodrębnionych definicji pakietów
 COPY --from=pruner /app/out/json/ .
@@ -36,7 +38,7 @@ RUN pnpm --filter @wedding-drop/web build
 # 3. Etap instalacji TYLKO zależności produkcyjnych
 FROM node:24-alpine AS prod-deps
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@12.4.1 --activate
 COPY --from=pruner /app/out/json/ .
 COPY pnpm-lock.yaml ./pnpm-lock.yaml
 COPY pnpm-workspace.yaml ./pnpm-workspace.yaml
