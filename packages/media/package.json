@@ -12,8 +12,8 @@
 	},
 	"dependencies": {
 		"@googleapis/drive": "^27.0.0",
-		"@tus/file-store": "^2.1.1",
-		"@tus/server": "^2.4.6",
+		"@tus/file-store": "^2.1.2",
+		"@tus/server": "^2.4.7",
 		"@wedding-drop/db": "workspace:*",
 		"archiver": "^8.0.0",
 		"drizzle-orm": "^0.45.4",
@@ -24,9 +24,9 @@
 	},
 	"devDependencies": {
 		"@types/archiver": "^8.0.0",
-		"@types/node": "^26.6.5",
+		"@types/node": "^26.6.6",
 		"@types/qrcode": "^1.5.6",
 		"typescript": "^7.0.2",
-		"vitest": "^5.0.5"
+		"vitest": "^5.1.0"
 	}
 }
