@@ -1,5 +1,5 @@
 # 1. Etap przycinania monorepo (Turborepo Pruner)
-FROM node:24-alpine AS pruner
+FROM node:26-alpine AS pruner
 RUN apk update && apk upgrade --no-cache && \
     apk add --no-cache libc6-compat
 WORKDIR /app
@@ -8,7 +8,7 @@ COPY . .
 RUN turbo prune @wedding-drop/web --docker
 
 # 2. Etap instalacji WSZYSTKICH zależności i budowy aplikacji
-FROM node:24-alpine AS builder
+FROM node:26-alpine AS builder
 RUN apk update && apk upgrade --no-cache && \
     apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
@@ -36,7 +36,7 @@ ENV SERWIST_SUPPRESS_TURBOPACK_WARNING=1
 RUN pnpm --filter @wedding-drop/web build
 
 # 3. Etap instalacji TYLKO zależności produkcyjnych i oczyszczenia artefaktów czasu budowy
-FROM node:24-alpine AS prod-deps
+FROM node:26-alpine AS prod-deps
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@12.4.1 --activate
 COPY --from=pruner /app/out/json/ .
@@ -60,7 +60,7 @@ RUN pnpm install --prod --frozen-lockfile --ignore-scripts && \
     find node_modules \( -name "*.map" -o -name "*.d.ts" -o -name "*.d.mts" -o -name "*.runtime.dev.js" \) -delete
 
 # 4. Etap produkcyjny (Minimalny Runner zoptymalizowany pod Intel N100, 0 CVE w Docker Scout)
-FROM node:24-alpine AS runner
+FROM node:26-alpine AS runner
 # Aktualizacja pakietów systemowych i biblioteki musl (>= 1.2.6-r6, CVE-2026-107891)
 # oraz usunięcie menedżerów pakietów npm/yarn/corepack zbędnych w runtime.
 RUN apk update && apk upgrade --no-cache && \

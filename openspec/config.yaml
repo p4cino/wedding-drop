@@ -13,7 +13,7 @@ context: |
   - apps/web: Next.js 16 App Router + custom server.ts (TUS + Next on one HTTP server)
   - packages/db: Drizzle ORM + PostgreSQL 16
   - packages/media: TUS, Sharp/FFmpeg pipeline, SSE bus, PDF cards, ZIP stream, GDrive
-  - Docker: Caddy (TLS) + Node 24 Alpine + Postgres; target hardware Intel N100
+  - Docker: Caddy (TLS) + Node 26 Alpine + Postgres; target hardware Intel N100
 
   Non-negotiable constraints (see AGENTS.md):
   - p-queue concurrency must stay 2 for media processing

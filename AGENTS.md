@@ -4,9 +4,10 @@ Welcome to the **WeddingDrop** repository. This document serves as the project's
 
 ---
 
-WeddingDrop is a self-hosted, multi-tenant web application designed to collect wedding photos and videos from guests via QR codes. It is structured as a **Turborepo monorepo** managed with **pnpm workspaces** and **Biome**, optimized for domestic low-power microservers (specifically **Intel N100** quad-core mini-PCs) running 100% inside **Docker** with **Caddy** (TLS reverse proxy), **Node.js 24 Alpine / Next.js 16** (App Router & HTTP server), and **PostgreSQL 16** with **Drizzle ORM**.
+WeddingDrop is a self-hosted, multi-tenant web application designed to collect wedding photos and videos from guests via QR codes. It is structured as a **Turborepo monorepo** managed with **pnpm workspaces** and **Biome**, optimized for domestic low-power microservers (specifically **Intel N100** quad-core mini-PCs) running 100% inside **Docker** with **Caddy** (TLS reverse proxy), **Node.js 26 Alpine / Next.js 16** (App Router & HTTP server), and **PostgreSQL 16** with **Drizzle ORM**.
 
 ### Monorepo Packages:
+
 - `apps/web` (`@wedding-drop/web`): Next.js 16 frontend, App Router, server actions, API routes, and unified HTTP server (`server.ts`).
 - `packages/db` (`@wedding-drop/db`): Drizzle ORM schema, migrations, connection pool singleton, and admin bootstrap.
 - `packages/media` (`@wedding-drop/media`): Media processing pipeline, TUS 1.0.0 server, Sharp & FFmpeg thumbnailing, SSE event bus, PDF A6 table cards, QR codes, streamed ZIPs, and Google Drive exporter.
@@ -18,7 +19,7 @@ WeddingDrop is a self-hosted, multi-tenant web application designed to collect w
 - **Package Manager**: **PNPM only** (`pnpm-workspace.yaml`). Never use `npm` or `yarn`.
 - **Linting & Formatting**: **Biome** (`biome.json`). Prettier and ESLint are decommissioned. Use `pnpm biome check apps/ packages/` with tab indentation and double quotes.
 - **Orchestration**: **Turborepo** (`turbo.json`). Tasks `build`, `test`, `lint`, `check-types`, `dev` are managed through Turbo.
-- **Docker Architecture**: Multi-stage build on `node:24-alpine` utilizing `turbo prune @wedding-drop/web --docker` for minimal production image footprint.
+- **Docker Architecture**: Multi-stage build on `node:26-alpine` utilizing `turbo prune @wedding-drop/web --docker` for minimal production image footprint.
 - **OpenSpec**: Spec-driven change workflow under `openspec/` (see `openspec/config.yaml`). CLI: `pnpm openspec <command>`. Antigravity & Cursor: `/opsx-*`; Claude Code & Gemini CLI: `/opsx:*`. Artifacts in Polish; this constitution (`AGENTS.md`) still binds all implementations.
 
 ---
@@ -28,6 +29,7 @@ WeddingDrop is a self-hosted, multi-tenant web application designed to collect w
 Any code changes must strictly adhere to the following hardware and architectural invariants:
 
 ### 2.1. Intel N100 Hardware Protection (Anti-DoS)
+
 - **Concurrency Throttling (`concurrency: 2`)**:
   - The Intel N100 has only 4 Gracemont CPU cores.
   - All image thumbnailing (`Sharp`) and video frame extractions (`FFmpeg`) MUST pass through the centralized `p-queue` with `concurrency: 2`.
@@ -39,6 +41,7 @@ Any code changes must strictly adhere to the following hardware and architectura
   - **NEVER** buffer entire gallery archives in memory (RAM) or disk before sending.
 
 ### 2.2. Cross-Platform Path Normalization
+
 - Always use POSIX path separators (`/` or `path.posix.join`) for storing paths in the database and emitting URLs to clients, even when developing on Windows.
 
 ---

@@ -1,7 +1,8 @@
 ---
+
 name: wedding-qa
 description: >-
-  Use this skill when the user asks to run, debug, analyze, or write unit tests (Vitest) or End-to-End tests (Playwright) for the WeddingDrop application, verify test coverage, or check for regressions across Desktop Chromium, Mobile Chrome, and Mobile Safari.
+Use this skill when the user asks to run, debug, analyze, or write unit tests (Vitest) or End-to-End tests (Playwright) for the WeddingDrop application, verify test coverage, or check for regressions across Desktop Chromium, Mobile Chrome, and Mobile Safari.
 ---
 
 # WeddingDrop QA: Testy Jednostkowe, Integracyjne i E2E
@@ -32,6 +33,7 @@ Szczegółowy wykaz wszystkich 32 scenariuszy znajduje się w podręczniku [test
 ## 2. Uruchamianie Testów Jednostkowych (Vitest)
 
 ### Opcja A: Szybki runner w środowisku deweloperskim (Node.js / Turborepo)
+
 ```bash
 # Uruchomienie wszystkich 80 testów Vitest w całym monorepo
 pnpm turbo run test
@@ -50,9 +52,10 @@ pnpm --filter @wedding-drop/web test:coverage
 ```
 
 ### Opcja B: Uruchomienie w odizolowanym kontenerze Docker
-Gwarantuje identyczne środowisko jak na serwerze CI/CD (Node 24 Alpine):
+
+Gwarantuje identyczne środowisko jak na serwerze CI/CD (Node 26 Alpine):
 ```bash
-docker run --rm -v "${PWD}:/app" -w /app node:24-alpine sh -c "corepack enable && pnpm -r test"
+docker run --rm -v "${PWD}:/app" -w /app node:26-alpine sh -c "corepack enable && pnpm -r test"
 ```
 
 ---
@@ -62,6 +65,7 @@ docker run --rm -v "${PWD}:/app" -w /app node:24-alpine sh -c "corepack enable &
 Testy E2E weryfikują działanie aplikacji w rzeczywistych przeglądarkach w komunikacji z backendem i bazą danych.
 
 ### Opcja A: W kontenerze Docker (Zalecane na serwerze i maszynach deweloperskich)
+
 Uruchamia testy z oficjalnym obrazem Playwright w sieci kontenerów:
 ```bash
 docker run --rm \
@@ -73,6 +77,7 @@ docker run --rm \
 ```
 
 ### Opcja B: Lokalnie na maszynie deweloperskiej
+
 Gdy aplikacja działa lokalnie na `http://localhost:3000`:
 ```bash
 # Uruchomienie pełnego zestawu Playwright

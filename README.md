@@ -1,7 +1,7 @@
 # WeddingDrop 💍 - Self-Hosted Fotowrzutka Ślubna
 
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg?style=flat-square)](LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D24%20Alpine-339933?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D26%20Alpine-339933?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white)](docker-compose.yml)
 [![Turborepo](https://img.shields.io/badge/Turborepo-Monorepo-EF4444?style=flat-square&logo=turborepo&logoColor=white)](turbo.json)
@@ -134,7 +134,7 @@ docker compose up -d --build
 
 Docker pobierze obrazy, zbuduje aplikację i uruchomi 3 kontenery:
 - `wedding_postgres` – Baza danych PostgreSQL 16 Alpine ze zoptymalizowanymi indeksami złożonymi
-- `wedding_web` – Monorepo Turborepo (Node.js 24 Alpine + Next.js 16 + serwer TUS + Sharp/FFmpeg z limitem współbieżności i watchdogiem)
+- `wedding_web` – Monorepo Turborepo (Node.js 26 Alpine + Next.js 16 + serwer TUS + Sharp/FFmpeg z limitem współbieżności i watchdogiem)
 - `wedding_caddy` – Reverse proxy z automatycznym HTTPS i blokadą noindex
 
 ### Architektura Monorepo (pnpm + Turborepo + Biome):
@@ -234,8 +234,8 @@ Aby aplikacja działała na Twojej publicznej domenie z darmowym certyfikatem Le
 - **Hasło gościa**: galeria chroniona hasłem nie ujawnia mediów, życzeń ani uploadu bez sesji gościa.
 - **Branding bez SVG**: logo i tło tylko JPEG/PNG/WebP, weryfikowane po zawartości pliku.
 - **Izolacja**: Pliki każdej pary są przechowywane w odrębnych podkatalogach `/data/galleries/<slug>/`.
-- **Utwardzony kontener Docker i izolacja jądra**: Kontener aplikacji produkcyjnej działa na odświeżonym obrazie `node:24-alpine` (wymóg `Node.js >= 24.22.1` z pełnym załataniem podatności RCE dekodera Brotli **CVE-2026-111497 "Node2Shell"**). Kontener ma włączone `security_opt: ["no-new-privileges:true"]`, zrzucone wszystkie zbędne uprawnienia jądra (`cap_drop: ["ALL"]`) oraz limit sterty V8 (`NODE_OPTIONS="--max-old-space-size=768"`) zapobiegający nagłemu OOM killerowi na serwerach Intel N100.
-- **Bezpieczny łańcuch dostaw (Supply Chain) i 0 podatności CVE**: Wszystkie zależności monorepo przechodzą rygorystyczny audyt (`0 vulnerabilities found` w `pnpm audit`), w tym zaktualizowany `Next.js 16.4.3` (eliminacja krytycznych podatności RCE w Image Optimization SVG i `use cache`) oraz przypięta wersja menedżera pakietów `pnpm@12.4.1` w Corepack.
+- **Utwardzony kontener Docker i izolacja jądra**: Kontener aplikacji produkcyjnej działa na obrazie `node:26-alpine` (wymóg `Node.js >= 26.13.1` Active LTS z pełnym załataniem zarówno październikowych biuletynów bezpieczeństwa **CVE-2026-111497 "Node2Shell"** Brotli RCE, `CVE-2026-105482`, `CVE-2026-105483`, jak i listopadowych `CVE-2026-123863` HTTP/2 DoS, `CVE-2026-123864` HTTPS heap disclosure oraz `CVE-2026-126051` TLS handshake DoS), a kontenery infrastruktury wykorzystują utwardzone obrazy `postgres:16-alpine` (`>= 16.16`, łatający `CVE-2026-6460`) oraz `caddy:2-alpine` (`>= 2.11.5`, łatający `CVE-2026-55458` i `CVE-2026-77281`). Kontener aplikacji ma włączone `security_opt: ["no-new-privileges:true"]`, zrzucone wszystkie zbędne uprawnienia jądra (`cap_drop: ["ALL"]`) oraz limit sterty V8 (`NODE_OPTIONS="--max-old-space-size=768"`) zapobiegający nagłemu OOM killerowi na serwerach Intel N100.
+- **Bezpieczny łańcuch dostaw (Supply Chain) i 0 podatności CVE**: Wszystkie zależności monorepo przechodzą rygorystyczny audyt (`0 vulnerabilities found` w `pnpm audit`), w tym zaktualizowany `Next.js >= 16.4.5` (eliminacja podatności `GHSA-pc58-hwjq-p385` self-hosted response disclosure, `GHSA-7qx7-33qx-rqx2` SVG image optimization bypass oraz ujawnień w Cache Components / `use cache`), wymuszone nadpisania zależności przechodnich (`pnpm.overrides` dla `qs >= 6.16.1`, `glob >= 14.0.2`, `minimatch >= 11.0.1`) oraz przypięta wersja menedżera pakietów `pnpm@12.4.1` w Corepack.
 - **Zoptymalizowany rozmiar obrazu (155 MB) i 0 CVE w Docker Scout**: Dzięki statycznej binarce FFmpeg 9.0 z `mwader/static-ffmpeg` (zamiast dynamicznego `apk add ffmpeg`), aktualizacji `musl >= 1.2.6-r6` oraz oczyszczeniu etapu `prod-deps` z kompilatorów czasu budowy (`@next/swc-*`, `@swc/core-*`, `playwright*`, `lucide-react`, map źródłowych `.map` i plików `.d.ts`), obraz produkcyjny osiąga wynik **`0C 0H 0M 0L` (0 podatności)** w `docker scout cves` oraz redukcję warstwy `node_modules` o ponad 70% (z 569 MB do 161 MB).
 
 ---
@@ -247,8 +247,8 @@ Aby aplikacja działała na Twojej publicznej domenie z darmowym certyfikatem Le
 ```bash
 # Uruchomienie 464 testów jednostkowych i integracyjnych w monorepo
 pnpm turbo run test
-# lub w kontenerze Docker (Node 24 Alpine)
-docker run --rm -v "${PWD}:/app" -w /app node:24-alpine sh -c "corepack enable && pnpm -r test"
+# lub w kontenerze Docker (Node 26 Alpine)
+docker run --rm -v "${PWD}:/app" -w /app node:26-alpine sh -c "corepack enable && pnpm -r test"
 ```
 
 ### 2. Testy End-to-End (Playwright)
