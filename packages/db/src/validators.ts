@@ -153,8 +153,54 @@ export const tusUploadMetadataDto = z.object({
 	fileType: z.string().trim().optional().default("image/jpeg"),
 	source: z.enum(["guest", "photographer"]).optional().default("guest"),
 	ownerToken: z.string().trim().optional(),
+	caption: z
+		.string()
+		.trim()
+		.max(140, "Podpis zdjęcia nie może przekraczać 140 znaków")
+		.optional(),
+	questId: z
+		.string()
+		.trim()
+		.regex(/^[a-z0-9_-]{1,40}$/, "Niepoprawny identyfikator wyzwania")
+		.optional()
+		.or(z.literal("")),
 });
 export type TusUploadMetadataInput = z.infer<typeof tusUploadMetadataDto>;
+
+/**
+ * Walidacja pojedynczego foto-wyzwania weselnego
+ */
+export const questItemDto = z.object({
+	id: z
+		.string()
+		.trim()
+		.regex(/^[a-z0-9_-]{1,40}$/, "Niepoprawny identyfikator wyzwania"),
+	title: z
+		.string()
+		.trim()
+		.min(2, "Tytuł wyzwania musi mieć co najmniej 2 znaki")
+		.max(80, "Tytuł wyzwania nie może przekraczać 80 znaków"),
+});
+export type QuestItemInput = z.infer<typeof questItemDto>;
+
+/**
+ * Walidacja konfiguracji foto-wyzwań galerii
+ */
+export const questsConfigDto = z.object({
+	enabled: z.boolean(),
+	items: z
+		.array(questItemDto)
+		.max(20, "Maksymalna liczba wyzwań w galerii to 20"),
+});
+export type QuestsConfigInput = z.infer<typeof questsConfigDto>;
+
+/**
+ * Walidacja dodawania/cofania reakcji (serduszka) pod materiałem
+ */
+export const toggleMediaLikeDto = z.object({
+	action: z.enum(["like", "unlike"]),
+});
+export type ToggleMediaLikeInput = z.infer<typeof toggleMediaLikeDto>;
 
 /**
  * Walidacja dodania życzenia do księgi gości (bez pliku, tylko tekst)

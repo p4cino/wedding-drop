@@ -209,9 +209,15 @@ export function initTusServer(dataDir: string, options: TusServerOptions = {}) {
 			const metadata = upload.metadata || {};
 			const parseResult = tusUploadMetadataDto.safeParse(metadata);
 			if (!parseResult.success) {
+				const issue = parseResult.error.issues[0];
+				const message =
+					issue?.path[0] === "gallerySlug" && issue.code === "invalid_type"
+						? "Brak wymaganego parametru gallerySlug w metadanych."
+						: issue?.message ||
+							"Brak wymaganego parametru gallerySlug w metadanych.";
 				throw {
 					status_code: 400,
-					body: "Błąd: Brak wymaganego parametru gallerySlug w metadanych.",
+					body: `Błąd: ${message}`,
 				};
 			}
 
@@ -355,6 +361,8 @@ export function initTusServer(dataDir: string, options: TusServerOptions = {}) {
 			originalName,
 			fileType: mimeType,
 			source,
+			caption,
+			questId,
 		} = parseResult.data;
 		const { fileType, mediaType } = classifyMedia(mimeType, originalName);
 
@@ -378,6 +386,8 @@ export function initTusServer(dataDir: string, options: TusServerOptions = {}) {
 			fileSize: upload.size || 0,
 			dataDir,
 			source,
+			caption,
+			questId,
 		});
 	});
 

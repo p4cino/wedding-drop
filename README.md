@@ -7,8 +7,8 @@
 [![Turborepo](https://img.shields.io/badge/Turborepo-Monorepo-EF4444?style=flat-square&logo=turborepo&logoColor=white)](turbo.json)
 [![pnpm](https://img.shields.io/badge/pnpm-12.4.1-F69220?style=flat-square&logo=pnpm&logoColor=white)](pnpm-lock.yaml)
 [![Biome](https://img.shields.io/badge/Biome-v2.5.13-60A5FA?style=flat-square&logo=biome&logoColor=white)](biome.json)
-[![Vitest](https://img.shields.io/badge/Vitest-464%20passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](package.json)
-[![Playwright](https://img.shields.io/badge/Playwright-114%20E2E%20passing-2EAD33?style=flat-square&logo=playwright&logoColor=white)](package.json)
+[![Vitest](https://img.shields.io/badge/Vitest-731%20passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](package.json)
+[![Playwright](https://img.shields.io/badge/Playwright-126%20E2E%20passing-2EAD33?style=flat-square&logo=playwright&logoColor=white)](package.json)
 [![UI](https://img.shields.io/badge/UI-Park%20UI%20%2B%20Panda%20CSS-F59E0B?style=flat-square&logo=react&logoColor=white)](https://park-ui.com)
 [![Hardware](https://img.shields.io/badge/Hardware-Intel%20N100%20Optimized-0071C5?style=flat-square&logo=intel&logoColor=white)](#-optymalizacje-pod-procesor-intel-n100)
 
@@ -20,22 +20,26 @@ Kompletna, samoobsługowa aplikacja internetowa do zbierania zdjęć i filmów z
 
 ### 📱 Doświadczenie Gościa Weselnego (100% Mobile First & PWA)
 
-Bez instalacji aplikacji ze sklepów i bez rejestracji – gość skanuje kod QR ze stolika, natychmiast przegląda zdjęcia na żywo, rywalizuje w rankingu TOP 3, wysyła ciepłe słowa w Księdze Życzeń oraz robi zdjęcia w wirtualnym Photobooth:
+Bez instalacji aplikacji ze sklepów i bez rejestracji – gość skanuje kod QR ze stolika, natychmiast przegląda zdjęcia na żywo, rozdaje serduszka ❤️ i sortuje galerię według *Najpopularniejszych*, bierze udział w **Foto-Wyzwaniach („Upoluj kadr”)**, opatruje ujęcia krótkimi podpisami kontekstowymi (`caption`), rywalizuje w rankingu TOP 3 oraz wysyła ciepłe słowa w Księdze Życzeń:
 
 <p align="center">
-  <img src="docs/screenshots/01-guest-gallery-mobile.png" width="270" alt="Galeria gościa weselnego z rankingiem TOP 3 i odznaką fotografa" />
+  <img src="docs/screenshots/01-guest-gallery-mobile.png" width="270" alt="Galeria gościa weselnego z Foto-Wyzwaniami, serduszkami na żywo, sortowaniem Najpopularniejsze i rankingiem TOP 3" />
   &nbsp;&nbsp;
-  <img src="docs/screenshots/02-upload-drawer-mobile.png" width="270" alt="Drawer wznawialnego uploadu TUS z opcją aparatu Photobooth" />
+  <img src="docs/screenshots/02-upload-drawer-mobile.png" width="270" alt="Drawer wznawialnego uploadu TUS z podpisem kontekstowym zdjęcia i wyborem Foto-Wyzwania" />
   &nbsp;&nbsp;
   <img src="docs/screenshots/03-guest-wishes-mobile.png" width="270" alt="Księga Życzeń gości na żywo z dedykowanymi wpisami" />
 </p>
 
-### 📺 Tryb TV na Sali Weselnej (Pokaz Slajdów na Żywo)
+### 📺 Tryb TV 2.0 na Sali Weselnej (Pokaz Slajdów na Żywo + Karty z Księgi Życzeń)
 
-Dedykowany, publiczny tryb tylko-do-odczytu na telewizor lub rzutnik w sali weselnej – automatyczna rotacja nowych materiałów w pełnej rozdzielczości z dynamicznym kodem QR w rogu dla dołączających gości:
+Dedykowany, publiczny tryb tylko-do-odczytu na telewizor lub rzutnik w sali weselnej – automatyczna rotacja zdjęć z podpisami kontekstowymi (`caption`), odznakami zrealizowanych Foto-Wyzwań (`🎯`) i aktualizowanym na żywo licznikiem serduszek ❤️, przeplatana pełnoekranowymi kartami z wpisami z Księgi Życzeń oraz stałym kodem QR w rogu ekranu:
 
 <p align="center">
-  <img src="docs/screenshots/04-tv-slideshow.png" width="850" alt="Tryb TV z pokazem slajdów na żywo i kodem QR" />
+  <img src="docs/screenshots/04-tv-slideshow.png" width="850" alt="Tryb TV 2.0 z pokazem slajdów na żywo, podpisem zdjęcia, odznaką Foto-Wyzwania, licznikiem serduszek i kodem QR" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/08-tv-wish-card.png" width="850" alt="Tryb TV 2.0 — pełnoekranowa karta z Księgi Życzeń przeplatająca rotację zdjęć" />
 </p>
 
 ### 💌 Generator Winietek na Stoliki Weselne (Format A6 / 300 DPI)
@@ -46,12 +50,12 @@ Wbudowany wektorowy generator wizytówek na stoły z dynamicznym kodem QR, wybor
   <img src="docs/screenshots/05-table-card-creator.png" width="850" alt="Generator winietek na stoliki weselne A6" />
 </p>
 
-### 💍 Panel Pary Młodej (Moderacja Treści, Import Fotografa, Księga Życzeń i Google Drive)
+### 💍 Panel Pary Młodej (Moderacja Treści, Foto-Wyzwania, Import Fotografa, Księga Życzeń i Google Drive)
 
-Dedykowany panel właściciela galerii chroniony utwardzoną sesją – statystyki w czasie rzeczywistym, moderacja widoczności zdjęć i życzeń jednym kliknięciem, masowy import materiałów fotografa z odznaką, pobieranie strumieniowego archiwum ZIP oraz automatyczny backup do chmury Google Drive:
+Dedykowany panel właściciela galerii chroniony utwardzoną sesją – statystyki w czasie rzeczywistym, konfiguracja **Foto-Wyzwań (Weselne Bingo)** z gotowymi szablonami, moderacja widoczności zdjęć i życzeń jednym kliknięciem, masowy import materiałów fotografa z odznaką, pobieranie strumieniowego archiwum ZIP oraz automatyczny backup do chmury Google Drive:
 
 <p align="center">
-  <img src="docs/screenshots/06-owner-dashboard.png" width="850" alt="Panel Pary Młodej z moderacją na żywo, importem fotografa i Google Drive" />
+  <img src="docs/screenshots/06-owner-dashboard.png" width="850" alt="Panel Pary Młodej z konfiguracją Foto-Wyzwań, moderacją na żywo, importem fotografa i Google Drive" />
 </p>
 
 ### ⚙️ Panel Główny Administratora Systemu
@@ -72,19 +76,22 @@ Szybki podgląd wszystkich ślubów, zarządzanie przestrzenią dyskową oraz b�
    - **Progressive Web App (PWA)**: Możliwość instalacji na ekranie głównym (dodaj do ekranu głównego) oraz strona awaryjna (Offline Fallback) informująca o braku sieci.
    - Wrzucanie zdjęć i filmów prosto z rolki aparatu.
    - **Natywny aparat**: opcja "Zrób zdjęcie" w drawerze uploadu płynnie integruje się z systemową aplikacją aparatu smartfona (`capture="environment"`). Dzięki wywołaniu natywnego interfejsu systemu iOS/Android, goście zachowują najwyższą jakość obrazu wspieraną sprzętowo (Deep Fusion, Smart HDR, pełna rozdzielczość matrycy, stabilizacja optyczna, tryb nocny), której często brakuje w zwykłym podglądzie z przeglądarki (`getUserMedia`). Wykonane zdjęcie od razu trafia do dokładnie tego samego, wznawialnego potoku TUS co pliki wybrane ręcznie.
-   - Opcjonalny podpis ("np. Wujek Janusz i Ciocia Halinka").
+   - Opcjonalny podpis autora ("np. Wujek Janusz i Ciocia Halinka") oraz **krótki podpis kontekstowy pod zdjęciem (`caption`, do 140 znaków)** przekazywany bezpośrednio w metadanych protokołu TUS i prezentowany w Lightboxie oraz Trybie TV.
    - **Wznawialny upload (TUS Protocol 1.0.0)**: Jeśli na sali weselnej na chwilę zerwie się zasięg Wi-Fi lub LTE, upload wznowi się automatycznie bez utraty przesłanych danych.
    - **Galeria na żywo (SSE)**: Nowe zdjęcia pojawiają się w telefonach gości w czasie rzeczywistym bez przeładowywania widoku.
-   - **Pełnoekranowa przeglądarka (Lightbox)**: Natywna obsługa gestów dotykowych **Swipe** (przesuwanie palcem lewo/prawo na smartfonach) oraz klawiatury na desktopie.
-   - **Odporność na napływ zdjęć**: Przeglądanie zdjęcia w powiększeniu nie ulega zresetowaniu, gdy w tle pojawiają się nowe zdjęcia od innych gości.
+   - **Reakcje na żywo (Serduszka ❤️) i sortowanie „Najpopularniejsze”**: Goście mogą anonimowo polubić (lub cofnąć polubienie) dowolne widoczne zdjęcie/wideo (`status: "ready"`) prosto z siatki galerii lub z pełnoekranowego Lightboxa bez logowania (stan pamiętany lokalnie w `localStorage` pod kluczem `wd_likes_<slug>` + atomowy licznik `likesCount` w PostgreSQL aktualizowany przez `POST /api/gallery/[slug]/media/[id]/like`). Zdarzenie SSE `media-liked` natychmiast synchronizuje licznik serduszek na wszystkich telefonach oraz na ekranie Trybu TV, a przełącznik nad siatką pozwala sortować galerię według *Najnowszych* lub *Najpopularniejszych ❤️*.
+   - **Foto-Wyzwania / Weselne Bingo („Upoluj kadr”)**: Gdy Para Młoda włączy wyzwania, nad galerią gościa pojawia się interaktywny pasek zadań z licznikami wykonanych ujęć, możliwością filtrowania siatki po wybranym wyzwaniu oraz szybkim otwarciem szuflady uploadu z przypisanym zadaniem (`questId` w metadanych TUS). Zdjęcia z wyzwania otrzymują odznakę `🎯 <Tytuł wyzwania>` w siatce, Lightboxie i Trybie TV.
+   - **Pełnoekranowa przeglądarka (Lightbox)**: Natywna obsługa gestów dotykowych **Swipe** (przesuwanie palcem lewo/prawo na smartfonach) oraz klawiatury na desktopie, z podglądem podpisu `caption`, odznaki foto-wyzwania i interaktywnym przyciskiem serduszka ❤️.
+   - **Odporność na napływ zdjęć**: Przeglądanie zdjęcia w powiększeniu nie ulega zresetowaniu, gdy w tle pojawiają się nowe zdjęcia lub polubienia (`media-liked`) od innych gości.
    - **Życzenia audio/wideo**: gość może nagrać krótką wiadomość (do 60 s) prosto w szufladzie uploadu — z podglądem kamery oraz odsłuchem przed wysłaniem (podgląd/odrzucenie/ponowne nagranie). Na urządzeniach bez `MediaRecorder` (np. starsze iOS) działa fallback do natywnego dyktafonu/kamery. Nagranie przechodzi tym samym wznawialnym protokołem TUS i tą samą kolejką (`p-queue` concurrency: 2) co zdjęcia, a w galerii jest oznaczone ikoną i odtwarzane w Lightboxie. W pobranym ZIP-ie trafia do katalogów `audio/` i `video/`. Interfejs nagrywania jest w pełni przetłumaczony (PL/EN/DE).
-   - **Księga Życzeń**: Oddzielna zakładka "Życzenia" obok galerii zdjęć — gość może zostawić tekstowe życzenia dla Pary Młodej (opcjonalne imię/nazwisko + treść) bez logowania i bez konieczności wgrywania żadnego pliku. Nowe wpisy pojawiają się na żywo (SSE) u wszystkich gości przeglądających galerię w tym samym czasie.
+   - **Księga Życzeń**: Oddzielna zakładka "Życzenia" obok galerii zdjęć — gość może zostawić tekstowe życzenia dla Pary Młodej (opcjonalne imię/nazwisko + treść) bez logowania i bez konieczności wgrywania żadnego pliku. Nowe wpisy pojawiają się na żywo (SSE) u wszystkich gości przeglądających galerię w tym samym czasie oraz na dużym ekranie w Trybie TV.
    - **Ranking najaktywniejszych gości (TOP 3)**: Niewielki widget nad galerią pokazuje trzech gości z największą liczbą wgranych zdjęć/filmów wraz z odznakami miejsc (🥇🥈🥉) — prosty "społeczny dowód słuszności", który zachęca do dalszego dodawania zdjęć. Ranking liczy się w całości po stronie przeglądarki (bez dodatkowego zapytania do serwera) na podstawie listy zdjęć, którą galeria już wczytała, więc aktualizuje się na żywo razem z resztą galerii (SSE). Uwzględnia wyłącznie widoczne materiały (ukryte/skasowane nigdy nie liczą się na korzyść gościa), a drobne różnice w zapisie podpisu (wielkość liter, spacje) grupują się w jedną pozycję. Widget jest niewidoczny, dopóki nikt jeszcze nic nie wgrał.
 
 2. **Dla Pary Młodej (Właściciela Galerii)**:
    - Panel zarządzania dostępny pod `/owner/[slug]`.
    - **Utwardzona sesja właściciela**: Bezpieczne ciasteczko sesji `HttpOnly; SameSite=Strict; Path=/api` (brak haseł i tokenów w `sessionStorage` oraz w URL-ach). Automatyczne wznawianie sesji po odświeżeniu i przycisk wylogowania.
    - **Personalizacja galerii (Branding)**: Własne logo (zastępujące tekst na górze ekranu) oraz niestandardowe tło (widoczne za zdjęciami pod przyciemniającą nakładką), konfiguracja wprost z panelu administracyjnego.
+   - **Konfiguracja Foto-Wyzwań (Weselne Bingo)**: Możliwość włączenia grywalizacji dla gości i zdefiniowania do 20 zadań fotograficznych (jednym kliknięciem z wbudowanych szablonów PL/EN/DE, np. *„Selfie z Parą Młodą”*, *„Toast przy naszym stoliku”*, lub poprzez wpisanie własnych tytułów 2–80 znaków), zapisywanych w `galleries.quests_config` (`PATCH /api/owner/[slug]/settings`).
    - Podgląd liczby zdjęć, filmów oraz sumarycznego zajętego miejsca na dysku.
    - **Import materiałów fotografa/kamerzysty**: masowy, wznawialny import profesjonalnych zdjęć i filmów (ten sam protokół TUS co upload gości) do tej samej galerii i chronologii — dostępny wyłącznie po zalogowaniu właściciela. Zaimportowane pliki są oznaczone w siatce galerii odróżniającą odznaką "Fotograf" i przechodzą przez dokładnie tę samą, ograniczoną kolejkę przetwarzania (`p-queue` concurrency: 2) co uploady gości — bez priorytetu ani osobnego limitu. Jeśli administrator ustawił limit pojemności galerii (`maxStorageBytes`), import fotografa go respektuje i odrzuci pojedyncze pliki przekraczające limit (nie wpływając na pozostałe pliki tej samej paczki importu).
    - **Pobieranie całej galerii jako jeden plik ZIP**: Generowanie strumieniowe w locie (`archiver`) bez obciążania pamięci RAM serwera (z uwzględnieniem zdjęć ukrytych dla uwierzytelnionej Pary Młodej). Jeśli galeria zawiera życzenia, ZIP zawiera dodatkowo plik tekstowy `zyczenia.txt` z treścią i autorami wszystkich widocznych wpisów.
@@ -97,10 +104,12 @@ Szybki podgląd wszystkich ślubów, zarządzanie przestrzenią dyskową oraz b�
    - **Moderacja Księgi Życzeń**: Ten sam mechanizm ukrywania/trwałego usuwania dostępny również dla wpisów w księdze życzeń (SSE `wish-updated`), z filtrowaniem po statusie (wszystkie/widoczne/ukryte).
    - Bezpośredni dostęp do generatora winietki na stolik oraz do trybu TV.
 
-3. **Tryb TV / Pokaz Slajdów na Sali (`/g/[slug]/tv`)**:
+3. **Tryb TV 2.0 / Pokaz Slajdów na Sali (`/g/[slug]/tv`)**:
    - Publiczna, tylko-do-odczytu, pełnoekranowa trasa myślana pod telewizor lub rzutnik w sali weselnej — bez logowania, bez FAB-a uploadu i bez klikalnego lightboxa.
-   - Reużywa dokładnie te same, niezmodyfikowane publiczne endpointy co galeria gościa (`/api/gallery/[slug]/media` i `/api/gallery/[slug]/live`), więc dziedziczy ich filtrowanie `status: "ready"` — zdjęcia `hidden`/`deleted` nigdy się tam nie pojawiają, nawet jeśli ktoś doda do adresu URL parametry sugerujące dostęp właściciela.
-   - Automatyczna rotacja materiałów w pełnej rozdzielczości; nowo wgrane zdjęcie/wideo wskakuje na wierzch rotacji zaraz po zdarzeniu SSE `new-media`, a ukryte przez Parę Młodą — natychmiast znika (`media-updated`).
+   - Reużywa dokładnie te same, niezmodyfikowane publiczne endpointy co galeria gościa (`/api/gallery/[slug]/media`, `/api/gallery/[slug]/wishes` z `withWishes: true` oraz `/api/gallery/[slug]/live`), więc dziedziczy ich filtrowanie `status: "ready"` — zdjęcia i życzenia `hidden`/`pending`/`deleted` nigdy się tam nie pojawiają, nawet jeśli ktoś doda do adresu URL parametry sugerujące dostęp właściciela.
+   - **Przeplatanie zdjęć i Księgi Życzeń (`buildTvSlides`)**: Automatyczna rotacja materiałów w pełnej rozdzielczości cyklicznie przeplatana pełnoekranowymi, typograficznymi kartami z wpisami z Księgi Życzeń (1 karta życzenia co 4 zdjęcia, lub same karty życzeń, gdy w galerii nie ma jeszcze zdjęć).
+   - **Reakcja na żywo (SSE)**: Nowo wgrane zdjęcie/wideo (`new-media`) lub nowo dodane życzenie (`new-wish`) natychmiast wskakuje na ekran projektora, a elementy ukryte lub usunięte przez Parę Młodą (`media-updated`, `wish-updated`) natychmiast znikają z rotacji.
+   - **Metadane zaangażowania na ekranie**: Slajdy ze zdjęciami prezentują autora (`uploaderName`), krótki podpis kontekstowy (`caption`), odznakę zrealizowanego foto-wyzwania (`🎯`) oraz aktualizowany na żywo licznik serduszek (`likesCount` ❤️ po zdarzeniu SSE `media-liked`).
    - Materiały wideo pokazywane jako statyczna miniatura (bez autoodtwarzania dźwięku).
    - Stały kod QR w rogu ekranu (generowany po stronie klienta biblioteką `qrcode`), by goście patrzący na telewizor mogli dołączyć.
    - Link "Otwórz tryb TV" dostępny bezpośrednio w panelu Pary Młodej (`/owner/[slug]`).
@@ -229,7 +238,7 @@ Aby aplikacja działała na Twojej publicznej domenie z darmowym certyfikatem Le
 - **Globalny singleton SSE i prywatność kolejki akceptacji**: Magistrala zdarzeń zarejestrowana w `globalThis.__wedding_sse_bus__` emituje zdarzenia `new-media` do nieautoryzowanych gości wyłącznie dla plików ze statusem `ready` (pliki `pending` w kolejce akceptacji są rozsyłane dopiero po zatwierdzeniu przez właściciela).
 - **Autoryzacja zdjęć ukrytych**: Dostęp do materiałów ukrytych (`status: "hidden"`) przez API wymaga poświadczeń właściciela galerii lub administratora (brak wycieków w publicznym JSON).
 - **Haszowanie haseł**: Hasła administratora, par młodych, hasła gości oraz PIN-y ZIP są zabezpieczone funkcją `bcrypt` z solą (stare wartości plaintext są automatycznie zamieniane na hash przy pierwszym poprawnym logowaniu).
-- **Odizolowany Rate limiting i jednorazowy OAuth `state`**: Kubełki uwierzytelniania (`admin-login`, `owner-login`, `owner-password`, `guest-login`, `zip-pin` — 10 nieudanych prób / 15 min na IP i zasób) są odseparowane w pamięci od kubełków publicznych (`tus-create`, `wishes-post`), co zapobiega wyparciu blokad brute-force przez ruch publiczny. Caddy nadpisuje `X-Forwarded-For` adresem `{remote_host}`. Przepływ Google Drive OAuth używa jednorazowego `nonce` w `state` powiązanego z ciasteczkiem `wd_gdrive_oauth_state`, a sesja gościa (`wd_guest_<slug>`) jest powiązana z aktualnym skrótem `guestPassword`.
+- **Odizolowany Rate limiting i jednorazowy OAuth `state`**: Kubełki uwierzytelniania (`admin-login`, `owner-login`, `owner-password`, `guest-login`, `zip-pin` — 10 nieudanych prób / 15 min na IP i zasób) są odseparowane w pamięci od kubełków publicznych (`tus-create`, `wishes-post`, `media-like`), co zapobiega wyparciu blokad brute-force przez ruch publiczny. Caddy nadpisuje `X-Forwarded-For` adresem `{remote_host}`. Przepływ Google Drive OAuth używa jednorazowego `nonce` w `state` powiązanego z ciasteczkiem `wd_gdrive_oauth_state`, a sesja gościa (`wd_guest_<slug>`) jest powiązana z aktualnym skrótem `guestPassword`.
 - **Limity uploadu**: maksymalnie **1 GB na plik**; limit pojemności galerii (`maxStorageBytes`) obejmuje także gości; porzucone uploady są sprzątane po 24 h.
 - **Hasło gościa**: galeria chroniona hasłem nie ujawnia mediów, życzeń ani uploadu bez sesji gościa.
 - **Branding bez SVG**: logo i tło tylko JPEG/PNG/WebP, weryfikowane po zawartości pliku.
@@ -245,7 +254,7 @@ Aby aplikacja działała na Twojej publicznej domenie z darmowym certyfikatem Le
 ### 1. Testy Jednostkowe i Integracyjne (Vitest)
 
 ```bash
-# Uruchomienie 464 testów jednostkowych i integracyjnych w monorepo
+# Uruchomienie 731 testów jednostkowych i integracyjnych w monorepo
 pnpm turbo run test
 # lub w kontenerze Docker (Node 26 Alpine)
 docker run --rm -v "${PWD}:/app" -w /app node:26-alpine sh -c "npm i -g pnpm@12.4.1 && pnpm -r test"
@@ -253,7 +262,7 @@ docker run --rm -v "${PWD}:/app" -w /app node:26-alpine sh -c "npm i -g pnpm@12.
 
 ### 2. Testy End-to-End (Playwright)
 
-Pakiet **38 unikalnych scenariuszy testowych (łącznie 114 testów)** uruchamianych w profilach Desktop Chromium, Mobile Chrome oraz Mobile Safari (WebKit):
+Pakiet **42 unikalnych scenariuszy testowych (łącznie 126 testów)** uruchamianych w profilach Desktop Chromium, Mobile Chrome oraz Mobile Safari (WebKit):
 ```bash
 # Uruchomienie pełnego zestawu Playwright E2E
 pnpm --filter @wedding-drop/web test:e2e
@@ -262,8 +271,8 @@ docker run --rm --network wedding-drop_wedding_net -v wedding_playwright_browser
 ```
 Pokrywa:
 - **Panel Administratora**: logowanie danymi admina, walidacja błędu hasła, tworzenie wesela, obsługa kolizji sluga, usuwanie galerii.
-- **Panel Pary Młodej (Moderacja)**: logowanie hasłem, pobieranie ZIP z hasłem (w tym zdjęć ukrytych), moderacja widoczności (ukryj/pokaż), filtrowanie zakładek, usuwanie multimediów.
-- **Ścieżka Gościa & Mobile UX**: przeglądanie galerii na żywo, drawer uploadu TUS, siatka zdjęć z podpisami, pełnoekranowy Lightbox z gestami **Touch Swipe** (przesuwanie palcem lewo/prawo) oraz pobieranie plików.
+- **Panel Pary Młodej (Moderacja i Foto-Wyzwania)**: logowanie hasłem, konfiguracja i zapis Foto-Wyzwań (Weselne Bingo), pobieranie ZIP z hasłem (w tym zdjęć ukrytych), moderacja widoczności (ukryj/pokaż), filtrowanie zakładek, usuwanie multimediów.
+- **Ścieżka Gościa, Zaangażowanie & Mobile UX**: przeglądanie galerii na żywo, reakcje serduszkami ❤️ (`localStorage` + sortowanie *Najpopularniejsze*), pasek i filtrowanie Foto-Wyzwań (`🎯`), drawer uploadu TUS z podpisem kontekstowym (`caption`) i wyborem wyzwania, pełnoekranowy Lightbox z gestami **Touch Swipe** oraz Tryb TV 2.0 z kartami z Księgi Życzeń na żywo (`new-wish`).
 - **Kreator Winietek A6**: podgląd karty `#printable-card` z kodem QR, zmiana palet barwnych, edycja tekstów na żywo, generowanie wektorowego PDF (300 DPI) z parametrami w URL.
 - **Bezpieczeństwo & Edge Cases**: blokada ukrytych zdjęć (401), ekran 404, ochrona sandbox Directory Traversal, pobieranie ZIP pustej galerii (400), blokada fałszywych tokenów HMAC (401), sanityzacja złośliwego sluga z path traversal, tryb TV natychmiast usuwający z rotacji zdjęcie ukryte na żywo (SSE) oraz ignorujący sfałszowane parametry dostępu właściciela w adresie URL.
 

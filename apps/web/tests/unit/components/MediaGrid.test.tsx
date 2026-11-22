@@ -129,4 +129,53 @@ describe("MediaGrid Component", () => {
 			screen.getByRole("button", { name: /^audioAria: zyczenia\.webm/ }),
 		).toBeInTheDocument();
 	});
+
+	it("obsługuje kliknięcie serduszka bez otwierania Lightboxa, nie zagnieżdża <button> i wyświetla podpis oraz wyzwanie", () => {
+		const onItemClick = vi.fn();
+		const onToggleLike = vi.fn();
+		const items = [
+			{
+				id: "m1",
+				uploaderName: "Ciocia Kasia",
+				fileType: "image" as const,
+				mimeType: "image/jpeg",
+				originalFileName: "parkiet.jpg",
+				thumbUrl: "/t1.webp",
+				rawUrl: "/r1.jpg",
+				createdAt: "2026-09-12",
+				likesCount: 7,
+				caption: "Najlepsza zabawa przy stoliku 4!",
+				questId: "first-dance",
+			},
+		];
+
+		const { container } = render(
+			<MediaGrid
+				items={items}
+				onItemClick={onItemClick}
+				likedIds={new Set(["m1"])}
+				onToggleLike={onToggleLike}
+				questsConfig={{
+					enabled: true,
+					items: [{ id: "first-dance", title: "Pierwszy taniec" }],
+				}}
+			/>,
+		);
+
+		// Brak niepoprawnego zagnieżdżenia <button> wewnątrz <button>
+		expect(container.querySelector("button button")).toBeNull();
+
+		expect(
+			screen.getByText("Najlepsza zabawa przy stoliku 4!"),
+		).toBeInTheDocument();
+		expect(screen.getByText("🎯 Pierwszy taniec")).toBeInTheDocument();
+		expect(screen.getByText("7")).toBeInTheDocument();
+
+		const likeBtn = screen.getByTestId("like-btn-m1");
+		expect(likeBtn).toHaveAttribute("aria-pressed", "true");
+		fireEvent.click(likeBtn);
+
+		expect(onToggleLike).toHaveBeenCalledWith("m1");
+		expect(onItemClick).not.toHaveBeenCalled();
+	});
 });

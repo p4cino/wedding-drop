@@ -88,6 +88,7 @@ export async function GET(
 			allowGuestViewing: gallery.allowGuestViewing,
 			allowGuestUploads: gallery.allowGuestUploads,
 			isApprovalQueueEnabled: gallery.isApprovalQueueEnabled,
+			questsConfig: gallery.questsConfig ?? { enabled: false, items: [] },
 			branding: brandingPayload,
 		});
 	} catch (error) {

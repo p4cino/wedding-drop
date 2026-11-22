@@ -336,4 +336,61 @@ describe("UploaderDrawer Component", () => {
 		expect(document.activeElement).toBe(opener);
 		opener.remove();
 	});
+
+	it("przekazuje caption (do 140 znaków) oraz wybrany questId w metadanych uploadu TUS", async () => {
+		const { container } = render(
+			<UploaderDrawer
+				gallerySlug="kasia-i-tomek"
+				isOpen={true}
+				onClose={vi.fn()}
+				initialQuestId="selfie"
+				questsConfig={{
+					enabled: true,
+					items: [
+						{ id: "selfie", title: "Selfie z Parą Młodą" },
+						{ id: "dance", title: "Pierwszy taniec" },
+					],
+				}}
+			/>,
+		);
+
+		// Wstępnie wybrane wyzwanie z initialQuestId
+		const selfieBtn = screen
+			.getByText("Selfie z Parą Młodą")
+			.closest("button") as HTMLButtonElement;
+		expect(selfieBtn).toHaveAttribute("aria-pressed", "true");
+
+		// Zmiana na drugie wyzwanie
+		const danceBtn = screen
+			.getByText("Pierwszy taniec")
+			.closest("button") as HTMLButtonElement;
+		fireEvent.click(danceBtn);
+		expect(danceBtn).toHaveAttribute("aria-pressed", "true");
+
+		// Wpisanie podpisu zdjęcia
+		const captionInput = screen.getByPlaceholderText("captionPlaceholder");
+		fireEvent.change(captionInput, {
+			target: { value: "  Stolik nr 4 bawi się najlepiej!  " },
+		});
+
+		const file = new File(["photo"], "kadr.jpg", { type: "image/jpeg" });
+		const fileInput = container.querySelector(
+			'input[type="file"]',
+		) as HTMLInputElement;
+		fireEvent.change(fileInput, { target: { files: [file] } });
+
+		fireEvent.click(screen.getByRole("button", { name: "submitBtn" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("doneBtn")).toBeInTheDocument();
+		});
+
+		expect(tusMock.metadata).toHaveLength(1);
+		expect(tusMock.metadata[0]).toMatchObject({
+			gallerySlug: "kasia-i-tomek",
+			originalName: "kadr.jpg",
+			caption: "Stolik nr 4 bawi się najlepiej!",
+			questId: "dance",
+		});
+	});
 });

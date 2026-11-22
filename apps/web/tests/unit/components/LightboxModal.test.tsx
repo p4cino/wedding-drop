@@ -476,4 +476,43 @@ describe("LightboxModal Component", () => {
 			expect(onNavigate).not.toHaveBeenCalled();
 		});
 	});
+
+	it("wyświetla podpis (caption), odznakę foto-wyzwania oraz obsługuje przycisk serduszka w Lightboxie", () => {
+		const onToggleLike = vi.fn();
+		const items = [
+			{
+				...mockItems[0],
+				likesCount: 12,
+				caption: "Toast za Parę Młodą!",
+				questId: "table-toast",
+			},
+		];
+
+		render(
+			<LightboxModal
+				items={items}
+				currentIndex={0}
+				onClose={vi.fn()}
+				onNavigate={vi.fn()}
+				likedIds={new Set(["1"])}
+				onToggleLike={onToggleLike}
+				questsConfig={{
+					enabled: true,
+					items: [{ id: "table-toast", title: "Toast przy naszym stoliku" }],
+				}}
+			/>,
+		);
+
+		expect(screen.getByText("Toast za Parę Młodą!")).toBeInTheDocument();
+		expect(
+			screen.getByText("🎯 Toast przy naszym stoliku"),
+		).toBeInTheDocument();
+
+		const likeBtn = screen.getByTestId("lightbox-like-btn");
+		expect(likeBtn).toHaveAttribute("aria-pressed", "true");
+		expect(likeBtn).toHaveTextContent("12");
+
+		fireEvent.click(likeBtn);
+		expect(onToggleLike).toHaveBeenCalledWith("1");
+	});
 });

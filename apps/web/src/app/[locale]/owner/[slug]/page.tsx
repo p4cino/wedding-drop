@@ -18,6 +18,7 @@ import { OwnerHeader } from "@/components/owner/OwnerHeader";
 import { OwnerLoginForm } from "@/components/owner/OwnerLoginForm";
 import { OwnerStatsGrid } from "@/components/owner/OwnerStatsGrid";
 import { PhotographerImportPanel } from "@/components/owner/PhotographerImportPanel";
+import { PhotoQuestsPanel } from "@/components/owner/PhotoQuestsPanel";
 import {
 	type OwnerWishItem,
 	WishesModeration,
@@ -421,6 +422,22 @@ export default function OwnerDashboardPage() {
 							showError();
 							return false;
 						}
+					}}
+				/>
+
+				<PhotoQuestsPanel
+					questsConfig={galleryInfo?.questsConfig}
+					onSave={async (questsConfig) => {
+						const res = await api("PATCH", `/api/owner/${slug}/settings`, {
+							questsConfig,
+						});
+						if (res.ok) {
+							setToast({ type: "success", text: t("settingsSaveSuccess") });
+							restoreSession();
+							return true;
+						}
+						showError();
+						return false;
 					}}
 				/>
 

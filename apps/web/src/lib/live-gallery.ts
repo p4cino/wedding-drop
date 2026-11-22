@@ -11,7 +11,12 @@ export interface LiveEvent {
 	type: string;
 	media?: MediaItemData;
 	wish?: WishItemData;
-	update?: { mediaId?: string; wishId?: string; status?: string };
+	update?: {
+		mediaId?: string;
+		wishId?: string;
+		status?: string;
+		likesCount?: number;
+	};
 	/** Tylko `gdrive-progress` (panel właściciela). */
 	progress?: GDriveSseProgress;
 }
@@ -24,6 +29,7 @@ export type LiveGalleryAction =
 			maxItems?: number;
 	  }
 	| { type: "wish-added"; wish: WishItemData }
+	| { type: "media-like-updated"; mediaId: string; likesCount: number }
 	| { type: "event"; event: LiveEvent; maxItems?: number };
 
 export const initialLiveGalleryState: LiveGalleryState = {
@@ -37,6 +43,20 @@ const isRemoved = (status?: string) =>
 function prependUnique<T extends { id: string }>(list: T[], item: T): T[] {
 	if (list.some((existing) => existing.id === item.id)) return list;
 	return [item, ...list];
+}
+
+function updateItemLikes(
+	items: MediaItemData[],
+	mediaId: string,
+	likesCount: number,
+): MediaItemData[] {
+	const index = items.findIndex((item) => item.id === mediaId);
+	if (index === -1) return items;
+	const current = items[index];
+	if (current.likesCount === likesCount) return items;
+	const next = [...items];
+	next[index] = { ...current, likesCount };
+	return next;
 }
 
 /**
@@ -58,6 +78,14 @@ export function galleryReducer(
 			};
 		case "wish-added":
 			return { ...state, wishes: prependUnique(state.wishes, action.wish) };
+		case "media-like-updated": {
+			const items = updateItemLikes(
+				state.items,
+				action.mediaId,
+				action.likesCount,
+			);
+			return items === state.items ? state : { ...state, items };
+		}
 		case "event": {
 			const { event, maxItems } = action;
 			if (event.type === "new-media" && event.media) {
@@ -72,6 +100,18 @@ export function galleryReducer(
 				return items.length === state.items.length
 					? state
 					: { ...state, items };
+			}
+			if (
+				event.type === "media-liked" &&
+				event.update?.mediaId &&
+				typeof event.update.likesCount === "number"
+			) {
+				const items = updateItemLikes(
+					state.items,
+					event.update.mediaId,
+					event.update.likesCount,
+				);
+				return items === state.items ? state : { ...state, items };
 			}
 			if (event.type === "new-wish" && event.wish) {
 				const wishes = prependUnique(state.wishes, event.wish);

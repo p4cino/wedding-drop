@@ -57,6 +57,25 @@ describe("sse-bus event hub", () => {
 		sseBus.off(`media-updated:${slug}`, callback);
 	});
 
+	it("powinien emitować zdarzenie notifyMediaLiked z zaktualizowanym licznikiem polubień", () => {
+		const slug = "ania-i-tomek-likes";
+		const callback = vi.fn();
+
+		sseBus.on(`media-liked:${slug}`, callback);
+
+		const likePayload = {
+			mediaId: "med-999",
+			likesCount: 7,
+		};
+
+		sseBus.notifyMediaLiked(slug, likePayload);
+
+		expect(callback).toHaveBeenCalledTimes(1);
+		expect(callback).toHaveBeenCalledWith(likePayload);
+
+		sseBus.off(`media-liked:${slug}`, callback);
+	});
+
 	it("powinien emitować zdarzenie notifyNewWish dla nowego życzenia", () => {
 		const slug = "wesele-wishes";
 		const callback = vi.fn();

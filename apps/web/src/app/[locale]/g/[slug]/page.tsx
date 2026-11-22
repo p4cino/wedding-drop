@@ -9,17 +9,21 @@ import {
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { css } from "styled-system/css";
 import ContributorLeaderboard from "@/components/ContributorLeaderboard";
+import GallerySortToggle from "@/components/GallerySortToggle";
 import GalleryStatusScreen from "@/components/GalleryStatusScreen";
 import { LegalFooterLinks } from "@/components/LegalFooterLinks";
 import LightboxModal from "@/components/LightboxModal";
 import MediaGrid from "@/components/MediaGrid";
+import PhotoQuestsBar from "@/components/PhotoQuestsBar";
 import UploaderDrawer from "@/components/UploaderDrawer";
 import WishesBook from "@/components/WishesBook";
+import { useGuestLikes } from "@/hooks/useGuestLikes";
 import { useLightboxSelection } from "@/hooks/useLightboxSelection";
 import { useLiveGallery } from "@/hooks/useLiveGallery";
+import { type GallerySortOrder, sortGalleryItems } from "@/lib/guest-likes";
 
 export default function GuestGalleryPage() {
 	const params = useParams();
@@ -34,10 +38,30 @@ export default function GuestGalleryPage() {
 		refetch,
 		refetchWithBackoff,
 		addWish,
+		updateMediaLikes,
 	} = useLiveGallery(slug);
+	const questsConfig = gallery?.questsConfig;
+
 	const [activeTab, setActiveTab] = useState<"photos" | "wishes">("photos");
 	const [isUploaderOpen, setIsUploaderOpen] = useState(false);
-	const lightbox = useLightboxSelection(items);
+	const [uploaderQuestId, setUploaderQuestId] = useState<string | null>(null);
+	const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null);
+	const [sortBy, setSortBy] = useState<GallerySortOrder>("newest");
+
+	const { likedIds, toggleLike } = useGuestLikes({
+		slug,
+		items,
+		updateMediaLikes,
+	});
+
+	const displayedItems = useMemo(() => {
+		const filtered = selectedQuestId
+			? items.filter((item) => item.questId === selectedQuestId)
+			: items;
+		return sortGalleryItems(filtered, sortBy);
+	}, [items, selectedQuestId, sortBy]);
+
+	const lightbox = useLightboxSelection(displayedItems);
 	const t = useTranslations("GuestGallery");
 	const tWishes = useTranslations("Wishes");
 
@@ -80,11 +104,8 @@ export default function GuestGalleryPage() {
 
 	const isViewingDisabled = gallery?.allowGuestViewing === false;
 	const isUploadsDisabled = gallery?.allowGuestUploads === false;
-
-	// Jeśli widoczność jest zablokowana i użytkownik jest w zakładce zdjęć, wymuś życzenia (jeśli istnieją), w przeciwnym razie zostań na zdjęciach, gdzie pokażemy komunikat
-	if (isViewingDisabled && activeTab === "photos" && wishes.length > 0) {
-		setActiveTab("wishes");
-	}
+	const effectiveTab =
+		isViewingDisabled && wishes.length > 0 ? "wishes" : activeTab;
 
 	return (
 		<div
@@ -330,7 +351,7 @@ export default function GuestGalleryPage() {
 							<button
 								type="button"
 								role="tab"
-								aria-selected={activeTab === "photos"}
+								aria-selected={effectiveTab === "photos"}
 								onClick={() => setActiveTab("photos")}
 								className={css({
 									display: "flex",
@@ -345,11 +366,11 @@ export default function GuestGalleryPage() {
 									cursor: "pointer",
 									transition: "all 0.15s ease",
 									backgroundColor:
-										activeTab === "photos" ? "slate.900" : "transparent",
-									color: activeTab === "photos" ? "white" : "slate.600",
+										effectiveTab === "photos" ? "slate.900" : "transparent",
+									color: effectiveTab === "photos" ? "white" : "slate.600",
 									_hover: {
 										backgroundColor:
-											activeTab === "photos" ? "slate.900" : "slate.100",
+											effectiveTab === "photos" ? "slate.900" : "slate.100",
 									},
 									_focusVisible: {
 										outline: "2px solid",
@@ -366,7 +387,7 @@ export default function GuestGalleryPage() {
 							<button
 								type="button"
 								role="tab"
-								aria-selected={activeTab === "wishes"}
+								aria-selected={effectiveTab === "wishes"}
 								onClick={() => setActiveTab("wishes")}
 								className={css({
 									display: "flex",
@@ -381,11 +402,11 @@ export default function GuestGalleryPage() {
 									cursor: "pointer",
 									transition: "all 0.15s ease",
 									backgroundColor:
-										activeTab === "wishes" ? "slate.900" : "transparent",
-									color: activeTab === "wishes" ? "white" : "slate.600",
+										effectiveTab === "wishes" ? "slate.900" : "transparent",
+									color: effectiveTab === "wishes" ? "white" : "slate.600",
 									_hover: {
 										backgroundColor:
-											activeTab === "wishes" ? "slate.900" : "slate.100",
+											effectiveTab === "wishes" ? "slate.900" : "slate.100",
 									},
 									_focusVisible: {
 										outline: "2px solid",
@@ -404,7 +425,7 @@ export default function GuestGalleryPage() {
 				)}
 
 				{/* Ranking najaktywniejszych gości (TOP 3) — tylko w zakładce zdjęć i jeśli dozwolony podgląd */}
-				{activeTab === "photos" && !isViewingDisabled && (
+				{effectiveTab === "photos" && !isViewingDisabled && (
 					<div className={css({ pt: "6" })}>
 						<ContributorLeaderboard items={items} />
 					</div>
@@ -419,7 +440,7 @@ export default function GuestGalleryPage() {
 						pt: "6",
 					})}
 				>
-					{activeTab === "photos" ? (
+					{effectiveTab === "photos" ? (
 						isViewingDisabled ? (
 							<div
 								className={css({
@@ -463,7 +484,31 @@ export default function GuestGalleryPage() {
 								</h3>
 							</div>
 						) : (
-							<MediaGrid items={items} onItemClick={lightbox.open} />
+							<>
+								<PhotoQuestsBar
+									questsConfig={questsConfig}
+									items={items}
+									selectedQuestId={selectedQuestId}
+									onSelectQuest={setSelectedQuestId}
+									allowUploads={!isUploadsDisabled}
+									onUploadForQuest={(questId) => {
+										setUploaderQuestId(questId);
+										setIsUploaderOpen(true);
+									}}
+								/>
+
+								{items.length > 0 && (
+									<GallerySortToggle sortBy={sortBy} onChange={setSortBy} />
+								)}
+
+								<MediaGrid
+									items={displayedItems}
+									onItemClick={lightbox.open}
+									likedIds={likedIds}
+									onToggleLike={toggleLike}
+									questsConfig={questsConfig}
+								/>
+							</>
 						)
 					) : (
 						<WishesBook wishes={wishes} onSubmit={handleAddWish} />
@@ -472,7 +517,7 @@ export default function GuestGalleryPage() {
 
 				{/* Pływający Przycisk Dodawania Zdjęć (FAB) */}
 				{!isUploadsDisabled &&
-					(!isViewingDisabled || activeTab === "photos") && (
+					(!isViewingDisabled || effectiveTab === "photos") && (
 						<div
 							className={css({
 								position: "fixed",
@@ -488,7 +533,10 @@ export default function GuestGalleryPage() {
 						>
 							<button
 								type="button"
-								onClick={() => setIsUploaderOpen(true)}
+								onClick={() => {
+									setUploaderQuestId(selectedQuestId);
+									setIsUploaderOpen(true);
+								}}
 								aria-haspopup="dialog"
 								aria-expanded={isUploaderOpen}
 								aria-label={t("addPhotosAria")}
@@ -535,9 +583,12 @@ export default function GuestGalleryPage() {
 						gallerySlug={slug}
 						primaryColor={gallery.primaryColor}
 						accentColor={gallery.accentColor}
+						questsConfig={questsConfig}
+						initialQuestId={uploaderQuestId}
 						isOpen={isUploaderOpen}
 						onClose={() => {
 							setIsUploaderOpen(false);
+							setUploaderQuestId(null);
 							refetch();
 						}}
 						onUploadSuccess={refetchWithBackoff}
@@ -546,11 +597,14 @@ export default function GuestGalleryPage() {
 
 				{/* Pełnoekranowy Lightbox */}
 				<LightboxModal
-					items={items}
+					items={displayedItems}
 					currentIndex={lightbox.index}
 					onClose={lightbox.close}
 					onNavigate={lightbox.navigate}
 					allowDownloads={gallery.allowGuestDownloads}
+					likedIds={likedIds}
+					onToggleLike={toggleLike}
+					questsConfig={questsConfig}
 				/>
 
 				{/* Stopka z dokumentami prawnymi */}

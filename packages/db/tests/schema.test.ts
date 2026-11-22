@@ -34,6 +34,7 @@ describe("Database Schema Definitions", () => {
 		expect(cols.allowGuestDownloads).toBeDefined();
 		expect(cols.allowVideos).toBeDefined();
 		expect(cols.maxStorageBytes).toBeDefined();
+		expect(cols.questsConfig).toBeDefined();
 		expect(cols.expiresAt).toBeDefined();
 		expect(cols.createdAt).toBeDefined();
 		expect(cols.updatedAt).toBeDefined();
@@ -95,6 +96,9 @@ describe("Database Schema Definitions", () => {
 		expect(cols.height).toBeDefined();
 		expect(cols.duration).toBeDefined();
 		expect(cols.status).toBeDefined();
+		expect(cols.likesCount).toBeDefined();
+		expect(cols.caption).toBeDefined();
+		expect(cols.questId).toBeDefined();
 		expect(cols.gdriveFileId).toBeDefined();
 		expect(cols.source).toBeDefined();
 		expect(cols.createdAt).toBeDefined();
@@ -102,6 +106,10 @@ describe("Database Schema Definitions", () => {
 		expect(cols.uploaderName.default).toBe("Gość weselny");
 		expect(cols.status.default).toBe("ready");
 		expect(cols.source.default).toBe("guest");
+		expect(cols.likesCount.default).toBe(0);
+		expect(cols.likesCount.notNull).toBe(true);
+		expect(cols.caption.notNull).toBe(false);
+		expect(cols.questId.notNull).toBe(false);
 	});
 
 	it("powinien definiować tabelę wishes z polami księgi życzeń", () => {

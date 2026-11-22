@@ -161,6 +161,7 @@ describe("Gallery API Routes", () => {
 			expect(data.slug).toBe("kasia-i-tomek");
 			expect(data.coupleNames).toBe("Kasia & Tomek");
 			expect(data.cardSettings).toBeDefined();
+			expect(data.questsConfig).toEqual({ enabled: false, items: [] });
 		});
 
 		it("powinien zwrócić null w cardSettings gdy brak konfiguracji winietki", async () => {
@@ -246,6 +247,9 @@ describe("Gallery API Routes", () => {
 			expect(data.media).toBeDefined();
 			expect(data.media.length).toBeGreaterThan(0);
 			expect(data.media[0].thumbUrl).toContain("/media-file/");
+			expect(data.media[0].likesCount).toBe(0);
+			expect(data.media[0].caption).toBeNull();
+			expect(data.media[0].questId).toBeNull();
 		});
 
 		it("powinien zwrócić pole mediaType dla zdjęć, wideo i audio", async () => {
@@ -745,8 +749,19 @@ describe("Gallery API Routes", () => {
 				const text2 = new TextDecoder().decode(chunk2);
 				expect(text2).toContain('"type":"new-media"');
 				expect(text2).toContain("Kuzyn Paweł");
+				expect(text2).toContain('"likesCount":0');
 
-				// 3. Rozłączenie - trigger abort
+				// 3. Emisja zdarzenia media-liked
+				sseBus.notifyMediaLiked("kasia-i-tomek", {
+					mediaId: "new-sse-media",
+					likesCount: 3,
+				});
+				const { value: chunk3 } = await reader.read();
+				const text3 = new TextDecoder().decode(chunk3);
+				expect(text3).toContain('"type":"media-liked"');
+				expect(text3).toContain('"likesCount":3');
+
+				// 4. Rozłączenie - trigger abort
 				abortController.abort();
 			}
 		});

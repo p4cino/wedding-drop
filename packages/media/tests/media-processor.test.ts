@@ -515,3 +515,98 @@ it("powinien nadać status 'ready', gdy isApprovalQueueEnabled jest true, ale ź
 	await scheduleMediaProcessing(task);
 	expect(lastInsertedValues).toMatchObject({ status: "ready" });
 });
+
+it("powinien zapisać przycięty podpis caption oraz aktywny questId, gdy wyzwanie istnieje w włączonym questsConfig galerii", async () => {
+	mockGalleryResult = [
+		{
+			id: "mock-gal-id",
+			questsConfig: {
+				enabled: true,
+				items: [
+					{ id: "selfie-para", title: "Selfie z Parą Młodą" },
+					{ id: "toast-stolik", title: "Toast przy naszym stoliku" },
+				],
+			},
+		},
+	];
+
+	const task: ProcessTask = {
+		uploadId: "upl-quest-valid",
+		tempFilePath: "/tmp/fake-file.jpg",
+		gallerySlug: "kasia-i-tomek",
+		uploaderName: "Wujek Janusz",
+		originalName: "foto.jpg",
+		fileType: "image",
+		mimeType: "image/jpeg",
+		fileSize: 5000,
+		dataDir: "/tmp/data",
+		caption: "  Stolik nr 4 bawi się najlepiej!  ",
+		questId: "toast-stolik",
+	};
+
+	await scheduleMediaProcessing(task);
+	expect(lastInsertedValues).toMatchObject({
+		caption: "Stolik nr 4 bawi się najlepiej!",
+		questId: "toast-stolik",
+	});
+});
+
+it("powinien zapisać questId: null oraz caption: null, gdy questId nie figuruje na liście aktywnych wyzwań lub podpis jest pusty", async () => {
+	mockGalleryResult = [
+		{
+			id: "mock-gal-id",
+			questsConfig: {
+				enabled: true,
+				items: [{ id: "selfie-para", title: "Selfie z Parą Młodą" }],
+			},
+		},
+	];
+
+	await scheduleMediaProcessing({
+		uploadId: "upl-quest-unknown",
+		tempFilePath: "/tmp/fake-file.jpg",
+		gallerySlug: "kasia-i-tomek",
+		uploaderName: "Gość",
+		originalName: "foto.jpg",
+		fileType: "image",
+		mimeType: "image/jpeg",
+		fileSize: 5000,
+		dataDir: "/tmp/data",
+		caption: "   ",
+		questId: "nieistniejace-wyzwanie",
+	});
+
+	expect(lastInsertedValues).toMatchObject({
+		caption: null,
+		questId: null,
+	});
+});
+
+it("powinien zapisać questId: null, gdy foto-wyzwania są wyłączone w galerii (enabled: false)", async () => {
+	mockGalleryResult = [
+		{
+			id: "mock-gal-id",
+			questsConfig: {
+				enabled: false,
+				items: [{ id: "selfie-para", title: "Selfie z Parą Młodą" }],
+			},
+		},
+	];
+
+	await scheduleMediaProcessing({
+		uploadId: "upl-quest-disabled",
+		tempFilePath: "/tmp/fake-file.jpg",
+		gallerySlug: "kasia-i-tomek",
+		uploaderName: "Gość",
+		originalName: "foto.jpg",
+		fileType: "image",
+		mimeType: "image/jpeg",
+		fileSize: 5000,
+		dataDir: "/tmp/data",
+		questId: "selfie-para",
+	});
+
+	expect(lastInsertedValues).toMatchObject({
+		questId: null,
+	});
+});

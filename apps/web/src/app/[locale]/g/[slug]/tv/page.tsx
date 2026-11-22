@@ -4,13 +4,16 @@ import { Heart } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import QRCode from "qrcode";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { css } from "styled-system/css";
 import AudioPlaceholder from "@/components/AudioPlaceholder";
 import GalleryStatusScreen from "@/components/GalleryStatusScreen";
+import TvMediaOverlay from "@/components/tv/TvMediaOverlay";
+import TvWishSlide from "@/components/tv/TvWishSlide";
 import { useLiveGallery } from "@/hooks/useLiveGallery";
 import type { LiveEvent } from "@/lib/live-gallery";
-import { buildTvGalleryQrUrl } from "@/lib/tv-slideshow";
+import { findQuestTitle } from "@/lib/photo-quests";
+import { buildTvGalleryQrUrl, buildTvSlides } from "@/lib/tv-slideshow";
 
 // Ustalony, stały interwał rotacji slajdów (nie konfigurowalny w tej iteracji — patrz design.md)
 const ROTATION_INTERVAL_MS = 8000;
@@ -21,37 +24,49 @@ export default function TvSlideshowPage() {
 	const params = useParams();
 	const slug = params?.slug as string;
 	const t = useTranslations("TvSlideshow");
-	const [currentIndex, setCurrentIndex] = useState(0);
+	const [activeSlideId, setActiveSlideId] = useState<string | null>(null);
 	const [qrSvg, setQrSvg] = useState("");
 
-	// Nowe zdjęcie natychmiast wskakuje na wierzch rotacji
+	// Nowe zdjęcie lub życzenie natychmiast wskakuje na ekran
 	const handleEvent = useCallback((event: LiveEvent) => {
-		if (event.type === "new-media" && event.media) setCurrentIndex(0);
+		if (event.type === "new-media" && event.media) {
+			setActiveSlideId(`media-${event.media.id}`);
+		} else if (event.type === "new-wish" && event.wish) {
+			setActiveSlideId(`wish-${event.wish.id}`);
+		}
 	}, []);
 
 	// Ten sam publiczny stan i kanał SSE co galeria gościa (API już filtruje "ready")
-	const { gallery, items, status, isLive, refetch } = useLiveGallery(slug, {
-		maxItems: MAX_QUEUE_SIZE,
-		withWishes: false,
-		onEvent: handleEvent,
-	});
+	const { gallery, items, wishes, status, isLive, refetch } = useLiveGallery(
+		slug,
+		{
+			maxItems: MAX_QUEUE_SIZE,
+			withWishes: true,
+			onEvent: handleEvent,
+		},
+	);
 
-	// Rotacja slajdów po ustalonym interwale
+	const slides = useMemo(() => buildTvSlides(items, wishes), [items, wishes]);
+	const slidesRef = useRef(slides);
+	slidesRef.current = slides;
+	const hasMultipleSlides = slides.length > 1;
+
+	// Rotacja slajdów po ustalonym interwale (bez resetu timera przy aktualizacji lajków)
 	useEffect(() => {
-		if (items.length <= 1) return;
+		if (!hasMultipleSlides) return;
 		const interval = setInterval(() => {
-			setCurrentIndex((curr) => (curr + 1) % items.length);
+			const currentSlides = slidesRef.current;
+			if (currentSlides.length <= 1) return;
+			setActiveSlideId((currId) => {
+				const idx = currId
+					? currentSlides.findIndex((slide) => slide.id === currId)
+					: 0;
+				const nextIndex = ((idx !== -1 ? idx : 0) + 1) % currentSlides.length;
+				return currentSlides[nextIndex]?.id ?? null;
+			});
 		}, ROTATION_INTERVAL_MS);
 		return () => clearInterval(interval);
-	}, [items.length]);
-
-	// Zabezpieczenie indeksu, gdy lista mediów się skurczy (np. po ukryciu/usunięciu)
-	useEffect(() => {
-		setCurrentIndex((curr) => {
-			if (items.length === 0) return 0;
-			return curr % items.length;
-		});
-	}, [items.length]);
+	}, [hasMultipleSlides]);
 
 	// Wygenerowanie kodu QR po stronie klienta prowadzącego do galerii gościa
 	useEffect(() => {
@@ -77,7 +92,16 @@ export default function TvSlideshowPage() {
 		return <GalleryStatusScreen variant="error" dark onRetry={refetch} />;
 	}
 
-	const current = items[currentIndex] ?? null;
+	const rawIndex = activeSlideId
+		? slides.findIndex((slide) => slide.id === activeSlideId)
+		: 0;
+	const activeIndex = rawIndex !== -1 ? rawIndex : 0;
+	const currentSlide = slides[activeIndex] ?? null;
+	const currentMedia =
+		currentSlide?.kind === "media" ? currentSlide.media : null;
+	const currentQuestTitle = currentMedia
+		? findQuestTitle(gallery.questsConfig, currentMedia.questId)
+		: null;
 
 	return (
 		<div
@@ -89,20 +113,24 @@ export default function TvSlideshowPage() {
 				userSelect: "none",
 			})}
 		>
-			{/* Prezentowany materiał — dla wideo pokazujemy statyczną miniaturę bez dźwięku (zob. design.md) */}
-			{current ? (
-				current.fileType === "audio" ? (
+			{/* Prezentowany slajd: zdjęcie/wideo/audio lub pełnoekranowa karta z Księgi Życzeń */}
+			{currentSlide ? (
+				currentSlide.kind === "wish" ? (
+					<TvWishSlide key={currentSlide.id} wish={currentSlide.wish} />
+				) : currentSlide.media.fileType === "audio" ? (
 					<div
-						key={current.id}
+						key={currentSlide.id}
 						className={css({ position: "absolute", inset: "0" })}
 					>
 						<AudioPlaceholder />
 					</div>
 				) : (
 					<img
-						key={current.id}
+						key={currentSlide.id}
 						src={
-							current.fileType === "video" ? current.thumbUrl : current.rawUrl
+							currentSlide.media.fileType === "video"
+								? currentSlide.media.thumbUrl
+								: currentSlide.media.rawUrl
 						}
 						alt=""
 						className={css({
@@ -208,25 +236,9 @@ export default function TvSlideshowPage() {
 				</span>
 			</div>
 
-			{/* Podpis autora bieżącego zdjęcia */}
-			{current?.uploaderName && (
-				<div
-					className={css({
-						position: "absolute",
-						bottom: "8",
-						left: "8",
-						px: "4",
-						py: "2",
-						borderRadius: "xl",
-						backgroundColor: "rgba(0, 0, 0, 0.4)",
-						backdropFilter: "blur(4px)",
-						color: "white",
-						fontSize: "sm",
-						maxW: "60%",
-					})}
-				>
-					{t("uploaderPrefix")} {current.uploaderName}
-				</div>
+			{/* Karta metadanych bieżącego zdjęcia: wyzwanie, serduszka, podpis oraz autor */}
+			{currentMedia && (
+				<TvMediaOverlay media={currentMedia} questTitle={currentQuestTitle} />
 			)}
 
 			{/* Stały kod QR do dołączenia — widoczny niezależnie od aktualnego slajdu */}

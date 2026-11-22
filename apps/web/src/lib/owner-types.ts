@@ -1,3 +1,5 @@
+import type { QuestsConfig } from "@/lib/gallery-types";
+
 /** Status eksportu Google Drive zwracany przez API panelu właściciela. */
 export type GDriveExportStatus =
 	| "idle"
@@ -46,6 +48,7 @@ export interface OwnerPanelGallery {
 		logoPath: string | null;
 		backgroundPath: string | null;
 	} | null;
+	questsConfig?: QuestsConfig | null;
 }
 
 /** Ładunek panelu właściciela (wspólny dla `POST .../auth` i `GET .../session`). */
