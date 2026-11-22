@@ -49,6 +49,9 @@ const MOCK_WEDDING_MEDIA = [
 		originalFileName: "pierwszy_taniec.jpg",
 		fileSize: 4194304,
 		status: "ready",
+		likesCount: 24,
+		caption: "Magiczny pierwszy taniec w chmurach! ✨",
+		questId: "pierwszy-taniec",
 		createdAt: "2026-09-12T17:45:00.000Z",
 		thumbUrl: createWeddingSvg({
 			bgGradient: ["#0f172a", "#1e1b4b", "#312e81"],
@@ -74,6 +77,9 @@ const MOCK_WEDDING_MEDIA = [
 		originalFileName: "toast_i_zyczenia.mp4",
 		fileSize: 15728640,
 		status: "ready",
+		likesCount: 18,
+		caption: "Stolik nr 4 bawi się najlepiej! 🥂",
+		questId: "toast-przy-naszym-stoliku",
 		createdAt: "2026-09-12T18:15:00.000Z",
 		thumbUrl: createWeddingSvg({
 			bgGradient: ["#451a03", "#78350f", "#92400e"],
@@ -99,6 +105,9 @@ const MOCK_WEDDING_MEDIA = [
 		originalFileName: "sesja_w_ogrodzie.jpg",
 		fileSize: 6815744,
 		status: "ready",
+		likesCount: 31,
+		caption: "Złota godzina w ogrodzie różanym",
+		questId: null,
 		createdAt: "2026-09-12T19:30:00.000Z",
 		thumbUrl: createWeddingSvg({
 			bgGradient: ["#064e3b", "#065f46", "#047857"],
@@ -124,6 +133,9 @@ const MOCK_WEDDING_MEDIA = [
 		originalFileName: "tort_weselny.jpg",
 		fileSize: 5242880,
 		status: "ready",
+		likesCount: 15,
+		caption: "Najsłodszy moment wieczoru 🎂",
+		questId: "selfie-z-para-mloda",
 		createdAt: "2026-09-12T20:00:00.000Z",
 		thumbUrl: createWeddingSvg({
 			bgGradient: ["#831843", "#9d174d", "#be185d"],
@@ -149,6 +161,9 @@ const MOCK_WEDDING_MEDIA = [
 		originalFileName: "zimne_ognie.jpg",
 		fileSize: 3145728,
 		status: "ready",
+		likesCount: 27,
+		caption: "Blask o północy z całą ekipą!",
+		questId: "selfie-z-para-mloda",
 		createdAt: "2026-09-12T22:30:00.000Z",
 		thumbUrl: createWeddingSvg({
 			bgGradient: ["#0f172a", "#1e293b", "#334155"],
@@ -174,6 +189,9 @@ const MOCK_WEDDING_MEDIA = [
 		originalFileName: "zabawa_na_parkiecie.jpg",
 		fileSize: 4456448,
 		status: "ready",
+		likesCount: 19,
+		caption: "Parkiet płonie do białego rana! 💃",
+		questId: "najlepszy-ruch-na-parkiecie",
 		createdAt: "2026-09-12T23:15:00.000Z",
 		thumbUrl: createWeddingSvg({
 			bgGradient: ["#1e1b4b", "#312e81", "#4338ca"],
@@ -226,9 +244,24 @@ const MOCK_GALLERY = {
 	weddingDate: "12.09.2026",
 	isActive: true,
 	allowGuestDownloads: true,
+	allowGuestViewing: true,
+	allowGuestUploads: true,
+	isApprovalQueueEnabled: false,
 	allowVideos: true,
 	primaryColor: "#1E293B",
 	accentColor: "#D4AF37",
+	questsConfig: {
+		enabled: true,
+		items: [
+			{ id: "selfie-z-para-mloda", title: "Selfie z Parą Młodą" },
+			{ id: "toast-przy-naszym-stoliku", title: "Toast przy naszym stoliku" },
+			{ id: "pierwszy-taniec", title: "Pierwszy taniec" },
+			{
+				id: "najlepszy-ruch-na-parkiecie",
+				title: "Najlepszy ruch na parkiecie",
+			},
+		],
+	},
 	cardSettings: {
 		headline: "Wspomnienia z naszego wesela",
 		customInstructions:
@@ -239,7 +272,7 @@ const MOCK_GALLERY = {
 };
 
 // biome-ignore lint/suspicious/noUndeclaredEnvVars: opcjonalny parametr skryptu narzędziowego
-const BASE_URL = process.env.BASE_URL || "http://localhost:3001";
+const BASE_URL = process.env.BASE_URL || "https://localhost";
 
 async function hideNextDevOverlay(page: Page) {
 	await page.addStyleTag({
@@ -304,15 +337,22 @@ async function main() {
 		// ==========================================
 		console.log("1. Przechwytywanie galerii gościa na żywo (Mobile)...");
 		const mobileContext = await browser.newContext({
-			viewport: { width: 390, height: 844 },
+			viewport: { width: 390, height: 1120 },
 			deviceScaleFactor: 2,
 			isMobile: true,
 			hasTouch: true,
 			locale: "pl-PL",
+			ignoreHTTPSErrors: true,
 		});
 
 		const guestPage = await mobileContext.newPage();
 		await enableLiveSseMock(guestPage);
+		await guestPage.addInitScript(() => {
+			window.localStorage.setItem(
+				"wd_likes_kasia-i-tomek",
+				JSON.stringify(["media-1", "media-3"]),
+			);
+		});
 
 		// Mock API dla gościa
 		await guestPage.route("**/api/gallery/kasia-i-tomek", async (route) => {
@@ -353,17 +393,18 @@ async function main() {
 			fullPage: false,
 		});
 		console.log(
-			"✓ 01-guest-gallery-mobile.png (Galeria gościa z rankingiem TOP 3 i statusem Na żywo)",
+			"✓ 01-guest-gallery-mobile.png (Galeria gościa z Foto-Wyzwaniami, serduszkami ❤️, sortowaniem i rankingiem TOP 3)",
 		);
 
 		// ==========================================
-		// 2. Mobile Upload Drawer z opcją Photobooth
+		// 2. Mobile Upload Drawer z podpisem caption i Foto-Wyzwaniem
 		// ==========================================
 		console.log(
-			"2. Przechwytywanie upload drawera z opcją aparatu Photobooth...",
+			"2. Przechwytywanie upload drawera z podpisem caption i wyborem Foto-Wyzwania...",
 		);
+		await guestPage.setViewportSize({ width: 390, height: 844 });
 		const uploadBtn = guestPage.getByRole("button", {
-			name: /Dodaj zdjęcia/i,
+			name: /Dodaj zdjęcia i filmy/i,
 		});
 		if (await uploadBtn.isVisible()) {
 			await uploadBtn.click();
@@ -372,13 +413,23 @@ async function main() {
 			if (await signatureInput.isVisible()) {
 				await signatureInput.fill("Wujek Staszek i Ciocia Krysia");
 			}
+			const captionInput = guestPage.locator("#uploader-caption-input");
+			if (await captionInput.isVisible()) {
+				await captionInput.fill("Stolik nr 4 bawi się najlepiej! 🥂");
+			}
+			const questPill = guestPage
+				.locator('[role="dialog"]')
+				.getByRole("button", { name: /Selfie z Parą Młodą/i });
+			if (await questPill.isVisible()) {
+				await questPill.click();
+			}
 			await hideNextDevOverlay(guestPage);
 			await guestPage.screenshot({
 				path: path.join(outputDir, "02-upload-drawer-mobile.png"),
 				fullPage: false,
 			});
 			console.log(
-				"✓ 02-upload-drawer-mobile.png (Drawer z podpisem i przyciskiem Zrób zdjęcie)",
+				"✓ 02-upload-drawer-mobile.png (Drawer z podpisem autora, podpisem zdjęcia caption i wyborem Foto-Wyzwania)",
 			);
 		}
 
@@ -413,6 +464,7 @@ async function main() {
 			viewport: { width: 1440, height: 900 },
 			deviceScaleFactor: 2,
 			locale: "pl-PL",
+			ignoreHTTPSErrors: true,
 		});
 
 		// Wspólne mocki dla kontekstu desktopowego
@@ -448,9 +500,9 @@ async function main() {
 		);
 
 		// ==========================================
-		// 4. Tryb TV na sali weselnej (TV Slideshow)
+		// 4. Tryb TV 2.0 na sali weselnej (TV Slideshow — zdjęcie z wyzwaniem, serduszkami i podpisem)
 		// ==========================================
-		console.log("4. Przechwytywanie widoku Trybu TV (Pokaz Slajdów)...");
+		console.log("4. Przechwytywanie widoku Trybu TV 2.0 (Pokaz Slajdów)...");
 		const tvPage = await desktopContext.newPage();
 		await enableLiveSseMock(tvPage);
 		await tvPage.goto(`${BASE_URL}/pl/g/kasia-i-tomek/tv`, {
@@ -462,7 +514,31 @@ async function main() {
 			path: path.join(outputDir, "04-tv-slideshow.png"),
 			fullPage: false,
 		});
-		console.log("✓ 04-tv-slideshow.png (Tryb TV z pełnym ekranem i kodem QR)");
+		console.log(
+			"✓ 04-tv-slideshow.png (Tryb TV 2.0 ze zdjęciem, odznaką wyzwania 🎯, licznikiem ❤️, podpisem i kodem QR)",
+		);
+
+		// 4b. Tryb TV 2.0 — pełnoekranowa karta z Księgi Życzeń
+		console.log(
+			"4b. Przechwytywanie widoku Trybu TV 2.0 (Karta z Księgi Życzeń)...",
+		);
+		await tvPage.route("**/api/gallery/kasia-i-tomek/media*", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({ media: [] }),
+			});
+		});
+		await tvPage.reload({ waitUntil: "networkidle" });
+		await tvPage.waitForTimeout(800);
+		await hideNextDevOverlay(tvPage);
+		await tvPage.screenshot({
+			path: path.join(outputDir, "08-tv-wish-card.png"),
+			fullPage: false,
+		});
+		console.log(
+			"✓ 08-tv-wish-card.png (Tryb TV 2.0 — pełnoekranowa karta z Księgi Życzeń i kodem QR)",
+		);
 		await tvPage.close();
 
 		// ==========================================
@@ -489,9 +565,9 @@ async function main() {
 		// ==========================================
 		console.log("6. Przechwytywanie panelu Pary Młodej...");
 		const ownerPage = await desktopContext.newPage();
-		// Zwiększamy wysokość viewportu, by objąć nagłówek, statystyki, import fotografa
-		// oraz przełączniki zaawansowanej moderacji (hasło dostępu, kolejka akceptacji, zamrożenie galerii)
-		await ownerPage.setViewportSize({ width: 1440, height: 1900 });
+		// Zwiększamy wysokość viewportu, by objąć nagłówek, statystyki, import fotografa,
+		// przełączniki moderacji oraz nowy panel Foto-Wyzwań (Weselne Bingo)
+		await ownerPage.setViewportSize({ width: 1440, height: 2450 });
 		await ownerPage.route(
 			"**/api/owner/kasia-i-tomek/session",
 			async (route) => {

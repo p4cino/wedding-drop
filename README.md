@@ -7,8 +7,8 @@
 [![Turborepo](https://img.shields.io/badge/Turborepo-Monorepo-EF4444?style=flat-square&logo=turborepo&logoColor=white)](turbo.json)
 [![pnpm](https://img.shields.io/badge/pnpm-12.4.1-F69220?style=flat-square&logo=pnpm&logoColor=white)](pnpm-lock.yaml)
 [![Biome](https://img.shields.io/badge/Biome-v2.5.13-60A5FA?style=flat-square&logo=biome&logoColor=white)](biome.json)
-[![Vitest](https://img.shields.io/badge/Vitest-464%20passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](package.json)
-[![Playwright](https://img.shields.io/badge/Playwright-114%20E2E%20passing-2EAD33?style=flat-square&logo=playwright&logoColor=white)](package.json)
+[![Vitest](https://img.shields.io/badge/Vitest-722%20passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](package.json)
+[![Playwright](https://img.shields.io/badge/Playwright-126%20E2E%20passing-2EAD33?style=flat-square&logo=playwright&logoColor=white)](package.json)
 [![UI](https://img.shields.io/badge/UI-Park%20UI%20%2B%20Panda%20CSS-F59E0B?style=flat-square&logo=react&logoColor=white)](https://park-ui.com)
 [![Hardware](https://img.shields.io/badge/Hardware-Intel%20N100%20Optimized-0071C5?style=flat-square&logo=intel&logoColor=white)](#-optymalizacje-pod-procesor-intel-n100)
 
@@ -20,22 +20,26 @@ Kompletna, samoobsługowa aplikacja internetowa do zbierania zdjęć i filmów z
 
 ### 📱 Doświadczenie Gościa Weselnego (100% Mobile First & PWA)
 
-Bez instalacji aplikacji ze sklepów i bez rejestracji – gość skanuje kod QR ze stolika, natychmiast przegląda zdjęcia na żywo, rywalizuje w rankingu TOP 3, wysyła ciepłe słowa w Księdze Życzeń oraz robi zdjęcia w wirtualnym Photobooth:
+Bez instalacji aplikacji ze sklepów i bez rejestracji – gość skanuje kod QR ze stolika, natychmiast przegląda zdjęcia na żywo, rozdaje serduszka ❤️ i sortuje galerię według *Najpopularniejszych*, bierze udział w **Foto-Wyzwaniach („Upoluj kadr”)**, opatruje ujęcia krótkimi podpisami kontekstowymi (`caption`), rywalizuje w rankingu TOP 3 oraz wysyła ciepłe słowa w Księdze Życzeń:
 
 <p align="center">
-  <img src="docs/screenshots/01-guest-gallery-mobile.png" width="270" alt="Galeria gościa weselnego z rankingiem TOP 3 i odznaką fotografa" />
+  <img src="docs/screenshots/01-guest-gallery-mobile.png" width="270" alt="Galeria gościa weselnego z Foto-Wyzwaniami, serduszkami na żywo, sortowaniem Najpopularniejsze i rankingiem TOP 3" />
   &nbsp;&nbsp;
-  <img src="docs/screenshots/02-upload-drawer-mobile.png" width="270" alt="Drawer wznawialnego uploadu TUS z opcją aparatu Photobooth" />
+  <img src="docs/screenshots/02-upload-drawer-mobile.png" width="270" alt="Drawer wznawialnego uploadu TUS z podpisem kontekstowym zdjęcia i wyborem Foto-Wyzwania" />
   &nbsp;&nbsp;
   <img src="docs/screenshots/03-guest-wishes-mobile.png" width="270" alt="Księga Życzeń gości na żywo z dedykowanymi wpisami" />
 </p>
 
-### 📺 Tryb TV na Sali Weselnej (Pokaz Slajdów na Żywo)
+### 📺 Tryb TV 2.0 na Sali Weselnej (Pokaz Slajdów na Żywo + Karty z Księgi Życzeń)
 
-Dedykowany, publiczny tryb tylko-do-odczytu na telewizor lub rzutnik w sali weselnej – automatyczna rotacja nowych materiałów w pełnej rozdzielczości z dynamicznym kodem QR w rogu dla dołączających gości:
+Dedykowany, publiczny tryb tylko-do-odczytu na telewizor lub rzutnik w sali weselnej – automatyczna rotacja zdjęć z podpisami kontekstowymi (`caption`), odznakami zrealizowanych Foto-Wyzwań (`🎯`) i aktualizowanym na żywo licznikiem serduszek ❤️, przeplatana pełnoekranowymi kartami z wpisami z Księgi Życzeń oraz stałym kodem QR w rogu ekranu:
 
 <p align="center">
-  <img src="docs/screenshots/04-tv-slideshow.png" width="850" alt="Tryb TV z pokazem slajdów na żywo i kodem QR" />
+  <img src="docs/screenshots/04-tv-slideshow.png" width="850" alt="Tryb TV 2.0 z pokazem slajdów na żywo, podpisem zdjęcia, odznaką Foto-Wyzwania, licznikiem serduszek i kodem QR" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/08-tv-wish-card.png" width="850" alt="Tryb TV 2.0 — pełnoekranowa karta z Księgi Życzeń przeplatająca rotację zdjęć" />
 </p>
 
 ### 💌 Generator Winietek na Stoliki Weselne (Format A6 / 300 DPI)
@@ -46,12 +50,12 @@ Wbudowany wektorowy generator wizytówek na stoły z dynamicznym kodem QR, wybor
   <img src="docs/screenshots/05-table-card-creator.png" width="850" alt="Generator winietek na stoliki weselne A6" />
 </p>
 
-### 💍 Panel Pary Młodej (Moderacja Treści, Import Fotografa, Księga Życzeń i Google Drive)
+### 💍 Panel Pary Młodej (Moderacja Treści, Foto-Wyzwania, Import Fotografa, Księga Życzeń i Google Drive)
 
-Dedykowany panel właściciela galerii chroniony utwardzoną sesją – statystyki w czasie rzeczywistym, moderacja widoczności zdjęć i życzeń jednym kliknięciem, masowy import materiałów fotografa z odznaką, pobieranie strumieniowego archiwum ZIP oraz automatyczny backup do chmury Google Drive:
+Dedykowany panel właściciela galerii chroniony utwardzoną sesją – statystyki w czasie rzeczywistym, konfiguracja **Foto-Wyzwań (Weselne Bingo)** z gotowymi szablonami, moderacja widoczności zdjęć i życzeń jednym kliknięciem, masowy import materiałów fotografa z odznaką, pobieranie strumieniowego archiwum ZIP oraz automatyczny backup do chmury Google Drive:
 
 <p align="center">
-  <img src="docs/screenshots/06-owner-dashboard.png" width="850" alt="Panel Pary Młodej z moderacją na żywo, importem fotografa i Google Drive" />
+  <img src="docs/screenshots/06-owner-dashboard.png" width="850" alt="Panel Pary Młodej z konfiguracją Foto-Wyzwań, moderacją na żywo, importem fotografa i Google Drive" />
 </p>
 
 ### ⚙️ Panel Główny Administratora Systemu
@@ -250,7 +254,7 @@ Aby aplikacja działała na Twojej publicznej domenie z darmowym certyfikatem Le
 ### 1. Testy Jednostkowe i Integracyjne (Vitest)
 
 ```bash
-# Uruchomienie 464 testów jednostkowych i integracyjnych w monorepo
+# Uruchomienie 722 testów jednostkowych i integracyjnych w monorepo
 pnpm turbo run test
 # lub w kontenerze Docker (Node 26 Alpine)
 docker run --rm -v "${PWD}:/app" -w /app node:26-alpine sh -c "npm i -g pnpm@12.4.1 && pnpm -r test"
@@ -258,7 +262,7 @@ docker run --rm -v "${PWD}:/app" -w /app node:26-alpine sh -c "npm i -g pnpm@12.
 
 ### 2. Testy End-to-End (Playwright)
 
-Pakiet **38 unikalnych scenariuszy testowych (łącznie 114 testów)** uruchamianych w profilach Desktop Chromium, Mobile Chrome oraz Mobile Safari (WebKit):
+Pakiet **42 unikalnych scenariuszy testowych (łącznie 126 testów)** uruchamianych w profilach Desktop Chromium, Mobile Chrome oraz Mobile Safari (WebKit):
 ```bash
 # Uruchomienie pełnego zestawu Playwright E2E
 pnpm --filter @wedding-drop/web test:e2e
@@ -267,8 +271,8 @@ docker run --rm --network wedding-drop_wedding_net -v wedding_playwright_browser
 ```
 Pokrywa:
 - **Panel Administratora**: logowanie danymi admina, walidacja błędu hasła, tworzenie wesela, obsługa kolizji sluga, usuwanie galerii.
-- **Panel Pary Młodej (Moderacja)**: logowanie hasłem, pobieranie ZIP z hasłem (w tym zdjęć ukrytych), moderacja widoczności (ukryj/pokaż), filtrowanie zakładek, usuwanie multimediów.
-- **Ścieżka Gościa & Mobile UX**: przeglądanie galerii na żywo, drawer uploadu TUS, siatka zdjęć z podpisami, pełnoekranowy Lightbox z gestami **Touch Swipe** (przesuwanie palcem lewo/prawo) oraz pobieranie plików.
+- **Panel Pary Młodej (Moderacja i Foto-Wyzwania)**: logowanie hasłem, konfiguracja i zapis Foto-Wyzwań (Weselne Bingo), pobieranie ZIP z hasłem (w tym zdjęć ukrytych), moderacja widoczności (ukryj/pokaż), filtrowanie zakładek, usuwanie multimediów.
+- **Ścieżka Gościa, Zaangażowanie & Mobile UX**: przeglądanie galerii na żywo, reakcje serduszkami ❤️ (`localStorage` + sortowanie *Najpopularniejsze*), pasek i filtrowanie Foto-Wyzwań (`🎯`), drawer uploadu TUS z podpisem kontekstowym (`caption`) i wyborem wyzwania, pełnoekranowy Lightbox z gestami **Touch Swipe** oraz Tryb TV 2.0 z kartami z Księgi Życzeń na żywo (`new-wish`).
 - **Kreator Winietek A6**: podgląd karty `#printable-card` z kodem QR, zmiana palet barwnych, edycja tekstów na żywo, generowanie wektorowego PDF (300 DPI) z parametrami w URL.
 - **Bezpieczeństwo & Edge Cases**: blokada ukrytych zdjęć (401), ekran 404, ochrona sandbox Directory Traversal, pobieranie ZIP pustej galerii (400), blokada fałszywych tokenów HMAC (401), sanityzacja złośliwego sluga z path traversal, tryb TV natychmiast usuwający z rotacji zdjęcie ukryte na żywo (SSE) oraz ignorujący sfałszowane parametry dostępu właściciela w adresie URL.
 
