@@ -68,7 +68,7 @@ export function setMediaLiked(
  * - `"popular"` — sortuje malejąco po `likesCount ?? 0`, a przy remisie malejąco po `createdAt`.
  */
 export function sortGalleryItems<
-	T extends Pick<MediaItemData, "id" | "createdAt"> & { likesCount?: number },
+	T extends Pick<MediaItemData, "id" | "createdAt" | "likesCount">,
 >(items: readonly T[], sortBy: GallerySortOrder): T[] {
 	if (sortBy === "newest") {
 		return [...items];

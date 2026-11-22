@@ -19,22 +19,14 @@ import { findQuestTitle, type QuestsConfig } from "@/lib/photo-quests";
 
 export type { MediaItemData };
 
-type LightboxMediaItem = MediaItemData & {
-	likesCount?: number;
-	caption?: string | null;
-	questId?: string | null;
-};
-
 interface LightboxModalProps {
-	items: LightboxMediaItem[];
+	items: MediaItemData[];
 	currentIndex: number | null;
 	onClose: () => void;
 	onNavigate: (index: number) => void;
 	allowDownloads?: boolean;
-	isLiked?: boolean;
 	likedIds?: Set<string>;
 	onToggleLike?: (mediaId: string) => void;
-	questTitle?: string | null;
 	questsConfig?: QuestsConfig | null;
 }
 
@@ -99,10 +91,8 @@ export default function LightboxModal({
 	onClose,
 	onNavigate,
 	allowDownloads = true,
-	isLiked,
 	likedIds,
 	onToggleLike,
-	questTitle,
 	questsConfig,
 }: LightboxModalProps) {
 	const t = useTranslations("GuestGallery");
@@ -142,13 +132,9 @@ export default function LightboxModal({
 
 	if (currentIndex === null || !items[currentIndex]) return null;
 	const current = items[currentIndex];
-	const currentIsLiked =
-		isLiked !== undefined ? isLiked : (likedIds?.has(current.id) ?? false);
+	const currentIsLiked = likedIds?.has(current.id) ?? false;
 	const currentLikesCount = current.likesCount ?? 0;
-	const resolvedQuestTitle =
-		questTitle !== undefined
-			? questTitle
-			: findQuestTitle(questsConfig, current.questId);
+	const resolvedQuestTitle = findQuestTitle(questsConfig, current.questId);
 
 	return (
 		<div

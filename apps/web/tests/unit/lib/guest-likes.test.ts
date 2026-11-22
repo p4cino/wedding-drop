@@ -12,7 +12,7 @@ function makeItem(
 	id: string,
 	createdAt: string,
 	likesCount?: number,
-): MediaItemData & { likesCount?: number } {
+): MediaItemData {
 	return {
 		id,
 		uploaderName: "Gość",

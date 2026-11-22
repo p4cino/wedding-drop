@@ -6,12 +6,7 @@ import PhotoQuestsBar from "@/components/PhotoQuestsBar";
 import type { MediaItemData } from "@/lib/gallery-types";
 import type { QuestsConfig } from "@/lib/photo-quests";
 
-function makeMedia(
-	id: string,
-	questId?: string | null,
-): MediaItemData & {
-	questId?: string | null;
-} {
+function makeMedia(id: string, questId?: string | null): MediaItemData {
 	return {
 		id,
 		uploaderName: "Gość",

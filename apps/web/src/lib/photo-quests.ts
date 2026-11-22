@@ -1,8 +1,5 @@
-import type {
-	MediaItemData,
-	QuestItem,
-	QuestsConfig,
-} from "@/lib/gallery-types";
+import type { QuestItem, QuestsConfig } from "@wedding-drop/db";
+import type { MediaItemData } from "@/lib/gallery-types";
 
 export type { QuestItem, QuestsConfig };
 
@@ -116,7 +113,9 @@ export function generateQuestId(
  * Zwraca listę aktywnych wyzwań galerii (pusta tablica, gdy wyzwania są wyłączone
  * lub konfiguracja nie istnieje).
  */
-export function getActiveQuests(config?: QuestsConfig | null): QuestItem[] {
+export function getActiveQuests(
+	config?: QuestsConfig | { enabled?: boolean; items?: QuestItem[] } | null,
+): QuestItem[] {
 	if (!config?.enabled || !Array.isArray(config.items)) {
 		return [];
 	}
@@ -136,13 +135,18 @@ export function getActiveQuests(config?: QuestsConfig | null): QuestItem[] {
  * są wyłączone, `questId` jest puste lub wyzwanie nie istnieje.
  */
 export function findQuestTitle(
-	config: QuestsConfig | null | undefined,
+	config:
+		| QuestsConfig
+		| { enabled?: boolean; items?: QuestItem[] }
+		| null
+		| undefined,
 	questId?: string | null,
 ): string | null {
-	if (!questId) return null;
-	const active = getActiveQuests(config);
-	const found = active.find((q) => q.id === questId);
-	return found ? found.title : null;
+	const id = questId?.trim();
+	if (!id) return null;
+	const found = getActiveQuests(config).find((q) => q.id === id);
+	const title = found?.title?.trim();
+	return title || null;
 }
 
 /**
@@ -150,7 +154,7 @@ export function findQuestTitle(
  * widocznych materiałów galerii.
  */
 export function countMediaByQuest(
-	items: ReadonlyArray<Pick<MediaItemData, "id"> & { questId?: string | null }>,
+	items: ReadonlyArray<Pick<MediaItemData, "id" | "questId">>,
 ): Record<string, number> {
 	const counts: Record<string, number> = {};
 	for (const item of items) {

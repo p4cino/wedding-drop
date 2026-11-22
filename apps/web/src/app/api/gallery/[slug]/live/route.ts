@@ -4,6 +4,7 @@ import { sseBus } from "@wedding-drop/media";
 import { eq } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { authorizeHiddenAccess, hasGuestAccess } from "@/lib/auth";
+import { serializePublicMediaItem } from "@/lib/public-media";
 import { tooManyRequests } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -60,23 +61,7 @@ export async function GET(
 					}
 					const payload = JSON.stringify({
 						type: "new-media",
-						media: {
-							id: mediaItem.id,
-							uploaderName: mediaItem.uploaderName,
-							source: mediaItem.source,
-							fileType: mediaItem.fileType,
-							mediaType: mediaItem.mediaType,
-							mimeType: mediaItem.mimeType,
-							originalFileName: mediaItem.originalFileName,
-							fileSize: mediaItem.fileSize,
-							status: mediaItem.status,
-							likesCount: mediaItem.likesCount ?? 0,
-							caption: mediaItem.caption ?? null,
-							questId: mediaItem.questId ?? null,
-							thumbUrl: `/media-file/${mediaItem.thumbPath.replace(/\\/g, "/")}`,
-							rawUrl: `/media-file/${mediaItem.storagePath.replace(/\\/g, "/")}`,
-							createdAt: mediaItem.createdAt,
-						},
+						media: serializePublicMediaItem(mediaItem),
 					});
 					controller.enqueue(encoder.encode(`data: ${payload}\n\n`));
 				} catch (err) {

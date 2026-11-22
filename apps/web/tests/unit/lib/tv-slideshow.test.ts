@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MediaItemData, WishItemData } from "@/lib/gallery-types";
-import {
-	buildTvGalleryQrUrl,
-	buildTvSlides,
-	resolveTvQuestTitle,
-} from "@/lib/tv-slideshow";
+import { buildTvGalleryQrUrl, buildTvSlides } from "@/lib/tv-slideshow";
 
 function makeMedia(
 	id: string,
@@ -142,34 +138,5 @@ describe("buildTvSlides", () => {
 			"media-m8",
 			"wish-w1",
 		]);
-	});
-});
-
-describe("resolveTvQuestTitle", () => {
-	const activeConfig = {
-		enabled: true,
-		items: [
-			{ id: "selfie-para", title: "Selfie z Parą Młodą" },
-			{ id: "toast-stolik", title: "Toast przy naszym stoliku" },
-		],
-	};
-
-	it("zwraca tytuł wyzwania, gdy wyzwania są włączone i questId istnieje na liście", () => {
-		expect(resolveTvQuestTitle(activeConfig, "selfie-para")).toBe(
-			"Selfie z Parą Młodą",
-		);
-	});
-
-	it("zwraca null, gdy wyzwania są wyłączone (enabled: false)", () => {
-		expect(
-			resolveTvQuestTitle({ ...activeConfig, enabled: false }, "selfie-para"),
-		).toBeNull();
-	});
-
-	it("zwraca null, gdy questId nie pasuje do żadnego wyzwania lub jest pusty", () => {
-		expect(resolveTvQuestTitle(activeConfig, "nieznane")).toBeNull();
-		expect(resolveTvQuestTitle(activeConfig, null)).toBeNull();
-		expect(resolveTvQuestTitle(activeConfig, undefined)).toBeNull();
-		expect(resolveTvQuestTitle(null, "selfie-para")).toBeNull();
 	});
 });

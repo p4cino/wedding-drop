@@ -1,12 +1,6 @@
-export interface QuestItem {
-	id: string;
-	title: string;
-}
+import type { QuestItem, QuestsConfig } from "@wedding-drop/db";
 
-export interface QuestsConfig {
-	enabled: boolean;
-	items: QuestItem[];
-}
+export type { QuestItem, QuestsConfig };
 
 /** Metadane galerii zwracane przez publiczne `GET /api/gallery/[slug]`. */
 export interface GalleryData {

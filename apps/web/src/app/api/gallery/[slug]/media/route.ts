@@ -2,6 +2,7 @@ import { db, galleries, mediaItems } from "@wedding-drop/db";
 import { and, desc, eq, ne } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { authorizeHiddenAccess, hasGuestAccess } from "@/lib/auth";
+import { serializePublicMediaItem } from "@/lib/public-media";
 import { tooManyRequests } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -72,26 +73,7 @@ export async function GET(
 			.where(condition)
 			.orderBy(desc(mediaItems.createdAt));
 
-		const formatted = items.map((m) => ({
-			id: m.id,
-			uploaderName: m.uploaderName,
-			source: m.source,
-			fileType: m.fileType,
-			mediaType: m.mediaType,
-			mimeType: m.mimeType,
-			originalFileName: m.originalFileName,
-			fileSize: m.fileSize,
-			width: m.width,
-			height: m.height,
-			duration: m.duration,
-			status: m.status,
-			likesCount: m.likesCount ?? 0,
-			caption: m.caption ?? null,
-			questId: m.questId ?? null,
-			createdAt: m.createdAt,
-			thumbUrl: `/media-file/${m.thumbPath.replace(/\\/g, "/")}`,
-			rawUrl: `/media-file/${m.storagePath.replace(/\\/g, "/")}`,
-		}));
+		const formatted = items.map(serializePublicMediaItem);
 
 		return NextResponse.json({ media: formatted });
 	} catch (error) {

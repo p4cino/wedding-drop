@@ -48,13 +48,6 @@ export async function GET(
 
 		const res = NextResponse.json({
 			...payload,
-			gallery: {
-				...payload.gallery,
-				questsConfig: auth.gallery.questsConfig ?? {
-					enabled: false,
-					items: [],
-				},
-			},
 			ownerToken: freshToken,
 		});
 		setOwnerSessionCookie(res, slug, freshToken);

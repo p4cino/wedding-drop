@@ -15,14 +15,8 @@ import EmptyState from "@/components/EmptyState";
 import type { MediaItemData } from "@/lib/gallery-types";
 import { findQuestTitle, type QuestsConfig } from "@/lib/photo-quests";
 
-export type GridMediaItem = MediaItemData & {
-	likesCount?: number;
-	caption?: string | null;
-	questId?: string | null;
-};
-
 interface MediaGridProps {
-	items: GridMediaItem[];
+	items: MediaItemData[];
 	onItemClick: (index: number) => void;
 	likedIds?: Set<string>;
 	onToggleLike?: (mediaId: string) => void;

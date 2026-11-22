@@ -52,13 +52,15 @@ describe("photo-quests helpers", () => {
 		expect(getActiveQuests({ enabled: true, items })).toEqual(items);
 	});
 
-	it("findQuestTitle rozwiązuje tytuł aktywnego wyzwania lub zwraca null", () => {
+	it("findQuestTitle rozwiązuje tytuł aktywnego wyzwania (z przycięciem białych znaków) lub zwraca null", () => {
 		const config: QuestsConfig = {
 			enabled: true,
-			items: [{ id: "first-dance", title: "Pierwszy taniec" }],
+			items: [{ id: "first-dance", title: "  Pierwszy taniec  " }],
 		};
 
 		expect(findQuestTitle(config, "first-dance")).toBe("Pierwszy taniec");
+		expect(findQuestTitle(config, "  first-dance  ")).toBe("Pierwszy taniec");
+		expect(findQuestTitle(config, "   ")).toBeNull();
 		expect(findQuestTitle(config, "unknown")).toBeNull();
 		expect(findQuestTitle(config, null)).toBeNull();
 		expect(

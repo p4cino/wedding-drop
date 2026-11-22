@@ -657,7 +657,31 @@ describe("tus-server configuration", () => {
 					},
 				} as never,
 			),
-		).rejects.toMatchObject({ status_code: 400 });
+		).rejects.toMatchObject({
+			status_code: 400,
+			body: "Błąd: Podpis zdjęcia nie może przekraczać 140 znaków",
+		});
+	});
+
+	it("onUploadCreate powinien odrzucić upload (400), gdy questId ma niepoprawny format", async () => {
+		const server = initTusServer(tempDir);
+		const onUploadCreate = server.options.onUploadCreate;
+
+		await expect(
+			onUploadCreate?.(
+				{} as never,
+				{
+					size: 1024,
+					metadata: {
+						gallerySlug: "kasia-i-tomek",
+						questId: "Niepoprawne ID!",
+					},
+				} as never,
+			),
+		).rejects.toMatchObject({
+			status_code: 400,
+			body: "Błąd: Niepoprawny identyfikator wyzwania",
+		});
 	});
 });
 

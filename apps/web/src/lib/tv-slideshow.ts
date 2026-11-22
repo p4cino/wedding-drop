@@ -91,25 +91,3 @@ export function buildTvSlides(
 
 	return slides;
 }
-
-/**
- * Zwraca tytuł foto-wyzwania dla danego `questId`, jeśli wyzwania są aktywne w galerii.
- */
-export function resolveTvQuestTitle(
-	questsConfig:
-		| { enabled?: boolean; items?: Array<{ id: string; title: string }> }
-		| null
-		| undefined,
-	questId?: string | null,
-): string | null {
-	if (
-		!questId ||
-		!questsConfig?.enabled ||
-		!Array.isArray(questsConfig.items)
-	) {
-		return null;
-	}
-	const found = questsConfig.items.find((item) => item.id === questId);
-	const title = found?.title?.trim();
-	return title ? title : null;
-}

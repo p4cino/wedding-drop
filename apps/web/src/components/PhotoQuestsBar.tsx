@@ -13,7 +13,7 @@ import {
 
 interface PhotoQuestsBarProps {
 	questsConfig?: QuestsConfig | null;
-	items: Array<MediaItemData & { questId?: string | null }>;
+	items: MediaItemData[];
 	selectedQuestId: string | null;
 	onSelectQuest: (questId: string | null) => void;
 	onUploadForQuest?: (questId: string) => void;
