@@ -13,7 +13,7 @@ RUN apk update && apk upgrade --no-cache && \
     apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@12.4.1 --activate
+RUN npm install -g pnpm@12.4.1
 
 # Kopiowanie wyodrębnionych definicji pakietów
 COPY --from=pruner /app/out/json/ .
@@ -38,7 +38,7 @@ RUN pnpm --filter @wedding-drop/web build
 # 3. Etap instalacji TYLKO zależności produkcyjnych i oczyszczenia artefaktów czasu budowy
 FROM node:26-alpine AS prod-deps
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@12.4.1 --activate
+RUN npm install -g pnpm@12.4.1
 COPY --from=pruner /app/out/json/ .
 COPY pnpm-lock.yaml ./pnpm-lock.yaml
 COPY pnpm-workspace.yaml ./pnpm-workspace.yaml

@@ -248,7 +248,7 @@ Aby aplikacja działała na Twojej publicznej domenie z darmowym certyfikatem Le
 # Uruchomienie 464 testów jednostkowych i integracyjnych w monorepo
 pnpm turbo run test
 # lub w kontenerze Docker (Node 26 Alpine)
-docker run --rm -v "${PWD}:/app" -w /app node:26-alpine sh -c "corepack enable && pnpm -r test"
+docker run --rm -v "${PWD}:/app" -w /app node:26-alpine sh -c "npm i -g pnpm@12.4.1 && pnpm -r test"
 ```
 
 ### 2. Testy End-to-End (Playwright)

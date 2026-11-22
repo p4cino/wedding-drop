@@ -44,7 +44,7 @@ pnpm --filter <pkg> check-types                  # tsc --noEmit for one package
 
 Husky hooks: `pre-commit` runs `lint-staged` (biome check --write on staged files); `pre-push` runs `pnpm test && pnpm build` — both must pass locally before a push will succeed.
 
-Docker: `docker compose up -d --build` runs the full stack (`wedding_postgres`, `wedding_web`, `wedding_caddy`). CI/sandboxed test runs use `docker run --rm -v "${PWD}:/app" -w /app node:26-alpine sh -c "corepack enable && pnpm -r test"`.
+Docker: `docker compose up -d --build` runs the full stack (`wedding_postgres`, `wedding_web`, `wedding_caddy`). CI/sandboxed test runs use `docker run --rm -v "${PWD}:/app" -w /app node:26-alpine sh -c "npm i -g pnpm@12.4.1 && pnpm -r test"`.
 
 ## Architecture
 

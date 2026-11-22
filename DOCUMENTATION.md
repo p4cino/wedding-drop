@@ -400,7 +400,7 @@ Projekt objęty jest dwupoziomową piramidą testów automatycznych oraz standar
    - `packages/db/tests/`: 55 testów schematu Drizzle, walidatorów Zod (w tym `wishes`/`addWishDto`) i klienta bazy.
    - `packages/media/tests/`: 81 testów potoku przetwarzania mediów, integracji Google Drive, wznawialnego serwera TUS, event-busa SSE (w tym `new-wish`/`wish-updated`) i strumienia ZIP (w tym dołączanie `zyczenia.txt`).
    - `apps/web/tests/`: 328 testów integracyjnych tras API (`admin`, `gallery`, `owner`, w tym księga życzeń i sesja właściciela), hooków (`useLiveGallery`, `useUploadQueue`, `useGDriveExport`, hooków dostępności modali), bibliotek (`lib/*`) oraz komponentów i stron UI.
-   - Uruchomienie: `pnpm turbo run test` lub `docker run --rm -v "${PWD}:/app" -w /app node:26-alpine sh -c "corepack enable && pnpm -r test"`
+   - Uruchomienie: `pnpm turbo run test` lub `docker run --rm -v "${PWD}:/app" -w /app node:26-alpine sh -c "npm i -g pnpm@12.4.1 && pnpm -r test"`
 
 3. **Testy End-to-End (Playwright)**:
    - Liczba testów: **38 unikalnych scenariuszy (114 testów łącznych)** w katalogu `apps/web/e2e/`.

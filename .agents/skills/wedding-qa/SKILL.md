@@ -55,7 +55,7 @@ pnpm --filter @wedding-drop/web test:coverage
 
 Gwarantuje identyczne środowisko jak na serwerze CI/CD (Node 26 Alpine):
 ```bash
-docker run --rm -v "${PWD}:/app" -w /app node:26-alpine sh -c "corepack enable && pnpm -r test"
+docker run --rm -v "${PWD}:/app" -w /app node:26-alpine sh -c "npm i -g pnpm@12.4.1 && pnpm -r test"
 ```
 
 ---
