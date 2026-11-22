@@ -59,19 +59,17 @@ RUN pnpm install --prod --frozen-lockfile --ignore-scripts && \
            node_modules/.pnpm/next@*/node_modules/next/dist/compiled/react-dom-experimental && \
     find node_modules \( -name "*.map" -o -name "*.d.ts" -o -name "*.d.mts" -o -name "*.runtime.dev.js" \) -delete
 
-# 4. Etap produkcyjny (Minimalny Runner zoptymalizowany pod Intel N100, 0 CVE w Docker Scout)
+# 4. Etap produkcyjny (Minimalny Runner zoptymalizowany pod Intel N100, bez roota)
 FROM node:26-alpine AS runner
 # Aktualizacja pakietów systemowych i biblioteki musl (>= 1.2.6-r6, CVE-2026-107891)
 # oraz usunięcie menedżerów pakietów npm/yarn/corepack zbędnych w runtime.
 RUN apk update && apk upgrade --no-cache && \
     apk upgrade --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/main musl musl-utils && \
-    apk add --no-cache libc6-compat su-exec && \
+    apk add --no-cache libc6-compat && \
     rm -rf /usr/local/lib/node_modules /opt/yarn* /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/yarn* /usr/local/bin/corepack /var/cache/apk/*
 
-# Statyczna binarka FFmpeg z obrazu mwader/static-ffmpeg (Docker Hub)
-# - brak throttlingu johnvansickle.com na GitHub Actions
-# - brak 80+ dynamicznych bibliotek z apk add ffmpeg (cjson, libxml2, libsndfile, libvpx, librav1e, libdovi) -> 0 CVE w Docker Scout
-COPY --from=mwader/static-ffmpeg:latest /ffmpeg /usr/local/bin/ffmpeg
+# Statyczna binarka FFmpeg przypięta do zweryfikowanego digestu SHA-256 (mwader/static-ffmpeg)
+COPY --from=mwader/static-ffmpeg@sha256:4cf063c6e18c630eeddbe4482d8a65a05067336d12d286a0165393b490eaddd6 /ffmpeg /usr/local/bin/ffmpeg
 
 WORKDIR /app
 
@@ -87,7 +85,6 @@ COPY --chown=node:node --from=prod-deps /app/packages/db/node_modules ./packages
 COPY --chown=node:node --from=prod-deps /app/packages/media/node_modules ./packages/media/node_modules
 
 # Kopiowanie wygenerowanych plików aplikacji
-COPY --chown=node:node --from=builder /app/apps/web/.next/standalone/apps/web/server.js ./apps/web/
 COPY --chown=node:node --from=builder /app/apps/web/.next/standalone/apps/web/.next ./apps/web/.next
 COPY --chown=node:node --from=builder /app/apps/web/.next/static ./apps/web/.next/static
 COPY --chown=node:node --from=builder /app/apps/web/public ./apps/web/public
@@ -101,10 +98,11 @@ RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && \
     mkdir -p /app/data/galleries /app/data/tus_temp && \
     chown -R node:node /app/data
 
-# Start jako root tylko po to, by entrypoint naprawil wlasciciela wolumenu /app/data
-# (stare wolumeny maja pliki roota) i zrzucil uprawnienia do uzytkownika node (su-exec).
 EXPOSE 3000
 
+USER node
 WORKDIR /app/apps/web
+HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \
+    CMD ["node", "-e", "fetch('http://127.0.0.1:3000/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "dist/server.js"]

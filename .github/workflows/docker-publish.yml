@@ -45,7 +45,31 @@ jobs:
             type=semver,pattern={{version}}
             type=sha,format=short
 
-      - name: Build and push
+      - name: Build local image for CVE gate
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          pull: true
+          load: true
+          push: false
+          tags: wedding-drop-web:ci-scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan image for fixable CRITICAL/HIGH CVEs (Trivy)
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:latest image \
+            --exit-code 1 \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --no-progress \
+            wedding-drop-web:ci-scan
+
+      - name: Build and push with SBOM & SLSA provenance
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -53,6 +77,8 @@ jobs:
           platforms: linux/amd64
           pull: true
           push: true
+          provenance: mode=max
+          sbom: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
