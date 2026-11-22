@@ -1,0 +1,53 @@
+# deployment/container-security Specification
+
+## Purpose
+Określa wymagania bezpieczeństwa warstwy kontenerowej WeddingDrop: uruchamianie bez uprawnień roota, minimalne przywileje jądra i system plików tylko do odczytu, izolację sieciową bazy danych, ochronę przed przestarzałymi obrazami podatnymi na CVE oraz weryfikację integralności konfiguracji wdrożeniowych.
+
+## Requirements
+
+### Requirement: Aplikacja web działa w obrazie jako jawny użytkownik nieuprzywilejowany
+Obraz produkcyjny `wedding-drop-web` SHALL deklarować jawnie nieuprzywilejowanego użytkownika `node` (`UID/GID 1000`) w metadanych obrazu (`USER node`), aby zarówno główny proces serwera, jak i sesje diagnostyczne (`docker exec`) działały bez uprawnień `root`. Kontener `web` MUST NOT wymagać dodatkowych uprawnień jądra (`cap_add`) ani startu jako `root`.
+
+#### Scenario: Uruchomienie procesu i sesji exec bez roota
+- **WHEN** kontener `wedding_web` zostaje uruchomiony z domyślnego obrazu produkcyjnego
+- **THEN** proces `node dist/server.js` oraz polecenie `docker exec wedding_web id` raportują `uid=1000(node)` i `gid=1000(node)`, a polityka Docker Scout `Default non-root user` kończy się statusem zaliczonym
+
+#### Scenario: Minimalne uprawnienia jądra w Compose
+- **WHEN** serwis `web` jest zdefiniowany w `docker-compose.yml` i `docker-compose.prod.yml`
+- **THEN** konfiguracja utrzymuje `security_opt: ["no-new-privileges:true"]` oraz `cap_drop: ["ALL"]` bez `cap_add` (`CHOWN`, `SETUID`, `SETGID`)
+
+### Requirement: Główny system plików kontenera web jest chroniony przed zapisem
+Kontener `web` w konfiguracjach Compose SHALL działać z głównym systemem plików tylko do odczytu (`read_only: true`), udostępniając zapis wyłącznie w trwałym wolumenie danych (`/app/data`) oraz ulotnym katalogu tymczasowym (`/tmp`).
+
+#### Scenario: Zapis multimediów i brak zapisu poza dozwolonymi ścieżkami
+- **WHEN** kontener `wedding_web` działa z `read_only: true` i `tmpfs: /tmp`
+- **THEN** zapis przesyłanych plików TUS, miniaturek oraz logów tymczasowych w `/app/data` i `/tmp` przebiega poprawnie, a próba zapisu w `/app/apps/web` lub `/etc` kończy się błędem `EROFS`
+
+### Requirement: Baza PostgreSQL jest odizolowana w wewnętrznej sieci Docker
+Serwis `postgres` MUST być podłączony wyłącznie do wewnętrznej sieci backendowej (`internal: true`), współdzielonej jedynie z serwisem `web`. Publiczny reverse proxy (`caddy`) MUST NOT mieć bezpośredniej ścieżki sieciowej do bazy danych.
+
+#### Scenario: Brak komunikacji z bazy danych poza siecią wewnętrzną
+- **WHEN** cały stack (`caddy`, `web`, `postgres`) jest uruchomiony
+- **THEN** kontener `web` komunikuje się z `postgres:5432` po sieci `backend_net` (`internal: true`), natomiast kontener `caddy` należy wyłącznie do sieci `frontend_net` i nie może nawiązać połączenia TCP z `postgres`
+
+### Requirement: Obrazy infrastruktury i narzędzi są przypięte do załatanych wydań
+Konfiguracje Compose i `Dockerfile` MUST jawnie wymuszać wersje lub digesty obrazów wolne od znanych luk krytycznych i wysokich: `postgres` w wersji co najmniej `16.16-alpine`, `caddy` w wersji co najmniej `2.11.5-alpine` (z aktualizacją pakietów systemowych w lokalnym buildzie Compose oraz przypiętym digestem w `docker-compose.prod.yml`) oraz przypięty tag/digest dla `mwader/static-ffmpeg`. Ewentualne użycie `edge/main` w `Dockerfile` MUST być ograniczone wyłącznie do pakietów `musl` i `musl-utils` do czasu wydania poprawki w stabilnej gałęzi Alpine, tak aby utrzymać `0` naprawialnych CVE w `wedding-drop-web`.
+
+#### Scenario: Przypięte obrazy i brak zbędnych nieprzypiętych tagów :latest
+- **WHEN** następuje budowanie obrazu `wedding-drop-web` lub wdrożenie stacka z `docker-compose.yml`
+- **THEN** żadna instrukcja `COPY --from` w `Dockerfile` nie używa mutowalnego tagu `:latest`, obraz `postgres` jest przypięty do załatanego wydania `>= 16.16`, a `wedding-drop-web` utrzymuje `0C 0H` CVE w Docker Scout (łącznie z `musl >= 1.2.6-r6`)
+
+#### Scenario: Utwardzenie serwisów postgres i caddy
+- **WHEN** uruchamiane są serwisy `postgres` i `caddy` w `docker-compose.yml`
+- **THEN** oba serwisy posiadają `security_opt: ["no-new-privileges:true"]` oraz ograniczone uprawnienia jądra (`cap_drop: ["ALL"]` z wyłącznie niezbędnym minimum dla bazy/bindowania portów)
+
+### Requirement: Konfiguracja produkcyjna chroni integralność Caddyfile i higienę sekretów
+W trybie jednopilkowym `docker-compose.prod.yml` pobieranie zdalnego `Caddyfile` SHALL weryfikować integralność pliku kryptograficzną sumą kontrolną SHA-256 przed uruchomieniem serwera proxy, zachowując pełną kompatybilność z importerem tekstowym ZimaOS/CasaOS. Hasła i sekrety w `docker-compose.yml` SHALL być parametryzowane zmiennymi środowiskowymi, a produkcyjny start z domyślnym hasłem administratora MUST emitować wyraźne ostrzeżenie w logach.
+
+#### Scenario: Weryfikacja sumy kontrolnej Caddyfile przy starcie prod
+- **WHEN** kontener `caddy` startuje w `docker-compose.prod.yml`
+- **THEN** po pobraniu `Caddyfile` weryfikuje jego hash SHA-256 i przerywa start z kodem błędu niezerowym w przypadku niezgodności sumy
+
+#### Scenario: Brak cichego użycia domyślnego hasła w produkcji
+- **WHEN** aplikacja uruchamia się z `NODE_ENV=production` i domyślnym `ADMIN_PASSWORD` (`admin123` lub `ZMIEN_MNIE_haslo_admina`) lub pustym `ADMIN_SECRET`
+- **THEN** serwer loguje wyraźne ostrzeżenie bezpieczeństwa `[SECURITY WARNING]` przy zachowaniu startu aplikacji

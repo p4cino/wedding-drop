@@ -1,17 +1,12 @@
 #!/bin/sh
-# Wolumen /app/data moze byc zalozony przez wczesniejszy obraz dzialajacy jako root
-# (named volume kopiuje wlasciciela tylko przy pierwszym utworzeniu), przez co
-# uzytkownik "node" dostaje EACCES przy rename/mkdir. Naprawiamy wlasciciela
-# przy kazdym starcie, a nastepnie zrzucamy uprawnienia do "node".
 set -e
 
 DATA_DIR="${DATA_DIR:-/app/data}"
 
-if [ "$(id -u)" = "0" ]; then
-	find "$DATA_DIR" -xdev \( ! -user node -o ! -group node \) -exec chown node:node {} +
-	su-exec node mkdir -p "$DATA_DIR/galleries" "$DATA_DIR/tus_temp"
-	exec su-exec node "$@"
+if ! mkdir -p "$DATA_DIR/galleries" "$DATA_DIR/tus_temp" 2>/dev/null || [ ! -w "$DATA_DIR" ]; then
+	echo "[ERROR] Brak uprawnień zapisu w katalogu danych '$DATA_DIR' dla użytkownika $(id -un) ($(id -u):$(id -g))." >&2
+	echo "[ERROR] Jeśli migrujesz wolumen utworzony przed v1.3, uruchom jednorazowo: docker run --rm -v wedding-drop_app_data:/data alpine chown -R 1000:1000 /data" >&2
+	exit 1
 fi
 
-mkdir -p "$DATA_DIR/galleries" "$DATA_DIR/tus_temp"
 exec "$@"

@@ -7,7 +7,7 @@
 [![Turborepo](https://img.shields.io/badge/Turborepo-Monorepo-EF4444?style=flat-square&logo=turborepo&logoColor=white)](turbo.json)
 [![pnpm](https://img.shields.io/badge/pnpm-12.4.1-F69220?style=flat-square&logo=pnpm&logoColor=white)](pnpm-lock.yaml)
 [![Biome](https://img.shields.io/badge/Biome-v2.5.13-60A5FA?style=flat-square&logo=biome&logoColor=white)](biome.json)
-[![Vitest](https://img.shields.io/badge/Vitest-731%20passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](package.json)
+[![Vitest](https://img.shields.io/badge/Vitest-736%20passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](package.json)
 [![Playwright](https://img.shields.io/badge/Playwright-126%20E2E%20passing-2EAD33?style=flat-square&logo=playwright&logoColor=white)](package.json)
 [![UI](https://img.shields.io/badge/UI-Park%20UI%20%2B%20Panda%20CSS-F59E0B?style=flat-square&logo=react&logoColor=white)](https://park-ui.com)
 [![Hardware](https://img.shields.io/badge/Hardware-Intel%20N100%20Optimized-0071C5?style=flat-square&logo=intel&logoColor=white)](#-optymalizacje-pod-procesor-intel-n100)
@@ -183,7 +183,7 @@ Jeśli nie chcesz budować obrazu lokalnie (np. na NAS-ie ZimaOS/CasaOS), aplika
 4. **Ustaw Primary Service na `caddy`**, nie `web` — `web` nie ma żadnego portu wystawionego na zewnątrz i jest dostępny tylko przez `caddy` (patrz architektura w [DOCUMENTATION.md](DOCUMENTATION.md#11-publikacja-obrazu-docker-ghcr-i-instalacja-na-zimaoscasaos)).
 5. Kliknij **Submit**, a następnie **Install**.
 
-Ten plik compose nie buduje niczego lokalnie i nie odwołuje się do żadnych plików z dysku — Caddy ściąga swój `Caddyfile` zdalnie z tego repozytorium przy starcie, więc cały stack da się wkleić jako czysty tekst YAML.
+Ten plik compose nie buduje niczego lokalnie i nie odwołuje się do żadnych plików z dysku — Caddy pobiera swój `Caddyfile` do `/tmp` i weryfikuje jego integralność sumą SHA-256 przed uruchomieniem, więc cały stack da się wkleić jako czysty tekst YAML.
 
 > **Coś nie działa po instalacji?** Zobacz sekcję rozwiązywania problemów w [DOCUMENTATION.md](DOCUMENTATION.md#11-publikacja-obrazu-docker-ghcr-i-instalacja-na-zimaoscasaos) — konkretne komendy do zdiagnozowania konfliktu portów, crashującego Caddy albo białej strony.
 
@@ -243,9 +243,9 @@ Aby aplikacja działała na Twojej publicznej domenie z darmowym certyfikatem Le
 - **Hasło gościa**: galeria chroniona hasłem nie ujawnia mediów, życzeń ani uploadu bez sesji gościa.
 - **Branding bez SVG**: logo i tło tylko JPEG/PNG/WebP, weryfikowane po zawartości pliku.
 - **Izolacja**: Pliki każdej pary są przechowywane w odrębnych podkatalogach `/data/galleries/<slug>/`.
-- **Utwardzony kontener Docker i izolacja jądra**: Kontener aplikacji produkcyjnej działa na obrazie `node:26-alpine` (wymóg `Node.js >= 26.13.1` Active LTS z pełnym załataniem zarówno październikowych biuletynów bezpieczeństwa **CVE-2026-111497 "Node2Shell"** Brotli RCE, `CVE-2026-105482`, `CVE-2026-105483`, jak i listopadowych `CVE-2026-123863` HTTP/2 DoS, `CVE-2026-123864` HTTPS heap disclosure oraz `CVE-2026-126051` TLS handshake DoS), a kontenery infrastruktury wykorzystują utwardzone obrazy `postgres:16-alpine` (`>= 16.16`, łatający `CVE-2026-6460`) oraz `caddy:2-alpine` (`>= 2.11.5`, łatający `CVE-2026-55458` i `CVE-2026-77281`). Kontener aplikacji ma włączone `security_opt: ["no-new-privileges:true"]`, zrzucone wszystkie zbędne uprawnienia jądra (`cap_drop: ["ALL"]`) oraz limit sterty V8 (`NODE_OPTIONS="--max-old-space-size=768"`) zapobiegający nagłemu OOM killerowi na serwerach Intel N100.
-- **Bezpieczny łańcuch dostaw (Supply Chain) i 0 podatności CVE**: Wszystkie zależności monorepo przechodzą rygorystyczny audyt (`0 vulnerabilities found` w `pnpm audit`), w tym zaktualizowany `Next.js >= 16.4.5` (eliminacja podatności `GHSA-pc58-hwjq-p385` self-hosted response disclosure, `GHSA-7qx7-33qx-rqx2` SVG image optimization bypass oraz ujawnień w Cache Components / `use cache`), wymuszone nadpisania zależności przechodnich (`pnpm.overrides` dla `qs >= 6.16.1`, `glob >= 14.0.2`, `minimatch >= 11.0.1`) oraz przypięta wersja menedżera pakietów `pnpm@12.4.1` w Corepack.
-- **Zoptymalizowany rozmiar obrazu (155 MB) i 0 CVE w Docker Scout**: Dzięki statycznej binarce FFmpeg 9.0 z `mwader/static-ffmpeg` (zamiast dynamicznego `apk add ffmpeg`), aktualizacji `musl >= 1.2.6-r6` oraz oczyszczeniu etapu `prod-deps` z kompilatorów czasu budowy (`@next/swc-*`, `@swc/core-*`, `playwright*`, `lucide-react`, map źródłowych `.map` i plików `.d.ts`), obraz produkcyjny osiąga wynik **`0C 0H 0M 0L` (0 podatności)** w `docker scout cves` oraz redukcję warstwy `node_modules` o ponad 70% (z 569 MB do 161 MB).
+- **Utwardzony kontener Docker, izolacja jądra i sieci**: Kontener aplikacji produkcyjnej działa na obrazie `node:26-alpine` (wymóg `Node.js >= 26.13.1` Active LTS z pełnym załataniem zarówno październikowych biuletynów bezpieczeństwa **CVE-2026-111497 "Node2Shell"** Brotli RCE, `CVE-2026-105482`, `CVE-2026-105483`, jak i listopadowych `CVE-2026-123863` HTTP/2 DoS, `CVE-2026-123864` HTTPS heap disclosure oraz `CVE-2026-126051` TLS handshake DoS), z jawnym `USER node` (bez `root` ani `su-exec`), `read_only: true`, `tmpfs: /tmp`, wbudowanym `HEALTHCHECK` (`GET /api/health`) oraz limitem sterty V8 (`NODE_OPTIONS="--max-old-space-size=768"`). Wszystkie serwisy mają włączone `security_opt: ["no-new-privileges:true"]` oraz `cap_drop: ["ALL"]` (`web` nie wymaga żadnych `cap_add`). Baza `postgres:16.16-alpine` (przypięty digest, łatający `CVE-2026-6460`) jest odizolowana w wewnętrznej sieci `backend_net` (`internal: true`), a proxy `caddy:2.11.9-alpine` (`>= 2.11.5`, łatający `CVE-2026-55458` i `CVE-2026-77281`; lokalnie dodatkowo aktualizowane w `Dockerfile.caddy`) działa wyłącznie w `frontend_net` z systemem plików `read_only: true`.
+- **Bezpieczny łańcuch dostaw (Supply Chain) i 0 podatności CVE**: Wszystkie zależności monorepo przechodzą rygorystyczny audyt (`0 vulnerabilities found` w `pnpm audit`), w tym zaktualizowany `Next.js >= 16.4.5` (eliminacja podatności `GHSA-pc58-hwjq-p385` self-hosted response disclosure, `GHSA-7qx7-33qx-rqx2` SVG image optimization bypass oraz ujawnień w Cache Components / `use cache`), wymuszone nadpisania zależności przechodnich (`pnpm.overrides` dla `qs >= 6.16.1`, `glob >= 14.0.2`, `minimatch >= 11.0.1`) oraz przypięta wersja menedżera pakietów `pnpm@12.4.1`. Pipeline publikacji `.github/workflows/docker-publish.yml` generuje atesty `SLSA provenance` i `SPDX SBOM` oraz blokuje publikację bramką Trivy przy naprawialnych lukach `CRITICAL`/`HIGH`.
+- **Zoptymalizowany rozmiar obrazu (158 MB) i 0 CVE w Docker Scout**: Dzięki statycznej binarce FFmpeg 9.0 z `mwader/static-ffmpeg` (przypiętej do digestu SHA-256 zamiast dynamicznego `apk add ffmpeg`), celowanej łatce `musl >= 1.2.6-r6` (`CVE-2026-107891`) oraz oczyszczeniu etapu `prod-deps` z kompilatorów czasu budowy (`@next/swc-*`, `@swc/core-*`, `playwright*`, `lucide-react`, map źródłowych `.map` i plików `.d.ts`), obraz produkcyjny osiąga wynik **`0C 0H 0M 0L` (0 podatności)** w `docker scout cves` oraz redukcję warstwy `node_modules` o ponad 70% (z 569 MB do 161 MB). Przy migracji wolumenów utworzonych przed v1.3 uruchom jednorazowo: `docker run --rm -v wedding-drop_app_data:/data alpine chown -R 1000:1000 /data`.
 
 ---
 
@@ -254,7 +254,7 @@ Aby aplikacja działała na Twojej publicznej domenie z darmowym certyfikatem Le
 ### 1. Testy Jednostkowe i Integracyjne (Vitest)
 
 ```bash
-# Uruchomienie 731 testów jednostkowych i integracyjnych w monorepo
+# Uruchomienie 736 testów jednostkowych i integracyjnych w monorepo
 pnpm turbo run test
 # lub w kontenerze Docker (Node 26 Alpine)
 docker run --rm -v "${PWD}:/app" -w /app node:26-alpine sh -c "npm i -g pnpm@12.4.1 && pnpm -r test"

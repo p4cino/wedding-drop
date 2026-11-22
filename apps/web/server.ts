@@ -25,8 +25,17 @@ const nextHandler = app.getRequestHandler();
 
 async function bootstrap() {
 	// 1. Upewnienie się o istnieniu katalogów danych
-	fs.mkdirSync(path.join(dataDir, "galleries"), { recursive: true });
-	fs.mkdirSync(path.join(dataDir, "tus_temp"), { recursive: true });
+	try {
+		fs.mkdirSync(path.join(dataDir, "galleries"), { recursive: true });
+		fs.mkdirSync(path.join(dataDir, "tus_temp"), { recursive: true });
+	} catch (err) {
+		if ((err as NodeJS.ErrnoException)?.code === "EACCES") {
+			console.error(
+				`[Server] Brak uprawnień zapisu w katalogu danych "${dataDir}". Jeśli migrujesz wolumen sprzed v1.3, wykonaj: docker run --rm -v wedding-drop_app_data:/data alpine chown -R 1000:1000 /data`,
+			);
+		}
+		throw err;
+	}
 
 	// 2. Inicjalizacja bazy danych PostgreSQL
 	await initDatabase();

@@ -197,4 +197,62 @@ describe("Database Client and InitDatabase", () => {
 		consoleLogSpy.mockRestore();
 		existsSyncSpy.mockRestore();
 	});
+
+	it("powinien logować [SECURITY WARNING] w produkcji przy domyślnym ADMIN_PASSWORD lub pustym ADMIN_SECRET", async () => {
+		const prevNodeEnv = process.env.NODE_ENV;
+		const prevAdminSecret = process.env.ADMIN_SECRET;
+		process.env.NODE_ENV = "production";
+		process.env.ADMIN_PASSWORD = "admin123";
+		delete process.env.ADMIN_SECRET;
+
+		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+		vi.spyOn(console, "log").mockImplementation(() => {});
+
+		try {
+			const { initDatabase } = await import("../src/client");
+			await initDatabase();
+
+			expect(warnSpy).toHaveBeenCalledWith(
+				expect.stringContaining("[SECURITY WARNING]"),
+			);
+			expect(warnSpy).toHaveBeenCalledWith(
+				expect.stringContaining("ADMIN_PASSWORD"),
+			);
+			expect(warnSpy).toHaveBeenCalledWith(
+				expect.stringContaining("ADMIN_SECRET"),
+			);
+		} finally {
+			process.env.NODE_ENV = prevNodeEnv;
+			if (prevAdminSecret === undefined) {
+				delete process.env.ADMIN_SECRET;
+			} else {
+				process.env.ADMIN_SECRET = prevAdminSecret;
+			}
+		}
+	});
+
+	it("nie powinien logować [SECURITY WARNING] w produkcji przy silnych sekretach", async () => {
+		const prevNodeEnv = process.env.NODE_ENV;
+		const prevAdminSecret = process.env.ADMIN_SECRET;
+		process.env.NODE_ENV = "production";
+		process.env.ADMIN_PASSWORD = "bardzo_silne_unikalne_haslo";
+		process.env.ADMIN_SECRET = "0123456789abcdef0123456789abcdef";
+
+		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+		vi.spyOn(console, "log").mockImplementation(() => {});
+
+		try {
+			const { initDatabase } = await import("../src/client");
+			await initDatabase();
+
+			expect(warnSpy).not.toHaveBeenCalled();
+		} finally {
+			process.env.NODE_ENV = prevNodeEnv;
+			if (prevAdminSecret === undefined) {
+				delete process.env.ADMIN_SECRET;
+			} else {
+				process.env.ADMIN_SECRET = prevAdminSecret;
+			}
+		}
+	});
 });

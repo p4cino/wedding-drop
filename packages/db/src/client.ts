@@ -49,6 +49,24 @@ function getMigrationsFolder(): string {
  */
 export async function initDatabase() {
 	try {
+		if (process.env.NODE_ENV === "production") {
+			const adminPassword = process.env.ADMIN_PASSWORD;
+			if (
+				!adminPassword ||
+				adminPassword === "admin123" ||
+				adminPassword === "ZMIEN_MNIE_haslo_admina"
+			) {
+				console.warn(
+					"[SECURITY WARNING] Domyślne lub nieustawione ADMIN_PASSWORD w trybie produkcyjnym. Ustaw silne hasło w zmiennej ADMIN_PASSWORD.",
+				);
+			}
+			if (!process.env.ADMIN_SECRET) {
+				console.warn(
+					"[SECURITY WARNING] Brak zmiennej ADMIN_SECRET w trybie produkcyjnym — sesje używają sekretu efemerycznego i wygasną po restarcie kontenera.",
+				);
+			}
+		}
+
 		const migrationsFolder = getMigrationsFolder();
 		console.log(
 			`[DB] Uruchamianie migracji Drizzle z folderu: ${migrationsFolder}`,
