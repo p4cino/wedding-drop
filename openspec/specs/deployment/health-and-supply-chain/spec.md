@@ -1,0 +1,31 @@
+# deployment/health-and-supply-chain Specification
+
+## Purpose
+Określa kontrakt monitorowania gotowości kontenera aplikacji (`HEALTHCHECK`) oraz wymagania bezpieczeństwa łańcucha dostaw (atesty SBOM/SLSA provenance i automatyczna bramka CVE) dla publikowanych obrazów Docker WeddingDrop.
+
+## Requirements
+
+### Requirement: Aplikacja udostępnia lekki endpoint gotowości HTTP
+Aplikacja `web` SHALL udostępniać publiczny endpoint `GET /api/health` niewymagający uwierzytelniania ani prefiksu językowego (`/pl`, `/en`, `/de`), który weryfikuje zdolność serwera HTTP do obsługi żądań oraz łączność z pulą PostgreSQL bez ujawniania wrażliwych szczegółów konfiguracji.
+
+#### Scenario: Serwer i baza danych są sprawne
+- **WHEN** klient lub Docker `HEALTHCHECK` wysyła `GET /api/health` przy działającym połączeniu z PostgreSQL
+- **THEN** odpowiedź ma status HTTP `200`, `Content-Type: application/json` oraz ciało `{ "status": "ok" }` bez zmiennych środowiskowych, haseł ani śladów stosu
+
+#### Scenario: Baza danych jest niedostępna
+- **WHEN** klient wysyła `GET /api/health` podczas awarii lub braku łączności z PostgreSQL
+- **THEN** odpowiedź ma status HTTP `503` oraz `{ "status": "error" }` bez ujawniania `DATABASE_URL` ani szczegółów wewnętrznych
+
+### Requirement: Obraz i konfiguracja Compose definiują HEALTHCHECK dla serwisu web
+`Dockerfile` oraz konfiguracje Compose (`docker-compose.yml`, `docker-compose.prod.yml`) SHALL definiować `HEALTHCHECK` odpytujący lokalny endpoint `/api/health`, aby Docker Desktop i orkiestratory poprawnie raportowały stan `healthy`/`unhealthy` kontenera `wedding_web`.
+
+#### Scenario: Kontener web raportuje stan healthy
+- **WHEN** kontener `wedding_web` zakończy migracje Drizzle i uruchomi serwer HTTP na porcie `3000`
+- **THEN** `docker ps` raportuje status `(healthy)` dla `wedding_web`
+
+### Requirement: Pipeline publikacji obrazu dołącza atesty łańcucha dostaw i skanuje CVE
+Workflow publikacji obrazu Docker (`.github/workflows/docker-publish.yml`) SHALL generować atesty `SLSA provenance` oraz `SPDX SBOM` dla publikowanego obrazu i uruchamiać automatyczną bramkę weryfikującą brak krytycznych i wysokich naprawialnych podatności przed lub natychmiast po wypchnięciu obrazu.
+
+#### Scenario: Zgodność z polityką Supply Chain Attestations w Docker Scout
+- **WHEN** obraz jest budowany w workflow `docker-publish.yml`
+- **THEN** konfiguracja `docker/build-push-action` posiada włączone `provenance: true` (lub `mode=max`) oraz `sbom: true`, a wygenerowany obraz przechodzi skan podatności bez błędów `CRITICAL` z dostępnym fixem
