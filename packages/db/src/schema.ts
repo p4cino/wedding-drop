@@ -10,6 +10,16 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 
+export interface QuestItem {
+	id: string;
+	title: string;
+}
+
+export interface QuestsConfig {
+	enabled: boolean;
+	items: QuestItem[];
+}
+
 export const galleries = pgTable("galleries", {
 	id: uuid("id").defaultRandom().primaryKey(),
 	slug: text("slug").notNull().unique(),
@@ -30,6 +40,7 @@ export const galleries = pgTable("galleries", {
 	maxStorageBytes: bigint("max_storage_bytes", { mode: "number" })
 		.notNull()
 		.default(0), // 0 = bez limitu
+	questsConfig: jsonb("quests_config").$type<QuestsConfig>(),
 	expiresAt: timestamp("expires_at", { withTimezone: true }),
 	createdAt: timestamp("created_at", { withTimezone: true })
 		.defaultNow()
@@ -81,6 +92,9 @@ export const mediaItems = pgTable(
 		height: integer("height"),
 		duration: integer("duration"),
 		status: text("status").notNull().default("ready"), // 'ready' | 'hidden' | 'deleted'
+		likesCount: integer("likes_count").notNull().default(0),
+		caption: text("caption"),
+		questId: text("quest_id"),
 		gdriveFileId: text("gdrive_file_id"), // ID pliku na Google Drive dla celów idempotentności
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.defaultNow()

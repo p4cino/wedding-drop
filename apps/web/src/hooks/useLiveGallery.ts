@@ -95,6 +95,12 @@ export function useLiveGallery(
 		[],
 	);
 
+	const updateMediaLikes = useCallback(
+		(mediaId: string, likesCount: number) =>
+			dispatch({ type: "media-like-updated", mediaId, likesCount }),
+		[],
+	);
+
 	return {
 		gallery,
 		items: state.items,
@@ -104,5 +110,6 @@ export function useLiveGallery(
 		refetch,
 		refetchWithBackoff,
 		addWish,
+		updateMediaLikes,
 	};
 }

@@ -553,6 +553,10 @@ describe("REST API Endpoints", () => {
 			expect(data.ownerToken).toBeDefined();
 			expect(data.gallery.slug).toBe(slug);
 			expect(data.gallery.hasGDrive).toBe(true);
+			expect(data.gallery.questsConfig).toEqual({
+				enabled: false,
+				items: [],
+			});
 			expect(data.stats).toBeDefined();
 		});
 

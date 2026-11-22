@@ -160,4 +160,63 @@ describe("galleryReducer", () => {
 			}),
 		).toBe(prev);
 	});
+
+	it("media-liked aktualizuje likesCount istniejącego elementu i zachowuje referencję stanu przy braku zmiany lub nieznanym id", () => {
+		const prev = withItems(["a", "b"]);
+		const updated = galleryReducer(prev, {
+			type: "event",
+			event: {
+				type: "media-liked",
+				update: { mediaId: "b", likesCount: 4 },
+			},
+		});
+		expect(updated.items.find((i) => i.id === "b")?.likesCount).toBe(4);
+		expect(updated.items[0]).toBe(prev.items[0]);
+
+		// Ten sam licznik — brak zmiany referencji
+		const unchanged = galleryReducer(updated, {
+			type: "event",
+			event: {
+				type: "media-liked",
+				update: { mediaId: "b", likesCount: 4 },
+			},
+		});
+		expect(unchanged).toBe(updated);
+
+		// Nieznany element — brak zmiany referencji
+		const unknown = galleryReducer(updated, {
+			type: "event",
+			event: {
+				type: "media-liked",
+				update: { mediaId: "nie-ma", likesCount: 10 },
+			},
+		});
+		expect(unknown).toBe(updated);
+	});
+
+	it("media-like-updated optymistycznie aktualizuje likesCount i nie zmienia referencji dla nieznanego id lub tej samej wartości", () => {
+		const prev = withItems(["a"]);
+		const updated = galleryReducer(prev, {
+			type: "media-like-updated",
+			mediaId: "a",
+			likesCount: 2,
+		});
+		expect(updated.items[0].likesCount).toBe(2);
+
+		expect(
+			galleryReducer(updated, {
+				type: "media-like-updated",
+				mediaId: "a",
+				likesCount: 2,
+			}),
+		).toBe(updated);
+
+		expect(
+			galleryReducer(updated, {
+				type: "media-like-updated",
+				mediaId: "brak",
+				likesCount: 5,
+			}),
+		).toBe(updated);
+	});
 });

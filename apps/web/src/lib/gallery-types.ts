@@ -1,3 +1,13 @@
+export interface QuestItem {
+	id: string;
+	title: string;
+}
+
+export interface QuestsConfig {
+	enabled: boolean;
+	items: QuestItem[];
+}
+
 /** Metadane galerii zwracane przez publiczne `GET /api/gallery/[slug]`. */
 export interface GalleryData {
 	/** Galeria jest chroniona hasłem gościa. */
@@ -23,6 +33,7 @@ export interface GalleryData {
 		logoPath: string | null;
 		backgroundPath: string | null;
 	} | null;
+	questsConfig?: QuestsConfig | null;
 	allowGuestViewing: boolean;
 	allowGuestUploads: boolean;
 	isApprovalQueueEnabled: boolean;
@@ -39,6 +50,9 @@ export interface MediaItemData {
 	thumbUrl: string;
 	rawUrl: string;
 	createdAt: string;
+	likesCount?: number;
+	caption?: string | null;
+	questId?: string | null;
 }
 
 export interface WishItemData {

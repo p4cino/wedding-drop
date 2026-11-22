@@ -1,4 +1,5 @@
 import { db, galleries } from "@wedding-drop/db";
+import { questsConfigDto } from "@wedding-drop/db/validators";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { authenticateOwner } from "@/lib/auth";
@@ -17,6 +18,7 @@ export async function PATCH(
 			allowGuestViewing?: boolean;
 			isApprovalQueueEnabled?: boolean;
 			guestPassword?: string | null;
+			questsConfig?: unknown;
 			token?: string;
 		};
 		try {
@@ -51,6 +53,21 @@ export async function PATCH(
 			} else if (typeof body.guestPassword === "string") {
 				updates.guestPassword = await hashSecret(body.guestPassword);
 			}
+		}
+
+		if (body.questsConfig !== undefined) {
+			const parsedQuests = questsConfigDto.safeParse(body.questsConfig);
+			if (!parsedQuests.success) {
+				return NextResponse.json(
+					{
+						error:
+							parsedQuests.error.issues[0]?.message ||
+							"Nieprawidłowa konfiguracja wyzwań",
+					},
+					{ status: 400 },
+				);
+			}
+			updates.questsConfig = parsedQuests.data;
 		}
 
 		if (Object.keys(updates).length > 0) {

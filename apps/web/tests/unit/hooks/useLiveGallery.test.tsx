@@ -253,4 +253,28 @@ describe("useLiveGallery", () => {
 		);
 		expect(result.current.wishes).toHaveLength(1);
 	});
+
+	it("updateMediaLikes oraz zdarzenie SSE media-liked aktualizują likesCount materiału", async () => {
+		vi.stubGlobal(
+			"fetch",
+			mockFetch({
+				"/api/gallery/s": () => json(gallery),
+				"/api/gallery/s/media": () => json({ media: [mediaItem("a")] }),
+				"/api/gallery/s/wishes": () => json({ wishes: [] }),
+			}),
+		);
+		const { result } = renderHook(() => useLiveGallery("s"));
+		await waitFor(() => expect(result.current.status).toBe("ready"));
+
+		act(() => result.current.updateMediaLikes("a", 3));
+		expect(result.current.items[0].likesCount).toBe(3);
+
+		act(() =>
+			FakeEventSource.instances[0].emit({
+				type: "media-liked",
+				update: { mediaId: "a", likesCount: 7 },
+			}),
+		);
+		expect(result.current.items[0].likesCount).toBe(7);
+	});
 });

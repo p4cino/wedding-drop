@@ -65,6 +65,7 @@ export async function buildOwnerPanelPayload(
 						backgroundPath: branding[0].backgroundPath,
 					}
 				: null,
+			questsConfig: gallery.questsConfig ?? { enabled: false, items: [] },
 		},
 		stats: stats[0] || { totalFiles: 0, totalBytes: 0 },
 		cardSettings: card[0] || null,

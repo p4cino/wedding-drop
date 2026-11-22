@@ -2,7 +2,7 @@
 
 import { Camera, CheckCircle2, Loader2, Upload, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { css, cx } from "styled-system/css";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,9 @@ import UploadFileRow from "@/components/upload/UploadFileRow";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { useUploadQueue } from "@/hooks/useUploadQueue";
+import { getActiveQuests, type QuestsConfig } from "@/lib/photo-quests";
+
+const MAX_CAPTION_LENGTH = 140;
 
 interface UploaderDrawerProps {
 	gallerySlug: string;
@@ -22,6 +25,8 @@ interface UploaderDrawerProps {
 	// Opcjonalne — komponent i tak posiada własne domyślne kolory generatora winietek.
 	primaryColor?: string | null;
 	accentColor?: string | null;
+	questsConfig?: QuestsConfig | null;
+	initialQuestId?: string | null;
 }
 
 export default function UploaderDrawer({
@@ -29,15 +34,27 @@ export default function UploaderDrawer({
 	isOpen,
 	onClose,
 	onUploadSuccess,
-	primaryColor,
-	accentColor,
+	questsConfig,
+	initialQuestId,
 }: UploaderDrawerProps) {
 	const [uploaderName, setUploaderName] = useState("");
+	const [caption, setCaption] = useState("");
+	const [selectedQuestId, setSelectedQuestId] = useState<string>(
+		initialQuestId ?? "",
+	);
 	const t = useTranslations("GuestGallery");
+	const activeQuests = useMemo(
+		() => getActiveQuests(questsConfig),
+		[questsConfig],
+	);
+
 	const queue = useUploadQueue({
 		errorMessage: t("uploadError"),
 		tooLargeMessage: t("uploadTooLarge"),
-		onFinished: () => onUploadSuccess?.(),
+		onFinished: () => {
+			setCaption("");
+			onUploadSuccess?.();
+		},
 	});
 	const { isUploading, clear: clearQueue } = queue;
 
@@ -50,8 +67,12 @@ export default function UploaderDrawer({
 	useEffect(() => {
 		if (!isOpen) {
 			clearQueue();
+			setCaption("");
+			setSelectedQuestId("");
+		} else {
+			setSelectedQuestId(initialQuestId ?? "");
 		}
-	}, [isOpen, clearQueue]);
+	}, [isOpen, initialQuestId, clearQueue]);
 
 	// Escape zamyka panel (poza trwającą wysyłką); fokus zostaje wewnątrz okna
 	const dialogRef = useRef<HTMLDivElement>(null);
@@ -62,11 +83,18 @@ export default function UploaderDrawer({
 
 	const startUpload = () => {
 		const name = uploaderName.trim() || t("defaultUploaderName");
+		const trimmedCaption = caption.trim();
+		const validQuestId = activeQuests.some((q) => q.id === selectedQuestId)
+			? selectedQuestId
+			: "";
+
 		queue.start((file) => ({
 			gallerySlug,
 			uploaderName: name,
 			originalName: file.name,
 			fileType: file.type,
+			...(trimmedCaption ? { caption: trimmedCaption } : {}),
+			...(validQuestId ? { questId: validQuestId } : {}),
 		}));
 	};
 
@@ -201,6 +229,139 @@ export default function UploaderDrawer({
 							disabled={isUploading}
 						/>
 					</div>
+
+					{/* Krótki podpis zdjęcia (caption) */}
+					<div>
+						<div
+							className={css({
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "space-between",
+								mb: "1.5",
+							})}
+						>
+							<label
+								htmlFor="uploader-caption-input"
+								className={css({
+									display: "block",
+									fontSize: "xs",
+									fontWeight: "semibold",
+									textTransform: "uppercase",
+									letterSpacing: "wider",
+									color: "slate.600",
+								})}
+							>
+								{t("captionLabel")}
+							</label>
+							<span
+								className={css({
+									fontSize: "11px",
+									color:
+										caption.length >= MAX_CAPTION_LENGTH
+											? "amber.700"
+											: "slate.400",
+								})}
+							>
+								{t("captionCounter", {
+									current: caption.length,
+								})}
+							</span>
+						</div>
+						<Input
+							id="uploader-caption-input"
+							type="text"
+							maxLength={MAX_CAPTION_LENGTH}
+							placeholder={t("captionPlaceholder")}
+							value={caption}
+							onChange={(e) =>
+								setCaption(e.target.value.slice(0, MAX_CAPTION_LENGTH))
+							}
+							disabled={isUploading}
+						/>
+					</div>
+
+					{/* Wybór Foto-Wyzwania (gdy aktywne w galerii) */}
+					{activeQuests.length > 0 && (
+						<div>
+							<p
+								className={css({
+									display: "block",
+									fontSize: "xs",
+									fontWeight: "semibold",
+									textTransform: "uppercase",
+									letterSpacing: "wider",
+									color: "slate.600",
+									mb: "2",
+								})}
+							>
+								{t("questSelectLabel")}
+							</p>
+							<div
+								className={css({
+									display: "flex",
+									flexWrap: "wrap",
+									gap: "2",
+								})}
+							>
+								<button
+									type="button"
+									disabled={isUploading}
+									aria-pressed={selectedQuestId === ""}
+									onClick={() => setSelectedQuestId("")}
+									className={css({
+										px: "3",
+										py: "1.5",
+										borderRadius: "full",
+										fontSize: "xs",
+										fontWeight: "semibold",
+										borderWidth: "1px",
+										cursor: isUploading ? "not-allowed" : "pointer",
+										transition: "all 0.15s ease",
+										backgroundColor:
+											selectedQuestId === "" ? "slate.900" : "slate.50",
+										borderColor:
+											selectedQuestId === "" ? "slate.900" : "slate.200",
+										color: selectedQuestId === "" ? "white" : "slate.600",
+									})}
+								>
+									{t("questSelectNone")}
+								</button>
+								{activeQuests.map((quest) => {
+									const isSelected = selectedQuestId === quest.id;
+									return (
+										<button
+											key={quest.id}
+											type="button"
+											disabled={isUploading}
+											aria-pressed={isSelected}
+											onClick={() =>
+												setSelectedQuestId(isSelected ? "" : quest.id)
+											}
+											className={css({
+												display: "inline-flex",
+												alignItems: "center",
+												gap: "1.5",
+												px: "3",
+												py: "1.5",
+												borderRadius: "full",
+												fontSize: "xs",
+												fontWeight: "semibold",
+												borderWidth: "1px",
+												cursor: isUploading ? "not-allowed" : "pointer",
+												transition: "all 0.15s ease",
+												backgroundColor: isSelected ? "amber.600" : "amber.50",
+												borderColor: isSelected ? "amber.600" : "amber.200",
+												color: isSelected ? "white" : "amber.900",
+											})}
+										>
+											<span aria-hidden="true">🎯</span>
+											<span>{quest.title}</span>
+										</button>
+									);
+								})}
+							</div>
+						</div>
+					)}
 
 					{/* Strefa wyboru plików / aparat natywny */}
 					<FilePickerDropzone

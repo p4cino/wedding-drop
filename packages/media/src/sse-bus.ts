@@ -17,6 +17,13 @@ class SSEBus extends EventEmitter {
 		this.emit(`media-updated:${gallerySlug}`, update);
 	}
 
+	notifyMediaLiked(
+		gallerySlug: string,
+		update: { mediaId: string; likesCount: number },
+	) {
+		this.emit(`media-liked:${gallerySlug}`, update);
+	}
+
 	notifyGDriveProgress(gallerySlug: string, progress: unknown) {
 		this.emit(`gdrive-progress:${gallerySlug}`, progress);
 	}

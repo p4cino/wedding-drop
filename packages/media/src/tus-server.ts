@@ -355,6 +355,8 @@ export function initTusServer(dataDir: string, options: TusServerOptions = {}) {
 			originalName,
 			fileType: mimeType,
 			source,
+			caption,
+			questId,
 		} = parseResult.data;
 		const { fileType, mediaType } = classifyMedia(mimeType, originalName);
 
@@ -378,6 +380,8 @@ export function initTusServer(dataDir: string, options: TusServerOptions = {}) {
 			fileSize: upload.size || 0,
 			dataDir,
 			source,
+			caption,
+			questId,
 		});
 	});
 

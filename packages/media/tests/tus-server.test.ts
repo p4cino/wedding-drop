@@ -604,6 +604,61 @@ describe("tus-server configuration", () => {
 			expect.objectContaining({ source: "photographer" }),
 		);
 	});
+
+	it("powinien przekazać caption i questId z metadanych TUS do scheduleMediaProcessing w POST_FINISH", async () => {
+		const server = initTusServer(tempDir);
+		vi.clearAllMocks();
+
+		const mockUpload = {
+			id: "upl-engagement",
+			size: 2048,
+			metadata: {
+				gallerySlug: "kasia-i-tomek",
+				uploaderName: "Wujek Janusz",
+				originalName: "toast.jpg",
+				fileType: "image/jpeg",
+				caption: "Stolik nr 4 bawi się najlepiej!",
+				questId: "toast-stolik",
+			},
+		};
+
+		(
+			server as unknown as {
+				emit: (
+					event: string,
+					req: unknown,
+					res: unknown,
+					upload: unknown,
+				) => void;
+			}
+		).emit(EVENTS.POST_FINISH, {}, {}, mockUpload);
+
+		expect(scheduleMediaProcessing).toHaveBeenCalledWith(
+			expect.objectContaining({
+				uploaderName: "Wujek Janusz",
+				caption: "Stolik nr 4 bawi się najlepiej!",
+				questId: "toast-stolik",
+			}),
+		);
+	});
+
+	it("onUploadCreate powinien odrzucić upload (400), gdy caption przekracza 140 znaków", async () => {
+		const server = initTusServer(tempDir);
+		const onUploadCreate = server.options.onUploadCreate;
+
+		await expect(
+			onUploadCreate?.(
+				{} as never,
+				{
+					size: 1024,
+					metadata: {
+						gallerySlug: "kasia-i-tomek",
+						caption: "a".repeat(141),
+					},
+				} as never,
+			),
+		).rejects.toMatchObject({ status_code: 400 });
+	});
 });
 
 describe("tus-server - limity i kontrola dostępu (owasp-hardening)", () => {

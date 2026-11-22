@@ -75,6 +75,8 @@ export interface ProcessTask {
 	fileSize: number;
 	dataDir: string;
 	source?: "guest" | "photographer";
+	caption?: string;
+	questId?: string;
 }
 
 export async function scheduleMediaProcessing(task: ProcessTask) {
@@ -186,6 +188,15 @@ async function processMediaTask(task: ProcessTask) {
 			safeExt,
 		);
 
+		const normalizedCaption = task.caption?.trim() ? task.caption.trim() : null;
+		const rawQuestId = task.questId?.trim();
+		const isValidActiveQuest =
+			Boolean(rawQuestId) &&
+			gallery.questsConfig?.enabled === true &&
+			Array.isArray(gallery.questsConfig.items) &&
+			gallery.questsConfig.items.some((q) => q.id === rawQuestId);
+		const normalizedQuestId = isValidActiveQuest ? (rawQuestId ?? null) : null;
+
 		const [newMedia] = await db
 			.insert(mediaItems)
 			.values({
@@ -208,6 +219,8 @@ async function processMediaTask(task: ProcessTask) {
 				width: mediaProps.width,
 				height: mediaProps.height,
 				duration: mediaProps.duration,
+				caption: normalizedCaption,
+				questId: normalizedQuestId,
 				status:
 					gallery.isApprovalQueueEnabled && source !== "photographer"
 						? "pending"

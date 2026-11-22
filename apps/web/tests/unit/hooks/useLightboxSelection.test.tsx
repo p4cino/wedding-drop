@@ -7,7 +7,7 @@ import { useLightboxSelection } from "@/hooks/useLightboxSelection";
 
 const list = (...ids: string[]) => ids.map((id) => ({ id }));
 
-function setup(initial: { id: string }[]) {
+function setup<T extends { id: string }>(initial: T[]) {
 	return renderHook(({ items }) => useLightboxSelection(items), {
 		initialProps: { items: initial },
 		wrapper: StrictMode,
@@ -73,5 +73,25 @@ describe("useLightboxSelection", () => {
 		expect(result.current.index).toBe(1);
 		act(() => result.current.close());
 		expect(result.current.index).toBeNull();
+	});
+
+	it("zmiana kolejności elementów (np. sortowanie Najpopularniejsze) lub aktualizacja likesCount śledzi otwarty materiał po id bez resetowania", () => {
+		const { result, rerender } = setup([
+			{ id: "a", likesCount: 1 },
+			{ id: "b", likesCount: 2 },
+			{ id: "c", likesCount: 5 },
+		]);
+		act(() => result.current.open(1)); // otwieramy "b" (indeks 1)
+		expect(result.current.index).toBe(1);
+
+		// Przełączenie na sortowanie malejąco po likesCount: ["c", "b", "a"], a potem "a" dostaje 10 lajków -> ["a", "c", "b"]
+		rerender({
+			items: [
+				{ id: "a", likesCount: 10 },
+				{ id: "c", likesCount: 5 },
+				{ id: "b", likesCount: 3 },
+			],
+		});
+		expect(result.current.index).toBe(2); // "b" jest teraz na indeksie 2, wciąż otwarte!
 	});
 });

@@ -1,6 +1,13 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Download, User, X } from "lucide-react";
+import {
+	ChevronLeft,
+	ChevronRight,
+	Download,
+	Heart,
+	User,
+	X,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import React, { useEffect } from "react";
 import { css } from "styled-system/css";
@@ -8,15 +15,27 @@ import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { useSwipe } from "@/hooks/useSwipe";
 import type { MediaItemData } from "@/lib/gallery-types";
+import { findQuestTitle, type QuestsConfig } from "@/lib/photo-quests";
 
 export type { MediaItemData };
 
+type LightboxMediaItem = MediaItemData & {
+	likesCount?: number;
+	caption?: string | null;
+	questId?: string | null;
+};
+
 interface LightboxModalProps {
-	items: MediaItemData[];
+	items: LightboxMediaItem[];
 	currentIndex: number | null;
 	onClose: () => void;
 	onNavigate: (index: number) => void;
 	allowDownloads?: boolean;
+	isLiked?: boolean;
+	likedIds?: Set<string>;
+	onToggleLike?: (mediaId: string) => void;
+	questTitle?: string | null;
+	questsConfig?: QuestsConfig | null;
 }
 
 function NavButton({
@@ -80,6 +99,11 @@ export default function LightboxModal({
 	onClose,
 	onNavigate,
 	allowDownloads = true,
+	isLiked,
+	likedIds,
+	onToggleLike,
+	questTitle,
+	questsConfig,
 }: LightboxModalProps) {
 	const t = useTranslations("GuestGallery");
 
@@ -118,6 +142,13 @@ export default function LightboxModal({
 
 	if (currentIndex === null || !items[currentIndex]) return null;
 	const current = items[currentIndex];
+	const currentIsLiked =
+		isLiked !== undefined ? isLiked : (likedIds?.has(current.id) ?? false);
+	const currentLikesCount = current.likesCount ?? 0;
+	const resolvedQuestTitle =
+		questTitle !== undefined
+			? questTitle
+			: findQuestTitle(questsConfig, current.questId);
 
 	return (
 		<div
@@ -174,10 +205,10 @@ export default function LightboxModal({
 					p: "4",
 					display: "flex",
 					justifyContent: "space-between",
-					alignItems: "center",
+					alignItems: "flex-start",
 					zIndex: "20",
 					background:
-						"linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)",
+						"linear-gradient(to bottom, rgba(0,0,0,0.85), transparent)",
 				})}
 			>
 				<div
@@ -186,12 +217,14 @@ export default function LightboxModal({
 						fontSize: "xs",
 						display: "flex",
 						flexDirection: "column",
-						gap: "0.5",
+						gap: "1",
+						minW: "0",
 					})}
 				>
 					<div
 						className={css({
 							display: "flex",
+							flexWrap: "wrap",
 							alignItems: "center",
 							gap: "2",
 						})}
@@ -212,7 +245,39 @@ export default function LightboxModal({
 						>
 							{current.uploaderName}
 						</span>
+						{resolvedQuestTitle && (
+							<span
+								className={css({
+									display: "inline-flex",
+									alignItems: "center",
+									gap: "1",
+									px: "2.5",
+									py: "0.5",
+									borderRadius: "full",
+									backgroundColor: "rgba(217, 119, 6, 0.25)",
+									borderWidth: "1px",
+									borderColor: "rgba(251, 191, 36, 0.4)",
+									color: "amber.200",
+									fontSize: "11px",
+									fontWeight: "semibold",
+								})}
+							>
+								🎯 {resolvedQuestTitle}
+							</span>
+						)}
 					</div>
+					{current.caption && (
+						<p
+							className={css({
+								color: "amber.100",
+								fontSize: "sm",
+								fontStyle: "italic",
+								maxWidth: { base: "260px", sm: "xl" },
+							})}
+						>
+							{current.caption}
+						</p>
+					)}
 					<p
 						className={css({
 							color: "slate.400",
@@ -234,6 +299,53 @@ export default function LightboxModal({
 						gap: "3",
 					})}
 				>
+					<button
+						type="button"
+						data-testid="lightbox-like-btn"
+						aria-pressed={currentIsLiked}
+						aria-label={currentIsLiked ? t("unlikeAria") : t("likeAria")}
+						onClick={(e) => {
+							e.stopPropagation();
+							onToggleLike?.(current.id);
+						}}
+						className={css({
+							display: "inline-flex",
+							alignItems: "center",
+							gap: "1.5",
+							px: "3.5",
+							py: "2",
+							borderRadius: "full",
+							backgroundColor: currentIsLiked
+								? "rgba(225, 29, 72, 0.9)"
+								: "rgba(255, 255, 255, 0.1)",
+							_hover: {
+								backgroundColor: currentIsLiked
+									? "rgba(190, 18, 60, 0.95)"
+									: "rgba(255, 255, 255, 0.2)",
+							},
+							color: "white",
+							fontSize: "sm",
+							fontWeight: "semibold",
+							transition: "all 0.15s ease",
+							backdropFilter: "blur(4px)",
+							cursor: "pointer",
+							_focusVisible: {
+								outline: "2px solid",
+								outlineColor: "amber.400",
+							},
+						})}
+					>
+						<Heart
+							className={css({
+								w: "4",
+								h: "4",
+								fill: currentIsLiked ? "currentColor" : "none",
+							})}
+							aria-hidden="true"
+						/>
+						<span>{currentLikesCount}</span>
+					</button>
+
 					{allowDownloads && (
 						<a
 							href={current.rawUrl}

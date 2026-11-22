@@ -26,6 +26,9 @@ export interface OwnerMediaItem {
 	rawUrl: string;
 	status: ModerationStatus;
 	createdAt: string;
+	likesCount?: number;
+	caption?: string | null;
+	questId?: string | null;
 }
 
 interface MediaGridWithModerationProps {

@@ -1,5 +1,4 @@
 import { db, galleries } from "@wedding-drop/db";
-import { eq } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PATCH } from "../../../src/app/api/owner/[slug]/settings/route";
@@ -25,7 +24,9 @@ vi.mock("../../../src/lib/auth", () => ({
 }));
 
 describe("PATCH /api/owner/[slug]/settings", () => {
-	const mockAuthenticateOwner = authenticateOwner as any;
+	const mockAuthenticateOwner = authenticateOwner as unknown as ReturnType<
+		typeof vi.fn
+	>;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -128,6 +129,44 @@ describe("PATCH /api/owner/[slug]/settings", () => {
 		expect(res.status).toBe(200);
 	});
 
+	it("waliduje i zapisuje questsConfig oraz odrzuca niepoprawną konfigurację wyzwań kodem 400", async () => {
+		mockAuthenticateOwner.mockResolvedValue({
+			authorized: true,
+			gallery: { id: "gal-123" },
+		});
+
+		const validQuests = {
+			enabled: true,
+			items: [{ id: "selfie-para", title: "Selfie z Parą Młodą" }],
+		};
+		const reqValid = {
+			json: vi.fn().mockResolvedValue({ questsConfig: validQuests }),
+		} as unknown as NextRequest;
+
+		const resValid = await PATCH(reqValid, {
+			params: Promise.resolve({ slug: "test" }),
+		});
+		expect(resValid.status).toBe(200);
+		const setArg = vi.mocked(
+			(db as unknown as { set: (v: unknown) => unknown }).set,
+		).mock.calls[0][0] as Record<string, unknown>;
+		expect(setArg.questsConfig).toEqual(validQuests);
+
+		const reqInvalid = {
+			json: vi.fn().mockResolvedValue({
+				questsConfig: {
+					enabled: true,
+					items: [{ id: "INVALID ID!", title: "X" }],
+				},
+			}),
+		} as unknown as NextRequest;
+
+		const resInvalid = await PATCH(reqInvalid, {
+			params: Promise.resolve({ slug: "test" }),
+		});
+		expect(resInvalid.status).toBe(400);
+	});
+
 	it("zwraca 500 przy błędzie serwera", async () => {
 		const req = {
 			json: vi.fn().mockResolvedValue({
@@ -140,7 +179,7 @@ describe("PATCH /api/owner/[slug]/settings", () => {
 			gallery: { id: "gal-123" },
 		});
 
-		(db.update as any).mockImplementationOnce(() => {
+		vi.mocked(db.update).mockImplementationOnce(() => {
 			throw new Error("DB Error");
 		});
 

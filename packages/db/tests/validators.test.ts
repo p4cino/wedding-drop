@@ -8,8 +8,11 @@ import {
 	insertMediaItemSchema,
 	insertWishSchema,
 	ownerLoginDto,
+	questItemDto,
+	questsConfigDto,
 	selectGallerySchema,
 	selectWishSchema,
+	toggleMediaLikeDto,
 	tusUploadMetadataDto,
 	updateCardSettingsDto,
 } from "../src/validators";
@@ -197,6 +200,122 @@ describe("Validators - tusUploadMetadataDto", () => {
 			source: "ktos-inny",
 		});
 		expect(result.success).toBe(false);
+	});
+
+	it("akceptuje opcjonalny podpis caption (do 140 znaków) oraz questId", () => {
+		const result = tusUploadMetadataDto.safeParse({
+			gallerySlug: "ania-i-michal",
+			caption: "  Stolik nr 4 bawi się najlepiej!  ",
+			questId: "selfie-para-mloda_1",
+		});
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.caption).toBe("Stolik nr 4 bawi się najlepiej!");
+			expect(result.data.questId).toBe("selfie-para-mloda_1");
+		}
+	});
+
+	it("akceptuje pusty string questId", () => {
+		const result = tusUploadMetadataDto.safeParse({
+			gallerySlug: "ania-i-michal",
+			questId: "",
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("odrzuca podpis caption przekraczający 140 znaków", () => {
+		const result = tusUploadMetadataDto.safeParse({
+			gallerySlug: "ania-i-michal",
+			caption: "x".repeat(141),
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("odrzuca questId o niepoprawnym formacie lub przekraczający 40 znaków", () => {
+		expect(
+			tusUploadMetadataDto.safeParse({
+				gallerySlug: "ania-i-michal",
+				questId: "Złe Znaki!@#",
+			}).success,
+		).toBe(false);
+
+		expect(
+			tusUploadMetadataDto.safeParse({
+				gallerySlug: "ania-i-michal",
+				questId: "a".repeat(41),
+			}).success,
+		).toBe(false);
+	});
+});
+
+describe("Validators - questItemDto & questsConfigDto", () => {
+	it("akceptuje poprawną konfigurację wyzwań", () => {
+		const result = questsConfigDto.safeParse({
+			enabled: true,
+			items: [
+				{ id: "selfie-para", title: "  Selfie z Parą Młodą  " },
+				{ id: "toast_stolik", title: "Toast przy naszym stoliku" },
+			],
+		});
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.enabled).toBe(true);
+			expect(result.data.items).toHaveLength(2);
+			expect(result.data.items[0]?.title).toBe("Selfie z Parą Młodą");
+		}
+	});
+
+	it("odrzuca wyzwanie z za krótkim (< 2 znaki) lub za długim (> 80 znaków) tytułem", () => {
+		expect(
+			questItemDto.safeParse({
+				id: "q-1",
+				title: "A",
+			}).success,
+		).toBe(false);
+
+		expect(
+			questItemDto.safeParse({
+				id: "q-1",
+				title: "A".repeat(81),
+			}).success,
+		).toBe(false);
+	});
+
+	it("odrzuca wyzwanie z niepoprawnym identyfikatorem id", () => {
+		expect(
+			questItemDto.safeParse({
+				id: "Zły ID ze spacją",
+				title: "Poprawny tytuł",
+			}).success,
+		).toBe(false);
+	});
+
+	it("odrzuca konfigurację zawierającą więcej niż 20 wyzwań", () => {
+		const items = Array.from({ length: 21 }, (_, idx) => ({
+			id: `quest-${idx + 1}`,
+			title: `Wyzwanie numer ${idx + 1}`,
+		}));
+		const result = questsConfigDto.safeParse({
+			enabled: true,
+			items,
+		});
+		expect(result.success).toBe(false);
+	});
+});
+
+describe("Validators - toggleMediaLikeDto", () => {
+	it("akceptuje akcje like oraz unlike", () => {
+		expect(toggleMediaLikeDto.safeParse({ action: "like" }).success).toBe(true);
+		expect(toggleMediaLikeDto.safeParse({ action: "unlike" }).success).toBe(
+			true,
+		);
+	});
+
+	it("odrzuca nieznaną akcję reakcji", () => {
+		expect(toggleMediaLikeDto.safeParse({ action: "superlike" }).success).toBe(
+			false,
+		);
+		expect(toggleMediaLikeDto.safeParse({}).success).toBe(false);
 	});
 });
 

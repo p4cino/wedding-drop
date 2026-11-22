@@ -33,7 +33,7 @@ graph TD
     subgraph "Kontener wedding_web (Turborepo Monorepo / Node 26 Alpine)"
         NextCore["apps/web: Next.js 16 App Router (UI & API)"]
         TusServer["packages/media: @tus/server (TUS Protocol 1.0.0)"]
-        SSEBus["packages/media: SSE Event Bus (new-media, media-updated)"]
+        SSEBus["packages/media: SSE Event Bus (new-media, media-updated, media-liked, new-wish, wish-updated)"]
         PdfGen["packages/media: pdf-lib (Wektorowy PDF A6 300 DPI)"]
         ZipStream["packages/media: archiver (Strumieniowany ZIP)"]
         MediaQueue["packages/media: p-queue (Concurrency = 2)\nThrottling dla Intel N100\nDispatcher i strategie dla Image/Video"]
@@ -76,19 +76,20 @@ graph TD
 2. **Źródło pliku — rolka aparatu albo photobooth w przeglądarce**:
    - **Wybór z dysku/rolki**: standardowy `<input type="file" multiple>`.
    - **Photobooth w przeglądarce** (`CameraCapture.tsx`): opcja "Zrób zdjęcie" w `UploaderDrawer.tsx` uruchamia podgląd na żywo z kamery urządzenia gościa (`navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facingMode }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false })`) z automatyczną aktywacją ciągłego autofokusu (`focusMode: "continuous"`), bez potrzeby otwierania natywnej aplikacji aparatu. Gość może swobodnie przełączać się między głównym (tylnym) aparatem telefonu a aparatem przednim (selfie) za pomocą dedykowanego przycisku na podglądzie (automatycznie ukrywanego na urządzeniach z jedną kamerą, wykrywanych przez `enumerateDevices()`), a preferencja jest zapamiętywana w `localStorage`. Podgląd stosuje naturalne odbicie lustrzane wyłącznie dla kamery przedniej (`scale-x-[-1]`). Po naciśnięciu spustu migawki aparat podejmuje próbę pobrania pełnoklatkowego, natywnego ujęcia sensora za pośrednictwem API `ImageCapture.takePhoto()` (obsługiwanego w Chromium / Androidzie), a w razie braku wsparcia (np. iOS Safari) płynnie przełącza się na zrzut z wysokorozdzielczego elementu `<video>`. Zdjęcie jest komponowane na `<canvas>` (`captureSourceToCanvas`, z zachowaniem proporcji i skalowaniem w dół do maks. 2560px Quad HD po dłuższym boku), na wierzchu dokładana jest dekoracyjna ramka w kolorach motywu wesela (`primaryColor`/`accentColor` z `card_settings`, odczytane przez ten sam publiczny `GET /api/gallery/:slug` co reszta galerii, z domyślnymi kolorami generatora winietek, gdy galeria nie ma zapisanych ustawień), a canvas jest eksportowany przez `canvas.toBlob("image/jpeg", 0.95)` do zwykłego obiektu `File`. Ten plik trafia do **dokładnie tej samej** kolejki `files`/`startUpload`, co plik z wyboru z dysku — zero rozgałęzień w logice TUS poniżej ani w backendzie. Gdy przeglądarka odmówi dostępu do kamery lub jej nie posiada, komponent pokazuje czytelny komunikat błędu, a zwykły wybór pliku pozostaje w pełni funkcjonalny.
-3. **Inicjalizacja Uploadu**: Klient (`UploaderDrawer.tsx`) dynamicznie ustala endpoint w oparciu o `window.location.origin` (`/api/upload/tus`), co zapobiega rozbieżnościom protokołów HTTP/HTTPS. Serwer TUS zwraca relatywny nagłówek `Location` (`relativeLocation: true`), eliminując błędy CORS i niepożądane przekierowania preflight 308 za proxy Caddy.
+3. **Inicjalizacja Uploadu**: Klient (`UploaderDrawer.tsx`) dynamicznie ustala endpoint w oparciu o `window.location.origin` (`/api/upload/tus`), co zapobiega rozbieżnościom protokołów HTTP/HTTPS. W metadanych protokołu TUS (`Upload-Metadata`, walidowanych przez `tusUploadMetadataDto`) przekazywane są m.in. `uploaderName`, opcjonalny krótki podpis kontekstowy `caption` (do 140 znaków) oraz opcjonalny identyfikator foto-wyzwania `questId` (`^[a-z0-9_-]{1,40}$`). Serwer TUS zwraca relatywny nagłówek `Location` (`relativeLocation: true`), eliminując błędy CORS i niepożądane przekierowania preflight 308 za proxy Caddy.
 4. **Wznawialny Transfer**: Plik przesyłany jest w kawałkach po 5 MB (`chunkSize: 5MB`). Jeśli gość wejdzie w martwą strefę zasięgu sali, transfer zostaje wstrzymany i po ponownym złapaniu sygnału wznawia się automatycznie od ostatniego bajtu (zero powtórek).
 5. **Hook Zakończenia (`POST_FINISH`)**:
    - Plik z tymczasowego katalogu `tus_temp` trafia do `/data/galleries/{slug}/raw/`.
-   - Zadanie obróbki trafia do kolejki `p-queue` (max 2 zadania współbieżne dla ochrony 4 rdzeni procesora N100).
+   - Zadanie obróbki (wraz z `caption` i `questId`) trafia do kolejki `p-queue` (max 2 zadania współbieżne dla ochrony 4 rdzeni procesora N100).
 6. **Przetwarzanie**:
    - **Zdjęcia**: `Sharp` odczytuje orientację EXIF (np. zdjęcia pionowe z iPhone'a) i generuje zoptymalizowaną miniaturkę WebP 500x500 z zachowaniem proporcji.
    - **Wideo**: `FFmpeg` wycina klatkę z pierwszej sekundy wideo i konwertuje ją do formatu WebP.
    - **Watchdog FFmpeg**: Proces `ffmpeg` uruchamiany jest z twardym limitem czasu (25 sekund). W razie zawieszenia na uszkodzonym pliku wideo proces zostaje bezwzględnie ubity (`SIGKILL`), uniemożliwiając zablokowanie kolejki zadań (`p-queue starvation`).
 7. **Zapis i Real-Time Notyfikacja**:
    - Ścieżki dyskowe zapisywane są w bazie PostgreSQL z wymuszeniem separatorów uniksowych (`path.posix.join`), gwarantując pełną zgodność niezależnie od systemu operacyjnego.
+   - Procesor mediów przy zapisie do `media_items` normalizuje `caption` (przycinając białe znaki lub ustawiając `null`) oraz weryfikuje, czy przekazany `questId` istnieje na liście aktywnych wyzwań galerii (`gallery.questsConfig?.enabled` i obecność na liście `items` — w przeciwnym razie zapisuje `questId: null`, zachowując spójność bazy).
    - Rekord zostaje utrwalony w tabeli `media_items` PostgreSQL.
-   - Magistrala `sseBus` (zarejestrowana w `globalThis.__wedding_sse_bus__` jako globalny singleton procesu Node) emituje zdarzenie `new-media` dla danego sluga galerii.
+   - Magistrala `sseBus` (zarejestrowana w `globalThis.__wedding_sse_bus__` jako globalny singleton procesu Node) emituje zdarzenie `new-media` (zawierające również `likesCount`, `caption` oraz `questId`) dla danego sluga galerii.
    - Wszystkie podłączone smartfony na sali weselnej otrzymują powiadomienie przez otwarty strumień SSE i natychmiast renderują nowe zdjęcie w siatce Masonry (bez zakłócania otwartego u innego gościa Lightboxa).
    - Dodatkowo interfejs gościa realizuje cichy fallback polling (po 1s, 2.5s i 5s) w tle na wypadek chwilowego zerwania strumienia SSE podczas obróbki długiego materiału wideo.
 
@@ -119,6 +120,7 @@ Para Młoda może w panelu właściciela (`/owner/[slug]`, komponent `Photograph
 | `allow_guest_downloads` | BOOLEAN     | Zezwolenie gościom na pobieranie zdjęć w pełnej rozdzielczości i ZIP           |
 | `allow_videos`          | BOOLEAN     | Zgoda na wrzucanie plików wideo                                                |
 | `max_storage_bytes`     | BIGINT      | Limit miejsca (0 = bez limitu)                                                 |
+| `quests_config`         | JSONB       | Konfiguracja foto-wyzwań (`{ enabled: boolean, items: Array<{ id, title }> }`) |
 | `created_at`            | TIMESTAMPTZ | Znacznik czasu utworzenia                                                      |
 
 ### Tabela `gallery_gdrive_exports`
@@ -165,7 +167,10 @@ Para Młoda może w panelu właściciela (`/owner/[slug]`, komponent `Photograph
 | `file_size`          | BIGINT      | Rozmiar w bajtach                                                                   |
 | `storage_path`       | TEXT        | Znormalizowana ścieżka względna do pliku źródłowego                                 |
 | `thumb_path`         | TEXT        | Znormalizowana ścieżka względna do miniatury WebP                                   |
-| `status`             | TEXT        | `ready` (widoczne), `hidden` (ukryte przez parę), `deleted`                         |
+| `status`             | TEXT        | `ready` (widoczne), `hidden` (ukryte przez parę), `pending` (w kolejce), `deleted`  |
+| `likes_count`        | INTEGER     | Atomowy licznik reakcji (serduszek ❤️) od gości (`NOT NULL DEFAULT 0`)              |
+| `caption`            | TEXT        | Opcjonalny krótki podpis kontekstowy do zdjęcia/filmu (nullable, max 140 znaków)    |
+| `quest_id`           | TEXT        | Identyfikator przypisanego foto-wyzwania z `galleries.quests_config` (nullable)     |
 | `created_at`         | TIMESTAMPTZ | Czas dodania                                                                        |
 
 ### Indeksy Wydajnościowe Bazy Danych
@@ -205,13 +210,18 @@ Indeks `idx_wishes_gallery_status_created` na `(gallery_id, status, created_at)`
 
 ### Publiczne (Gość)
 
-- `GET /api/gallery/:slug` – Metadane galerii, status aktywności i ustawienia winietki, w tym `primaryColor`/`accentColor` motywu wesela (zawsze zwracane, z domyślnymi wartościami generatora winietek, gdy galeria nie ma zapisanych ustawień) — wykorzystywane m.in. przez ramkę photobooth w przeglądarce gościa (`CameraCapture.tsx`).
-- `GET /api/gallery/:slug/media` – Lista aktywnych multimediów (`status: "ready"`):
+- `GET /api/gallery/:slug` – Metadane galerii, status aktywności, konfiguracja foto-wyzwań (`questsConfig: { enabled: boolean, items: QuestItem[] }`) i ustawienia winietki, w tym `primaryColor`/`accentColor` motywu wesela (zawsze zwracane, z domyślnymi wartościami generatora winietek, gdy galeria nie ma zapisanych ustawień) — wykorzystywane m.in. przez ramkę photobooth w przeglądarce gościa (`CameraCapture.tsx`).
+- `GET /api/gallery/:slug/media` – Lista aktywnych multimediów (`status: "ready"`, zawierająca również `likesCount`, `caption` oraz `questId`):
   - Parametr `?includeHidden=true` wymaga autoryzacji nagłówkiem `Authorization: Bearer <adminToken>` / `x-admin-token`, nagłówkiem `x-owner-token`, ciasteczkiem sesji `wd_owner_{slug}` lub nagłówkiem `x-owner-password: <password>`. Poświadczenia w query stringu są ignorowane, a próba nieautoryzowanego odczytu zwraca `401 Unauthorized`.
   - Pozycje o statusie `status: "deleted"` są bezwzględnie odfiltrowywane.
+- `POST /api/gallery/:slug/media/:id/like` – Anonimowe dodawanie i cofanie reakcji (serduszka ❤️) bez logowania (`{ action: "like" | "unlike" }` walidowane przez `toggleMediaLikeDto`):
+  - Wymaga aktywnej galerii (`isActive`), włączonego podglądu gości (`allowGuestViewing`) oraz ważnej sesji gościa przy ustawionym `guestPassword` (`401 Unauthorized` w razie braku).
+  - Pozwala modyfikować wyłącznie materiały o statusie `status: "ready"` (dla `hidden`, `pending`, `deleted` zwraca `404 Not Found` bez emisji SSE).
+  - Aktualizuje `likes_count` atomowo w PostgreSQL (`likes_count + 1` lub `GREATEST(0, likes_count - 1)`), podlega odizolowanemu rate-limitingowi w `publicStore` (`media-like`, 60 żądań/min na IP i galerię) i natychmiast rozsyła zdarzenie SSE `media-liked`.
 - `GET /api/gallery/:slug/live` – Strumień Server-Sent Events (SSE):
-  - Emisja `new-media`: powiadomienie o nowym przetworzonym zdjęciu.
+  - Emisja `new-media`: powiadomienie o nowym przetworzonym zdjęciu (wraz z `likesCount`, `caption`, `questId`, `source`).
   - Emisja `media-updated`: natychmiastowa aktualizacja widoczności (ukrycie/odkrycie/usunięcie) synchronizowana na żywo na ekranach wszystkich gości.
+  - Emisja `media-liked`: natychmiastowa synchronizacja licznika polubień (`{ mediaId, likesCount }`) na wszystkich telefonach oraz w Trybie TV.
   - Emisja `new-wish`: powiadomienie o nowym życzeniu dodanym do księgi gości.
   - Emisja `wish-updated`: natychmiastowa aktualizacja widoczności życzenia (ukrycie/odkrycie/usunięcie) synchronizowana na żywo, tym samym wzorcem co `media-updated`.
 - `ANY /api/upload/tus/*` – W pełni zgodny ze specyfikacją protokół TUS 1.0.0 (`POST`, `PATCH`, `HEAD`, `OPTIONS`, `DELETE`). Ten sam endpoint obsługuje zarówno upload gościa, jak i import fotografa (`source: "photographer"` w metadanych TUS): import fotografa wymaga dodatkowo poprawnego `ownerToken` (inaczej `401 Unauthorized`) i respektuje limit `maxStorageBytes` galerii (inaczej `413 Payload Too Large` dla konkretnego pliku) — patrz sekcja 3.1.
@@ -231,11 +241,12 @@ Indeks `idx_wishes_gallery_status_created` na `(gallery_id, status, created_at)`
 - `GET /api/gallery/:slug/wishes` – Lista życzeń, dokładnie ten sam wzorzec autoryzacji co `GET /api/gallery/:slug/media` (`includeHidden`, `ownerToken`/`password`/`adminToken`):
   - Bez poświadczeń zwraca wyłącznie życzenia o statusie `ready`.
   - Z poświadczeniami właściciela/administratora zwraca wszystkie poza `deleted`.
-- `GET /g/:slug/tv` – **Nie jest to nowy endpoint API**, lecz publiczna trasa strony (komponent kliencki `apps/web/src/app/[locale]/g/[slug]/tv/page.tsx`) — tryb TV/pokaz slajdów na telewizor lub rzutnik. Pobiera dane wyłącznie z `GET /api/gallery/:slug/media` i `GET /api/gallery/:slug/live` powyżej, bez żadnych własnych zapytań do bazy i bez wysyłania nagłówków/parametrów właściciela — dziedziczy filtrowanie `status: "ready"` 1:1 z istniejących endpointów.
+- `GET /g/:slug/tv` – **Nie jest to nowy endpoint API**, lecz publiczna trasa strony (komponent kliencki `apps/web/src/app/[locale]/g/[slug]/tv/page.tsx`) — Tryb TV 2.0 / pokaz slajdów na telewizor lub rzutnik. Pobiera dane wyłącznie z `GET /api/gallery/:slug`, `GET /api/gallery/:slug/media`, `GET /api/gallery/:slug/wishes` (`withWishes: true`) i `GET /api/gallery/:slug/live` powyżej, bez żadnych własnych zapytań do bazy i bez wysyłania nagłówków/parametrów właściciela — dziedziczy filtrowanie `status: "ready"` 1:1 z istniejących endpointów.
 
-- `POST /api/owner/:slug/auth` – Logowanie hasłem właściciela, wydanie podpisanego tokenu HMAC-SHA256 w JSON oraz ciasteczka sesji `wd_owner_{slug}` (`HttpOnly; SameSite=Strict; Path=/api; Max-Age=7 dni; Secure` w produkcji). Zwraca statystyki galerii, stan Google Drive i konfigurację winietki.
-- `GET /api/owner/:slug/session` – Przywrócenie aktywnej sesji właściciela na podstawie ciasteczka `wd_owner_{slug}` (wymaga metody GET). Odświeża ciasteczko sesji i zwraca świeży `ownerToken` oraz pełne dane panelu bez ponownego podawania hasła.
+- `POST /api/owner/:slug/auth` – Logowanie hasłem właściciela, wydanie podpisanego tokenu HMAC-SHA256 w JSON oraz ciasteczka sesji `wd_owner_{slug}` (`HttpOnly; SameSite=Strict; Path=/api; Max-Age=7 dni; Secure` w produkcji). Zwraca statystyki galerii, stan Google Drive, konfigurację foto-wyzwań (`questsConfig`) i konfigurację winietki.
+- `GET /api/owner/:slug/session` – Przywrócenie aktywnej sesji właściciela na podstawie ciasteczka `wd_owner_{slug}` (wymaga metody GET). Odświeża ciasteczko sesji i zwraca świeży `ownerToken` oraz pełne dane panelu (w tym `questsConfig`) bez ponownego podawania hasła.
 - `DELETE /api/owner/:slug/session` – Wylogowanie właściciela i wyczyszczenie ciasteczka sesji (`Max-Age=0`).
+- `PATCH /api/owner/:slug/settings` – Zapis ustawień moderacji galerii (`allowGuestUploads`, `allowGuestViewing`, `isApprovalQueueEnabled`, `guestPassword`) oraz konfiguracji foto-wyzwań (`questsConfig`, walidowanej schematem `questsConfigDto`: max 20 wyzwań, tytuły 2–80 znaków).
 - Import materiałów fotografa/kamerzysty (`PhotographerImportPanel.tsx`) nie ma osobnego endpointu REST — korzysta z tego samego `ANY /api/upload/tus/*` co upload gościa, przekazując dodatkowo `ownerToken` z logowania właściciela oraz `source: "photographer"` w metadanych TUS (patrz sekcja 3.1 i 5 wyżej).
 - `PATCH /api/owner/:slug/media/:id/status` – Zmiana widoczności zdjęcia (`ready` <-> `hidden`) autoryzowana tokenem HMAC (nagłówek `x-owner-token` lub `body.token`), wraz z natychmiastową emisją SSE `media-updated`.
 - `DELETE /api/owner/:slug/media/:id` – Fizyczne usunięcie pliku źródłowego i miniatury z dysku oraz bazy danych autoryzowane nagłówkiem `x-owner-token` lub `body.token` (ciasteczko nie wystarcza dla operacji mutujących).
@@ -260,22 +271,28 @@ Indeks `idx_wishes_gallery_status_created` na `(gallery_id, status, created_at)`
 
 ## 6. UX i Interakcja Mobilna
 
-1. **Pełnoekranowa Przeglądarka (LightboxModal)**:
+1. **Pełnoekranowa Przeglądarka (LightboxModal) oraz Siatka Galerii (MediaGrid)**:
    - **Natywna obsługa gestów dotykowych Swipe**: Użytkownik smartfona może płynnie przesuwać zdjęcia w lewo i w prawo palcem.
    - **Nawigacja klawiaturą**: Klawisze Strzałka w lewo / w prawo oraz Escape do zamykania.
-   - **Stabilność indeksu przy transmisji SSE**: Napływ nowych zdjęć od innych gości na sali weselnej nie powoduje nieoczekiwanego przeskakiwania aktualnie oglądanego zdjęcia w powiększeniu.
-2. **Drawer uploadu gościa (`UploaderDrawer`)**:
-   - Po **pełnym sukcesie** sesji wysyłania kolejka plików czyści się **natychmiast** (komunikat sukcesu + przycisk „Gotowe” bez listy completed).
+   - **Reakcje na żywo (Serduszka ❤️) i sortowanie „Najpopularniejsze”**: Kafelki w siatce oraz pasek nagłówka w Lightboxie udostępniają przycisk serduszka z licznikiem polubień (`likesCount`), pamiętający polubione ID w `localStorage` (`wd_likes_<slug>`, moduł `lib/guest-likes.ts`). Przełącznik nad siatką pozwala sortować materiały według *Najnowszych* lub *Najpopularniejszych* (`sortGalleryItems` — malejąco po `likesCount`, a przy remisie od najnowszych).
+   - **Podpisy (`caption`) i odznaki Foto-Wyzwań (`🎯`)**: Zdjęcia prezentują krótki podpis kontekstowy autora oraz odznakę przypisanego wyzwania zarówno w siatce, jak i w Lightboxie.
+   - **Stabilność indeksu przy transmisji SSE**: Napływ nowych zdjęć (`new-media`) lub zmian licznika polubień (`media-liked`) od innych gości na sali weselnej nie powoduje nieoczekiwanego przeskakiwania aktualnie oglądanego zdjęcia w powiększeniu (`useLightboxSelection` śledzi otwarty element po `id`).
+2. **Drawer uploadu gościa (`UploaderDrawer`) i Foto-Wyzwania (`PhotoQuestsBar`)**:
+   - Umożliwia opcjonalne wpisanie krótkiego podpisu do zdjęcia/filmu (`caption`, do 140 znaków, niezależnie od pola podpisu autora `uploaderName`) oraz przypisanie uploadu do aktywnego foto-wyzwania (`questId`).
+   - Gdy w galerii włączone są foto-wyzwania (`questsConfig.enabled`), nad siatką galerii pojawia się pasek `PhotoQuestsBar.tsx` prezentujący aktywne wyzwania z licznikami wykonanych zdjęć (`status: "ready"`), pozwalający filtrować galerię po wyzwaniu lub otworzyć `UploaderDrawer` z wstępnie wybranym zadaniem.
+   - Po **pełnym sukcesie** sesji wysyłania kolejka plików oraz podpis `caption` czyszczą się **natychmiast** (komunikat sukcesu + przycisk „Gotowe” bez listy completed).
    - Zamknięcie drawera (X / Escape / Gotowe) nie zachowuje kolejki — kolejne otwarcie startuje z pustą listą, co utrudnia przypadkowe ponowne wysłanie tych samych zdjęć.
    - Przy częściowych błędach na liście zostają pozycje z błędem (pozycje udane są usuwane), aby gość mógł ponowić wysyłanie.
 3. **Kreator Karteczek na Stoły (`/g/[slug]/card`)**:
    - Przeniesiony do strefy zarządzania dla Pary Młodej (wyeliminowano zbędne odnośniki z nagłówka gościa).
    - Dynamiczny podgląd na żywo stylów i kolorów.
    - Pobieranie PDF przekazuje aktualne parametry edytora bezpośrednio do generatora `pdf-lib`.
-4. **Tryb TV / Pokaz Slajdów na Sali (`/g/[slug]/tv`)**:
+4. **Tryb TV 2.0 / Pokaz Slajdów na Sali (`/g/[slug]/tv`)**:
    - Publiczna, tylko-do-odczytu, w pełni kliencka trasa (`"use client"`) — zero nowych endpointów API, zero nowych zapytań do bazy danych.
-   - Pobiera dane identycznie jak galeria gościa: `GET /api/gallery/:slug` (metadane) + `GET /api/gallery/:slug/media` (lista) i nasłuchuje `GET /api/gallery/:slug/live` (SSE `new-media` / `media-updated`) — nigdy nie wysyła `x-owner-token`/`x-owner-password`/`x-admin-token` ani parametru `includeHidden`, nawet jeśli ktoś doda je ręcznie do adresu URL strony.
-   - Rotacja slajdów oparta o `setInterval` i lokalny stan React (indeks bieżącej pozycji); nowe zdjęcie z `new-media` trafia na początek kolejki (limit 200 pozycji) i jest natychmiast wyświetlane, a `media-updated` ze statusem `hidden`/`deleted` usuwa pozycję z rotacji w czasie rzeczywistym.
+   - Pobiera dane identycznie jak galeria gościa: `GET /api/gallery/:slug` (metadane + `questsConfig`), `GET /api/gallery/:slug/media` (lista mediów) oraz `GET /api/gallery/:slug/wishes` (`withWishes: true` w `useLiveGallery`) i nasłuchuje `GET /api/gallery/:slug/live` (SSE `new-media`, `media-updated`, `media-liked`, `new-wish`, `wish-updated`) — nigdy nie wysyła `x-owner-token`/`x-owner-password`/`x-admin-token` ani parametru `includeHidden`, nawet jeśli ktoś doda je ręcznie do adresu URL strony.
+   - **Przeplatanie zdjęć i Księgi Życzeń (`buildTvSlides` w `lib/tv-slideshow.ts`)**: Buduje zunifikowaną kolejkę slajdów (`TvSlide`), wstawiając pełnoekranową kartę z życzeniem po każdych 4 zdjęciach (lub na końcu w małych galeriach `< 4` zdjęć, a gdy brak zdjęć — wyświetla same karty życzeń).
+   - Rotacja slajdów oparta o `setInterval` i lokalny stan React; nowe zdjęcie z `new-media` lub nowe życzenie z `new-wish` jest natychmiast wyświetlane na ekranie, natomiast `media-updated` i `wish-updated` ze statusem `hidden`/`deleted` natychmiast usuwają pozycję z rotacji w czasie rzeczywistym.
+   - Na slajdach ze zdjęciami w dolnej karcie metadanych obok autora (`uploaderName`) prezentowane są: podpis kontekstowy (`caption`, z `line-clamp: 2`), odznaka foto-wyzwania (`🎯`, wyznaczana przez `resolveTvQuestTitle`) oraz licznik serduszek (`likesCount` ❤️, gdy `> 0`).
    - Materiały `fileType: "video"` renderowane jako statyczna miniatura (`thumbUrl`) — bez `<video autoplay>` i bez ryzyka nieoczekiwanego dźwięku na sali.
    - Stały kod QR w rogu ekranu generowany po stronie klienta biblioteką `qrcode` (funkcja `buildTvGalleryQrUrl` w `apps/web/src/lib/tv-slideshow.ts`), prowadzący do `/g/{slug}`.
    - Brak FAB-a uploadu, brak klikalnego lightboxa — widok jest z założenia tylko-do-oglądania.
@@ -351,9 +368,9 @@ docker run --rm -v wedding-drop_app_data:/data -v $(pwd):/backup alpine tar -xzf
 4. **Bezpieczeństwo PWA i Wykluczenie Cache API**:
    - Konfiguracja Service Worker (`sw.ts`) wymusza strategię `NetworkOnly` dla wszystkich zapytań `/api/*` oraz `/media-file/*`, uniemożliwiając cachowanie danych wrażliwych, prywatnych mediów, tokenów sesyjnych oraz odpowiedzi API w `CacheStorage` przeglądarki.
 5. **Rate limiting (`apps/web/src/lib/rate-limit.ts`)**:
-   - Limiter w pamięci procesu (stałe okno, współdzielony przez `globalThis` między Next.js a serwerem TUS) utrzymuje dwa odizolowane magazyny: `authStore` dla kubełków uwierzytelniania (`admin-login`, `owner-login`, `owner-password`, `guest-login`, `zip-pin`) oraz `publicStore` dla ruchu publicznego (`tus-create`, `wishes-post`), co zapobiega wyparciu FIFO blokad brute-force przez ruch publiczny. Klucz: IP z `X-Forwarded-For` (nadpisywanego przez Caddy wartością `{remote_host}`) + zasób (slug galerii lub `admin`).
+   - Limiter w pamięci procesu (stałe okno, współdzielony przez `globalThis` między Next.js a serwerem TUS) utrzymuje dwa odizolowane magazyny: `authStore` dla kubełków uwierzytelniania (`admin-login`, `owner-login`, `owner-password`, `guest-login`, `zip-pin`) oraz `publicStore` dla ruchu publicznego (`tus-create`, `wishes-post`, `media-like`), co zapobiega wyparciu FIFO blokad brute-force przez ruch publiczny. Klucz: IP z `X-Forwarded-For` (nadpisywanego przez Caddy wartością `{remote_host}`) + zasób (slug galerii lub `admin`).
    - **10 nieudanych prób / 15 min** dla: logowania admina, logowania właściciela, hasła gościa, PIN-u ZIP oraz nagłówka `x-owner-password` (poprawne logowanie zeruje licznik). Po przekroczeniu: `429` z `Retry-After`, **bez wywołania bcrypt** (ochrona CPU N100).
-   - **30 życzeń / minutę** (`POST /wishes`) oraz **300 utworzeń uploadu TUS / minutę** na IP i galerię (gość; import fotografa jest zwolniony, bo wymaga tokenu). Limit TUS jest luźniejszy, bo goście na weselu dzielą jeden adres IP (Wi-Fi sali).
+   - **30 życzeń / minutę** (`POST /wishes`), **60 reakcji / minutę** (`POST /media/:id/like`) oraz **300 utworzeń uploadu TUS / minutę** na IP i galerię (gość; import fotografa jest zwolniony, bo wymaga tokenu). Limit TUS jest luźniejszy, bo goście na weselu dzielą jeden adres IP (Wi-Fi sali).
    - Limiter resetuje się po restarcie i działa tylko dla jednej instancji.
 6. **Hasło gościa i PIN**:
    - Hasło gościa i PIN ZIP są zapisywane jako hash bcrypt (hasła zapisane wcześniej w formacie `scrypt$…` z #62 nadal są akceptowane). Stare wartości plaintext działają nadal i są zamieniane na hash przy pierwszej poprawnej weryfikacji (lazy-upgrade, bez migracji SQL). API zwraca tylko flagi `hasPassword`/`hasPin`.

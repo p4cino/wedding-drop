@@ -63,12 +63,16 @@ export async function GET(
 						media: {
 							id: mediaItem.id,
 							uploaderName: mediaItem.uploaderName,
+							source: mediaItem.source,
 							fileType: mediaItem.fileType,
 							mediaType: mediaItem.mediaType,
 							mimeType: mediaItem.mimeType,
 							originalFileName: mediaItem.originalFileName,
 							fileSize: mediaItem.fileSize,
 							status: mediaItem.status,
+							likesCount: mediaItem.likesCount ?? 0,
+							caption: mediaItem.caption ?? null,
+							questId: mediaItem.questId ?? null,
 							thumbUrl: `/media-file/${mediaItem.thumbPath.replace(/\\/g, "/")}`,
 							rawUrl: `/media-file/${mediaItem.storagePath.replace(/\\/g, "/")}`,
 							createdAt: mediaItem.createdAt,
@@ -82,6 +86,7 @@ export async function GET(
 
 			const eventName = `new-media:${slug}`;
 			const updateEventName = `media-updated:${slug}`;
+			const likedEventName = `media-liked:${slug}`;
 			const gdriveEventName = `gdrive-progress:${slug}`;
 			const newWishEventName = `new-wish:${slug}`;
 			const wishUpdatedEventName = `wish-updated:${slug}`;
@@ -98,6 +103,24 @@ export async function GET(
 					controller.enqueue(encoder.encode(`data: ${payload}\n\n`));
 				} catch (err) {
 					console.error("Błąd wysyłania SSE update:", err);
+				}
+			};
+
+			const onMediaLiked = (update: {
+				mediaId: string;
+				likesCount: number;
+			}) => {
+				try {
+					const payload = JSON.stringify({
+						type: "media-liked",
+						update: {
+							mediaId: update.mediaId,
+							likesCount: update.likesCount,
+						},
+					});
+					controller.enqueue(encoder.encode(`data: ${payload}\n\n`));
+				} catch (err) {
+					console.error("Błąd wysyłania SSE media-liked:", err);
 				}
 			};
 
@@ -149,6 +172,7 @@ export async function GET(
 			if (gallery.allowGuestViewing || canViewHidden) {
 				sseBus.on(eventName, onNewMedia);
 				sseBus.on(updateEventName, onMediaUpdated);
+				sseBus.on(likedEventName, onMediaLiked);
 			}
 
 			if (canViewHidden) {
@@ -173,6 +197,7 @@ export async function GET(
 				if (gallery.allowGuestViewing || canViewHidden) {
 					sseBus.off(eventName, onNewMedia);
 					sseBus.off(updateEventName, onMediaUpdated);
+					sseBus.off(likedEventName, onMediaLiked);
 				}
 				if (canViewHidden) {
 					sseBus.off(gdriveEventName, onGDriveProgress);

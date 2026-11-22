@@ -9,17 +9,24 @@ import {
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { css } from "styled-system/css";
 import ContributorLeaderboard from "@/components/ContributorLeaderboard";
 import GalleryStatusScreen from "@/components/GalleryStatusScreen";
 import { LegalFooterLinks } from "@/components/LegalFooterLinks";
 import LightboxModal from "@/components/LightboxModal";
 import MediaGrid from "@/components/MediaGrid";
+import PhotoQuestsBar from "@/components/PhotoQuestsBar";
 import UploaderDrawer from "@/components/UploaderDrawer";
 import WishesBook from "@/components/WishesBook";
 import { useLightboxSelection } from "@/hooks/useLightboxSelection";
 import { useLiveGallery } from "@/hooks/useLiveGallery";
+import {
+	type GallerySortOrder,
+	getLikedMediaIds,
+	setMediaLiked,
+	sortGalleryItems,
+} from "@/lib/guest-likes";
 
 export default function GuestGalleryPage() {
 	const params = useParams();
@@ -34,12 +41,70 @@ export default function GuestGalleryPage() {
 		refetch,
 		refetchWithBackoff,
 		addWish,
+		updateMediaLikes,
 	} = useLiveGallery(slug);
+	const questsConfig = gallery?.questsConfig;
+
 	const [activeTab, setActiveTab] = useState<"photos" | "wishes">("photos");
 	const [isUploaderOpen, setIsUploaderOpen] = useState(false);
-	const lightbox = useLightboxSelection(items);
+	const [uploaderQuestId, setUploaderQuestId] = useState<string | null>(null);
+	const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null);
+	const [sortBy, setSortBy] = useState<GallerySortOrder>("newest");
+	const [likedIds, setLikedIds] = useState<Set<string>>(() => new Set());
+
+	useEffect(() => {
+		if (slug) {
+			setLikedIds(getLikedMediaIds(slug));
+		}
+	}, [slug]);
+
+	const displayedItems = useMemo(() => {
+		const filtered = selectedQuestId
+			? items.filter((item) => item.questId === selectedQuestId)
+			: items;
+		return sortGalleryItems(filtered, sortBy);
+	}, [items, selectedQuestId, sortBy]);
+
+	const lightbox = useLightboxSelection(displayedItems);
 	const t = useTranslations("GuestGallery");
 	const tWishes = useTranslations("Wishes");
+
+	const handleToggleLike = useCallback(
+		async (mediaId: string) => {
+			if (!slug) return;
+			const isCurrentlyLiked = likedIds.has(mediaId);
+			const action = isCurrentlyLiked ? "unlike" : "like";
+			const nextLiked = setMediaLiked(slug, mediaId, !isCurrentlyLiked);
+			setLikedIds(new Set(nextLiked));
+
+			const targetItem = items.find((i) => i.id === mediaId);
+			const currentLikes = targetItem?.likesCount ?? 0;
+			const optimisticLikes = isCurrentlyLiked
+				? Math.max(0, currentLikes - 1)
+				: currentLikes + 1;
+			updateMediaLikes?.(mediaId, optimisticLikes);
+
+			try {
+				const res = await fetch(`/api/gallery/${slug}/media/${mediaId}/like`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ action }),
+				});
+				if (res.ok) {
+					const data = (await res.json()) as {
+						id: string;
+						likesCount: number;
+					};
+					if (typeof data.likesCount === "number") {
+						updateMediaLikes?.(mediaId, data.likesCount);
+					}
+				}
+			} catch (err) {
+				console.error("Błąd aktualizacji polubienia:", err);
+			}
+		},
+		[slug, likedIds, items, updateMediaLikes],
+	);
 
 	// Dodanie nowego życzenia przez gościa
 	const handleAddWish = useCallback(
@@ -463,7 +528,112 @@ export default function GuestGalleryPage() {
 								</h3>
 							</div>
 						) : (
-							<MediaGrid items={items} onItemClick={lightbox.open} />
+							<>
+								<PhotoQuestsBar
+									questsConfig={questsConfig}
+									items={items}
+									selectedQuestId={selectedQuestId}
+									onSelectQuest={setSelectedQuestId}
+									allowUploads={!isUploadsDisabled}
+									onUploadForQuest={(questId) => {
+										setUploaderQuestId(questId);
+										setIsUploaderOpen(true);
+									}}
+								/>
+
+								{/* Pasek sortowania (Najnowsze / Najpopularniejsze ❤️) */}
+								{items.length > 0 && (
+									<div
+										className={css({
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "flex-end",
+											gap: "2",
+											mb: "4",
+										})}
+									>
+										<span
+											className={css({
+												fontSize: "xs",
+												fontWeight: "medium",
+												color: "slate.500",
+											})}
+										>
+											{t("sortLabel")}
+										</span>
+										<div
+											className={css({
+												display: "inline-flex",
+												alignItems: "center",
+												gap: "1",
+												p: "1",
+												bg: "white",
+												borderRadius: "xl",
+												borderWidth: "1px",
+												borderColor: "slate.200",
+												boxShadow: "xs",
+											})}
+										>
+											<button
+												type="button"
+												aria-pressed={sortBy === "newest"}
+												onClick={() => setSortBy("newest")}
+												className={css({
+													px: "3",
+													py: "1.5",
+													borderRadius: "lg",
+													fontSize: "xs",
+													fontWeight: "semibold",
+													cursor: "pointer",
+													borderWidth: "0",
+													transition: "all 0.15s ease",
+													backgroundColor:
+														sortBy === "newest" ? "slate.900" : "transparent",
+													color: sortBy === "newest" ? "white" : "slate.600",
+													_hover: {
+														backgroundColor:
+															sortBy === "newest" ? "slate.900" : "slate.100",
+													},
+												})}
+											>
+												{t("sortNewest")}
+											</button>
+											<button
+												type="button"
+												aria-pressed={sortBy === "popular"}
+												onClick={() => setSortBy("popular")}
+												className={css({
+													px: "3",
+													py: "1.5",
+													borderRadius: "lg",
+													fontSize: "xs",
+													fontWeight: "semibold",
+													cursor: "pointer",
+													borderWidth: "0",
+													transition: "all 0.15s ease",
+													backgroundColor:
+														sortBy === "popular" ? "slate.900" : "transparent",
+													color: sortBy === "popular" ? "white" : "slate.600",
+													_hover: {
+														backgroundColor:
+															sortBy === "popular" ? "slate.900" : "slate.100",
+													},
+												})}
+											>
+												{t("sortPopular")}
+											</button>
+										</div>
+									</div>
+								)}
+
+								<MediaGrid
+									items={displayedItems}
+									onItemClick={lightbox.open}
+									likedIds={likedIds}
+									onToggleLike={handleToggleLike}
+									questsConfig={questsConfig}
+								/>
+							</>
 						)
 					) : (
 						<WishesBook wishes={wishes} onSubmit={handleAddWish} />
@@ -488,7 +658,10 @@ export default function GuestGalleryPage() {
 						>
 							<button
 								type="button"
-								onClick={() => setIsUploaderOpen(true)}
+								onClick={() => {
+									setUploaderQuestId(selectedQuestId);
+									setIsUploaderOpen(true);
+								}}
 								aria-haspopup="dialog"
 								aria-expanded={isUploaderOpen}
 								aria-label={t("addPhotosAria")}
@@ -535,9 +708,12 @@ export default function GuestGalleryPage() {
 						gallerySlug={slug}
 						primaryColor={gallery.primaryColor}
 						accentColor={gallery.accentColor}
+						questsConfig={questsConfig}
+						initialQuestId={uploaderQuestId}
 						isOpen={isUploaderOpen}
 						onClose={() => {
 							setIsUploaderOpen(false);
+							setUploaderQuestId(null);
 							refetch();
 						}}
 						onUploadSuccess={refetchWithBackoff}
@@ -546,11 +722,14 @@ export default function GuestGalleryPage() {
 
 				{/* Pełnoekranowy Lightbox */}
 				<LightboxModal
-					items={items}
+					items={displayedItems}
 					currentIndex={lightbox.index}
 					onClose={lightbox.close}
 					onNavigate={lightbox.navigate}
 					allowDownloads={gallery.allowGuestDownloads}
+					likedIds={likedIds}
+					onToggleLike={handleToggleLike}
+					questsConfig={questsConfig}
 				/>
 
 				{/* Stopka z dokumentami prawnymi */}

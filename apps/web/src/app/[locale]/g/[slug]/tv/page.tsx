@@ -4,13 +4,17 @@ import { Heart } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import QRCode from "qrcode";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { css } from "styled-system/css";
 import AudioPlaceholder from "@/components/AudioPlaceholder";
 import GalleryStatusScreen from "@/components/GalleryStatusScreen";
 import { useLiveGallery } from "@/hooks/useLiveGallery";
 import type { LiveEvent } from "@/lib/live-gallery";
-import { buildTvGalleryQrUrl } from "@/lib/tv-slideshow";
+import {
+	buildTvGalleryQrUrl,
+	buildTvSlides,
+	resolveTvQuestTitle,
+} from "@/lib/tv-slideshow";
 
 // Ustalony, stały interwał rotacji slajdów (nie konfigurowalny w tej iteracji — patrz design.md)
 const ROTATION_INTERVAL_MS = 8000;
@@ -22,36 +26,60 @@ export default function TvSlideshowPage() {
 	const slug = params?.slug as string;
 	const t = useTranslations("TvSlideshow");
 	const [currentIndex, setCurrentIndex] = useState(0);
+	const [pendingSlideId, setPendingSlideId] = useState<string | null>(null);
 	const [qrSvg, setQrSvg] = useState("");
 
-	// Nowe zdjęcie natychmiast wskakuje na wierzch rotacji
+	// Nowe zdjęcie lub życzenie natychmiast wskakuje na ekran
 	const handleEvent = useCallback((event: LiveEvent) => {
-		if (event.type === "new-media" && event.media) setCurrentIndex(0);
+		if (event.type === "new-media" && event.media) {
+			setPendingSlideId(null);
+			setCurrentIndex(0);
+		} else if (event.type === "new-wish" && event.wish) {
+			setPendingSlideId(`wish-${event.wish.id}`);
+		} else if (event.type === "wish-updated" && event.update?.wishId) {
+			const updatedId = `wish-${event.update.wishId}`;
+			setPendingSlideId((curr) => (curr === updatedId ? null : curr));
+		}
 	}, []);
 
 	// Ten sam publiczny stan i kanał SSE co galeria gościa (API już filtruje "ready")
-	const { gallery, items, status, isLive, refetch } = useLiveGallery(slug, {
-		maxItems: MAX_QUEUE_SIZE,
-		withWishes: false,
-		onEvent: handleEvent,
-	});
+	const { gallery, items, wishes, status, isLive, refetch } = useLiveGallery(
+		slug,
+		{
+			maxItems: MAX_QUEUE_SIZE,
+			withWishes: true,
+			onEvent: handleEvent,
+		},
+	);
+
+	const slides = useMemo(() => buildTvSlides(items, wishes), [items, wishes]);
+
+	// Synchronizacja indeksu z nowo nadesłanym życzeniem (gdy pojawi się na liście slajdów)
+	useEffect(() => {
+		if (!pendingSlideId) return;
+		const idx = slides.findIndex((slide) => slide.id === pendingSlideId);
+		if (idx !== -1) {
+			setCurrentIndex(idx);
+			setPendingSlideId(null);
+		}
+	}, [slides, pendingSlideId]);
 
 	// Rotacja slajdów po ustalonym interwale
 	useEffect(() => {
-		if (items.length <= 1) return;
+		if (slides.length <= 1) return;
 		const interval = setInterval(() => {
-			setCurrentIndex((curr) => (curr + 1) % items.length);
+			setCurrentIndex((curr) => (curr + 1) % slides.length);
 		}, ROTATION_INTERVAL_MS);
 		return () => clearInterval(interval);
-	}, [items.length]);
+	}, [slides.length]);
 
-	// Zabezpieczenie indeksu, gdy lista mediów się skurczy (np. po ukryciu/usunięciu)
+	// Zabezpieczenie indeksu, gdy lista slajdów się skurczy (np. po ukryciu/usunięciu)
 	useEffect(() => {
 		setCurrentIndex((curr) => {
-			if (items.length === 0) return 0;
-			return curr % items.length;
+			if (slides.length === 0) return 0;
+			return curr % slides.length;
 		});
-	}, [items.length]);
+	}, [slides.length]);
 
 	// Wygenerowanie kodu QR po stronie klienta prowadzącego do galerii gościa
 	useEffect(() => {
@@ -77,7 +105,29 @@ export default function TvSlideshowPage() {
 		return <GalleryStatusScreen variant="error" dark onRetry={refetch} />;
 	}
 
-	const current = items[currentIndex] ?? null;
+	const pendingIndex = pendingSlideId
+		? slides.findIndex((slide) => slide.id === pendingSlideId)
+		: -1;
+	const effectiveIndex =
+		pendingIndex !== -1
+			? pendingIndex
+			: slides.length > 0
+				? currentIndex % slides.length
+				: 0;
+	const currentSlide = slides[effectiveIndex] ?? null;
+	const currentMedia =
+		currentSlide?.kind === "media" ? currentSlide.media : null;
+	const currentQuestTitle = currentMedia
+		? resolveTvQuestTitle(gallery.questsConfig, currentMedia.questId)
+		: null;
+	const currentLikesCount = currentMedia?.likesCount ?? 0;
+	const showMediaOverlay = Boolean(
+		currentMedia &&
+			(currentMedia.uploaderName ||
+				currentMedia.caption ||
+				currentQuestTitle ||
+				currentLikesCount > 0),
+	);
 
 	return (
 		<div
@@ -89,20 +139,115 @@ export default function TvSlideshowPage() {
 				userSelect: "none",
 			})}
 		>
-			{/* Prezentowany materiał — dla wideo pokazujemy statyczną miniaturę bez dźwięku (zob. design.md) */}
-			{current ? (
-				current.fileType === "audio" ? (
+			{/* Prezentowany slajd: zdjęcie/wideo/audio lub pełnoekranowa karta z Księgi Życzeń */}
+			{currentSlide ? (
+				currentSlide.kind === "wish" ? (
 					<div
-						key={current.id}
+						key={currentSlide.id}
+						data-testid="tv-wish-slide"
+						className={css({
+							position: "absolute",
+							inset: "0",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							px: { base: "6", md: "20" },
+							py: "24",
+							background:
+								"radial-gradient(circle at center, rgba(30, 41, 59, 0.92) 0%, rgba(2, 6, 23, 0.98) 100%)",
+						})}
+					>
+						<div
+							className={css({
+								maxW: "4xl",
+								w: "full",
+								textAlign: "center",
+								px: { base: "8", md: "14" },
+								py: { base: "10", md: "14" },
+								borderRadius: "3xl",
+								border: "1px solid rgba(212, 175, 55, 0.45)",
+								backgroundColor: "rgba(15, 23, 42, 0.75)",
+								backdropFilter: "blur(12px)",
+								boxShadow: "2xl",
+								display: "flex",
+								flexDirection: "column",
+								alignItems: "center",
+								gap: "6",
+							})}
+						>
+							<span
+								data-testid="tv-wish-badge"
+								className={css({
+									display: "inline-flex",
+									alignItems: "center",
+									gap: "2",
+									px: "4",
+									py: "1.5",
+									borderRadius: "full",
+									backgroundColor: "rgba(212, 175, 55, 0.18)",
+									border: "1px solid rgba(212, 175, 55, 0.5)",
+									color: "wedding.gold",
+									fontSize: "xs",
+									fontWeight: "semibold",
+									letterSpacing: "wider",
+									textTransform: "uppercase",
+								})}
+							>
+								<Heart
+									aria-hidden="true"
+									className={css({
+										w: "3.5",
+										h: "3.5",
+										color: "wedding.gold",
+									})}
+								/>
+								<span>{t("wishBadge")}</span>
+							</span>
+
+							<blockquote
+								data-testid="tv-wish-message"
+								className={css({
+									fontFamily: "serif",
+									fontSize: { base: "2xl", md: "4xl" },
+									lineHeight: "relaxed",
+									color: "white",
+									fontStyle: "italic",
+									wordBreak: "break-word",
+								})}
+							>
+								{currentSlide.wish.message}
+							</blockquote>
+
+							<p
+								data-testid="tv-wish-author"
+								className={css({
+									fontSize: { base: "base", md: "lg" },
+									fontWeight: "medium",
+									color: "wedding.gold",
+								})}
+							>
+								<span aria-hidden="true">— </span>
+								<span>
+									{currentSlide.wish.guestName?.trim() ||
+										t("wishAuthorFallback")}
+								</span>
+							</p>
+						</div>
+					</div>
+				) : currentSlide.media.fileType === "audio" ? (
+					<div
+						key={currentSlide.id}
 						className={css({ position: "absolute", inset: "0" })}
 					>
 						<AudioPlaceholder />
 					</div>
 				) : (
 					<img
-						key={current.id}
+						key={currentSlide.id}
 						src={
-							current.fileType === "video" ? current.thumbUrl : current.rawUrl
+							currentSlide.media.fileType === "video"
+								? currentSlide.media.thumbUrl
+								: currentSlide.media.rawUrl
 						}
 						alt=""
 						className={css({
@@ -208,24 +353,114 @@ export default function TvSlideshowPage() {
 				</span>
 			</div>
 
-			{/* Podpis autora bieżącego zdjęcia */}
-			{current?.uploaderName && (
+			{/* Karta metadanych bieżącego zdjęcia: wyzwanie, serduszka, podpis oraz autor */}
+			{showMediaOverlay && currentMedia && (
 				<div
+					data-testid="tv-media-overlay"
 					className={css({
 						position: "absolute",
 						bottom: "8",
 						left: "8",
-						px: "4",
-						py: "2",
-						borderRadius: "xl",
-						backgroundColor: "rgba(0, 0, 0, 0.4)",
-						backdropFilter: "blur(4px)",
+						px: "5",
+						py: "3",
+						borderRadius: "2xl",
+						backgroundColor: "rgba(0, 0, 0, 0.55)",
+						backdropFilter: "blur(8px)",
 						color: "white",
-						fontSize: "sm",
 						maxW: "60%",
+						display: "flex",
+						flexDirection: "column",
+						gap: "1.5",
 					})}
 				>
-					{t("uploaderPrefix")} {current.uploaderName}
+					{(currentQuestTitle || currentLikesCount > 0) && (
+						<div
+							className={css({
+								display: "flex",
+								flexWrap: "wrap",
+								alignItems: "center",
+								gap: "2",
+							})}
+						>
+							{currentQuestTitle && (
+								<span
+									data-testid="tv-quest-badge"
+									className={css({
+										display: "inline-flex",
+										alignItems: "center",
+										gap: "1",
+										px: "2.5",
+										py: "0.5",
+										borderRadius: "full",
+										backgroundColor: "rgba(212, 175, 55, 0.25)",
+										border: "1px solid rgba(212, 175, 55, 0.5)",
+										color: "wedding.gold",
+										fontSize: "xs",
+										fontWeight: "semibold",
+									})}
+								>
+									<span aria-hidden="true">🎯 </span>
+									<span>{currentQuestTitle}</span>
+								</span>
+							)}
+							{currentLikesCount > 0 && (
+								<span
+									data-testid="tv-likes-badge"
+									className={css({
+										display: "inline-flex",
+										alignItems: "center",
+										gap: "1",
+										px: "2.5",
+										py: "0.5",
+										borderRadius: "full",
+										backgroundColor: "rgba(244, 63, 94, 0.25)",
+										border: "1px solid rgba(244, 63, 94, 0.5)",
+										color: "white",
+										fontSize: "xs",
+										fontWeight: "semibold",
+									})}
+								>
+									<Heart
+										aria-hidden="true"
+										className={css({
+											w: "3.5",
+											h: "3.5",
+											color: "rose.400",
+											fill: "currentColor",
+										})}
+									/>
+									<span>{currentLikesCount}</span>
+								</span>
+							)}
+						</div>
+					)}
+
+					{currentMedia.caption && (
+						<p
+							data-testid="tv-media-caption"
+							className={css({
+								fontFamily: "serif",
+								fontStyle: "italic",
+								fontSize: { base: "base", md: "lg" },
+								color: "white",
+								lineClamp: 2,
+								overflow: "hidden",
+							})}
+						>
+							{currentMedia.caption}
+						</p>
+					)}
+
+					{currentMedia.uploaderName && (
+						<div
+							className={css({
+								fontSize: "sm",
+								color: "slate.200",
+							})}
+						>
+							{t("uploaderPrefix")} {currentMedia.uploaderName}
+						</div>
+					)}
 				</div>
 			)}
 

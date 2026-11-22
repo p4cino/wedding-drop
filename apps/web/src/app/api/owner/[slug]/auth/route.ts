@@ -81,6 +81,10 @@ export async function POST(
 		const payload = await buildOwnerPanelPayload(gallery, gdrive);
 		const res = NextResponse.json({
 			...payload,
+			gallery: {
+				...payload.gallery,
+				questsConfig: gallery.questsConfig ?? { enabled: false, items: [] },
+			},
 			ownerToken,
 		});
 		setOwnerSessionCookie(res, slug, ownerToken);
