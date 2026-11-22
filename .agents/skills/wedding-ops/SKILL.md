@@ -1,7 +1,8 @@
 ---
+
 name: wedding-ops
 description: >-
-  Use this skill when the user asks to manage, deploy, configure, backup, restore, or monitor the WeddingDrop infrastructure, Docker Compose containers, PostgreSQL database, Drizzle ORM migrations, or Caddy reverse proxy with automatic SSL.
+Use this skill when the user asks to manage, deploy, configure, backup, restore, or monitor the WeddingDrop infrastructure, Docker Compose containers, PostgreSQL database, Drizzle ORM migrations, or Caddy reverse proxy with automatic SSL.
 ---
 
 # WeddingDrop Operations: Zarządzanie Infrastrukturą, Dockerem i Bazą Danych
@@ -14,7 +15,7 @@ Ten skill zawiera procedury operacyjne i wdrożeniowe dla aplikacji **WeddingDro
 
 Stos produkcyjny składa się z 3 współpracujących kontenerów:
 1. **`wedding_postgres`**: Baza danych PostgreSQL 16 Alpine z dedykowanymi indeksami złożonymi i wolumenem `postgres_data`.
-2. **`wedding_web`**: Node.js 24 Alpine, Next.js 16 (`apps/web`), serwer TUS, Sharp, FFmpeg z limitem `concurrency: 2` i wolumenem danych `app_data`. Zbudowany z wieloetapowego Dockerfile z wykorzystaniem `turbo prune`.
+2. **`wedding_web`**: Node.js 26 Alpine, Next.js 16 (`apps/web`), serwer TUS, Sharp, FFmpeg z limitem `concurrency: 2` i wolumenem danych `app_data`. Zbudowany z wieloetapowego Dockerfile z wykorzystaniem `turbo prune`.
 3. **`wedding_caddy`**: Reverse proxy Caddy v2 z automatycznym certyfikatem HTTPS Let's Encrypt i nagłówkami `noindex`.
 
 Szczegóły sieci i konfiguracji Caddyfile znajdziesz w dokumencie [docker-caddy.md](./references/docker-caddy.md).
@@ -66,6 +67,7 @@ docker exec -it wedding_postgres psql -U wedding -d wedding_drop
 Wszystkie istotne dane aplikacji znajdują się w dwóch wolumenach Dockera: `postgres_data` oraz `app_data`.
 
 ### Wykonanie Kopii Zapasowej (Backup):
+
 ```bash
 # 1. Eksport bazy danych PostgreSQL
 docker exec -t wedding_postgres pg_dump -U wedding wedding_drop > wedding_backup_$(date +%F).sql
@@ -75,6 +77,7 @@ docker run --rm -v wedding-drop_app_data:/data -v $(pwd):/backup alpine tar -czf
 ```
 
 ### Odtwarzanie z Kopii Zapasowej (Restore):
+
 ```bash
 # 1. Odtworzenie bazy danych
 cat wedding_backup_YYYY-MM-DD.sql | docker exec -i wedding_postgres psql -U wedding -d wedding_drop
@@ -84,6 +87,7 @@ docker run --rm -v wedding-drop_app_data:/data -v $(pwd):/backup alpine tar -xzf
 ```
 
 ### Opcja zintegrowana przez skrypt TypeScript:
+
 ```bash
 npx tsx .agents/scripts/ops-helper.ts backup
 npx tsx .agents/scripts/ops-helper.ts status
@@ -94,12 +98,15 @@ npx tsx .agents/scripts/ops-helper.ts status
 ## 5. Konfiguracja Domeny i Certyfikatu SSL (Caddy)
 
 1. W pliku `.env` ustaw domenę publiczną:
+
    ```env
    APP_DOMAIN=slub.twojadomena.pl
    ```
 2. Upewnij się, że porty 80 i 443 na routerze/serwerze są przekierowane na maszynę z Dockerem.
 3. Przeładuj Caddy:
+
    ```bash
    docker compose restart caddy
    ```
+
    Caddy automatycznie wygeneruje i odnowi certyfikat SSL z Let's Encrypt lub ZeroSSL.

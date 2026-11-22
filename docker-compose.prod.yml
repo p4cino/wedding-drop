@@ -29,6 +29,7 @@
 #    dla automatycznego Let's Encrypt.
 services:
   postgres:
+    # Wymagany PostgreSQL >= 16.16 (łatka bezpieczeństwa dla CVE-2026-6460)
     image: postgres:16-alpine
     container_name: wedding_postgres
     restart: unless-stopped
@@ -80,6 +81,7 @@ services:
       - wedding_net
 
   caddy:
+    # Wymagany Caddy >= 2.11.5 (łatki bezpieczeństwa dla CVE-2026-55458 i CVE-2026-77281)
     image: caddy:2-alpine
     container_name: wedding_caddy
     restart: unless-stopped

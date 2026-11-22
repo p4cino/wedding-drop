@@ -44,11 +44,11 @@ pnpm --filter <pkg> check-types                  # tsc --noEmit for one package
 
 Husky hooks: `pre-commit` runs `lint-staged` (biome check --write on staged files); `pre-push` runs `pnpm test && pnpm build` — both must pass locally before a push will succeed.
 
-Docker: `docker compose up -d --build` runs the full stack (`wedding_postgres`, `wedding_web`, `wedding_caddy`). CI/sandboxed test runs use `docker run --rm -v "${PWD}:/app" -w /app node:24-alpine sh -c "corepack enable && pnpm -r test"`.
+Docker: `docker compose up -d --build` runs the full stack (`wedding_postgres`, `wedding_web`, `wedding_caddy`). CI/sandboxed test runs use `docker run --rm -v "${PWD}:/app" -w /app node:26-alpine sh -c "corepack enable && pnpm -r test"`.
 
 ## Architecture
 
-**apps/web (`@wedding-drop/web`)** — Next.js 16 App Router, but it does *not* run via plain `next start`. `apps/web/server.ts` is a custom unified server: it initializes the DB, recovers interrupted Google Drive exports, boots the TUS upload server, calls `app.prepare()`, then creates one `node:http` server that routes `/api/upload/tus/*` to the TUS handler and everything else to the Next.js request handler. It's bundled with `tsup` for production (`tsup.config.ts` → `dist/server.js`) alongside `next build`. Route handlers live under `src/app/api/**/route.ts` (admin, owner, gallery, auth/google, trace). Client components (Lightbox, upload drawer, owner moderation grid) are the exception to Next's server-first default — see AGENTS.md §5.
+**apps/web (`@wedding-drop/web`)** — Next.js 16 App Router, but it does _not_ run via plain `next start`. `apps/web/server.ts` is a custom unified server: it initializes the DB, recovers interrupted Google Drive exports, boots the TUS upload server, calls `app.prepare()`, then creates one `node:http` server that routes `/api/upload/tus/*` to the TUS handler and everything else to the Next.js request handler. It's bundled with `tsup` for production (`tsup.config.ts` → `dist/server.js`) alongside `next build`. Route handlers live under `src/app/api/**/route.ts` (admin, owner, gallery, auth/google, trace). Client components (Lightbox, upload drawer, owner moderation grid) are the exception to Next's server-first default — see AGENTS.md §5.
 
 **packages/db (`@wedding-drop/db`)** — Drizzle ORM. `src/schema.ts` defines 5 tables (`galleries`, `media_items`, `gallery_gdrive_exports`, `card_settings`, `admins`); `src/client.ts` holds the connection pool singleton and `initDatabase()`/admin bootstrap; `src/validators.ts` has Zod schemas via drizzle-zod. Migrations are in `migrations/`, generated with `db:generate`, applied with `db:push`/`db:migrate`. Two composite indexes on `media_items` (`gallery_id, status, created_at DESC` and `gallery_id, file_size`) back the hot gallery/stats queries — don't touch without an `EXPLAIN ANALYZE`.
 
@@ -56,12 +56,11 @@ Docker: `docker compose up -d --build` runs the full stack (`wedding_postgres`, 
 
 **Data flow (guest upload → live gallery update):** guest uploads via `tus-js-client` (5MB chunks, relative endpoint, auto-resume) → TUS `POST_FINISH` hook moves the file from `tus_temp` into `/data/galleries/{slug}/raw/` and enqueues a job on the shared `p-queue` (concurrency 2) → Sharp (images) or FFmpeg-with-watchdog (video) produces a WebP thumbnail → a `media_items` row is written with POSIX-normalized paths → the SSE bus, registered as a `globalThis` singleton so it survives Next.js module reloads, emits `new-media`/`media-updated` → connected guest browsers patch their gallery grid live (with a silent 0s/1s/2.5s/5s fallback poll in case the SSE stream drops).
 
-**At the edge:** Caddy (`Caddyfile`) terminates TLS, serves `/media-file/*` directly from the data volume (bypassing Node, with byte-range support), and injects `X-Robots-Tag: noindex` globally. Production images are built multi-stage on `node:24-alpine` via `turbo prune @wedding-drop/web --docker`.
+**At the edge:** Caddy (`Caddyfile`) terminates TLS, serves `/media-file/*` directly from the data volume (bypassing Node, with byte-range support), and injects `X-Robots-Tag: noindex` globally. Production images are built multi-stage on `node:26-alpine` via `turbo prune @wedding-drop/web --docker`.
 
 ## Non-negotiable constraints
 
 Full rationale is in `AGENTS.md` §3–4 and `.agents/rules/*.md` — headline list:
-
 - `p-queue` concurrency for media processing must stay `2` (4-core N100 target); never process thumbnails/frames unthrottled.
 - Every FFmpeg spawn needs a hard 25s timeout that `SIGKILL`s on expiry.
 - ZIP downloads stream via `archiver` straight to the response — never buffer a full archive in memory or on disk.

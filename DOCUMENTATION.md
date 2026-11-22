@@ -30,7 +30,7 @@ graph TD
         Caddy["Caddy v2 Reverse Proxy\n- Automatyczny TLS\n- Nagłówki noindex\n- Kompresja zstd/gzip\n- Flush SSE bez buforowania"]
     end
 
-    subgraph "Kontener wedding_web (Turborepo Monorepo / Node 24 Alpine)"
+    subgraph "Kontener wedding_web (Turborepo Monorepo / Node 26 Alpine)"
         NextCore["apps/web: Next.js 16 App Router (UI & API)"]
         TusServer["packages/media: @tus/server (TUS Protocol 1.0.0)"]
         SSEBus["packages/media: SSE Event Bus (new-media, media-updated)"]
@@ -400,7 +400,7 @@ Projekt objęty jest dwupoziomową piramidą testów automatycznych oraz standar
    - `packages/db/tests/`: 55 testów schematu Drizzle, walidatorów Zod (w tym `wishes`/`addWishDto`) i klienta bazy.
    - `packages/media/tests/`: 81 testów potoku przetwarzania mediów, integracji Google Drive, wznawialnego serwera TUS, event-busa SSE (w tym `new-wish`/`wish-updated`) i strumienia ZIP (w tym dołączanie `zyczenia.txt`).
    - `apps/web/tests/`: 328 testów integracyjnych tras API (`admin`, `gallery`, `owner`, w tym księga życzeń i sesja właściciela), hooków (`useLiveGallery`, `useUploadQueue`, `useGDriveExport`, hooków dostępności modali), bibliotek (`lib/*`) oraz komponentów i stron UI.
-   - Uruchomienie: `pnpm turbo run test` lub `docker run --rm -v "${PWD}:/app" -w /app node:24-alpine sh -c "corepack enable && pnpm -r test"`
+   - Uruchomienie: `pnpm turbo run test` lub `docker run --rm -v "${PWD}:/app" -w /app node:26-alpine sh -c "corepack enable && pnpm -r test"`
 
 3. **Testy End-to-End (Playwright)**:
    - Liczba testów: **38 unikalnych scenariuszy (114 testów łącznych)** w katalogu `apps/web/e2e/`.
@@ -556,7 +556,7 @@ Aplikacja `@wedding-drop/web` wykorzystuje nowoczesny system wzornictwa [Park UI
 
 ## 14. Architektura Konteneryzacji i Bezpieczeństwo Obrazu Docker
 
-Obraz produkcyjny kontenera `wedding_web` (`node:24-alpine`) został zoptymalizowany pod kątem minimalnego zużycia zasobów mini-PC (Intel N100) oraz rygorystycznych standardów bezpieczeństwa:
+Obraz produkcyjny kontenera `wedding_web` (`node:26-alpine`, `Node.js >= 26.13.1` Active LTS) został zoptymalizowany pod kątem minimalnego zużycia zasobów mini-PC (Intel N100) oraz rygorystycznych standardów bezpieczeństwa:
 
 ### 14.1. Wielostopniowy proces budowania (Multi-Stage Build)
 
@@ -567,6 +567,9 @@ Obraz produkcyjny kontenera `wedding_web` (`node:24-alpine`) został zoptymalizo
 
 ### 14.2. Utwardzenie Bezpieczeństwa i Eliminacja CVE
 
+- **Migracja do `node:26-alpine` (`Node.js >= 26.13.1` Active LTS)**: Pełna eliminacja podatności środowiska uruchomieniowego Node.js z biuletynów z października 2026 (`CVE-2026-111497` "Node2Shell" Brotli RCE, `CVE-2026-105482`, `CVE-2026-105483`) oraz listopada 2026 (`CVE-2026-123863` HTTP/2 DoS, `CVE-2026-123864` HTTPS heap disclosure, `CVE-2026-126051` TLS handshake DoS).
+- **Łatki bezpieczeństwa Next.js `>= 16.4.5` i `pnpm.overrides`**: Aktualizacja Next.js do wersji `>= 16.4.5` łata podatności z listopada 2026 (`GHSA-pc58-hwjq-p385` self-hosted response disclosure, `GHSA-7qx7-33qx-rqx2` SVG image optimization bypass oraz ujawnienia danych w Cache Components), a `pnpm.overrides` wymusza bezpieczne wersje zależności przechodnich (`qs >= 6.16.1`, `glob >= 14.0.2`, `minimatch >= 11.0.1`), zapewniając `0 vulnerabilities` w `pnpm audit`.
+- **Utwardzenie kontenerów infrastruktury**: Serwisy towarzyszące wymagają załatanych wydań `postgres:16-alpine` (`>= 16.16`, łatającego `CVE-2026-6460`) oraz `caddy:2-alpine` (`>= 2.11.5`, łatającego `CVE-2026-55458` oraz `CVE-2026-77281`).
 - **Brak uprawnień roota (`USER node`)**: Aplikacja działa z prawami wbudowanego użytkownika `node` (UID/GID 1000). Katalogi montowane `/app/data` (galerie i pliki tymczasowe TUS) są naprawiane przy każdym starcie kontenera przez `docker-entrypoint.sh` (chown na plikach nienależących do `node`, następnie `su-exec node`). Dzięki temu istniejące wolumeny utworzone wcześniej przez roota nie powodują błędu `EACCES` przy `rename` z `tus_temp` do `galleries/{slug}/raw`.
 - **Usunięcie zbędnych środowisk NPM/Yarn**: Ponieważ monorepo korzysta w 100% z PNPM, z obrazu runnera usuwane są fabryczne instalacje `/usr/local/lib/node_modules/npm` oraz `/opt/yarn*`, co eliminuje kilkanaście powszechnych podatności CVE (m.in. `http-cache-semantics`, `undici`, `tar`).
 - **Eliminacja zależności deweloperskich z runtime**: Pakiety `@serwist/next` i `serwist` przeniesiono do `devDependencies`, co zapobiega instalacji kompilatora TypeScript/Go w runnerze i całkowicie usuwa podatność krytyczną `CVE-2026-39821` (`golang/stdlib`).
